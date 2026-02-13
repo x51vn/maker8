@@ -42,12 +42,17 @@ class Settings(BaseSettings):
     tts_presets_path: Path = Path("config/tts_presets.json")
 
     # ── Google Cloud TTS ─────────────────────────────────────────────
-    # Uses Application Default Credentials (ADC) or GOOGLE_APPLICATION_CREDENTIALS
+    # Single-key fallback (ADC or explicit path)
     google_cloud_tts_enabled: bool = False
-    google_application_credentials: str = ""  # Path to GCP service account JSON
+    google_application_credentials: str = ""
+    # Directory with service-account JSON files for round-robin rotation
+    google_tts_keys_dir: Path = Path("gg-tts-keys")
 
     # ── ElevenLabs TTS ───────────────────────────────────────────────
+    # Single-key fallback
     elevenlabs_api_key: str = ""
+    # Directory with API key files (.txt/.key) for round-robin rotation
+    elevenlabs_keys_dir: Path = Path("elevenlabs-keys")
 
     # ── Work directory ───────────────────────────────────────────────
     work_dir: Path = Path("/tmp/maker8")
