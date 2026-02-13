@@ -34,7 +34,7 @@ class BlurEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         start_radius = float(params.get("radius", 5.0))
         end_radius_raw = params.get("end_radius")
@@ -43,7 +43,7 @@ class BlurEffect(EffectPlugin):
         source_clip: VideoClip = ir
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             frame = source_clip.get_frame(t)
 
             if end_radius is not None:
@@ -57,7 +57,7 @@ class BlurEffect(EffectPlugin):
 
             img = Image.fromarray(frame)
             img = img.filter(ImageFilter.GaussianBlur(radius=r))
-            return np.array(img)
+            return np.array(img)  # type: ignore[no-any-return]
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)

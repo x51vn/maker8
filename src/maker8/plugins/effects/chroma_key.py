@@ -39,7 +39,7 @@ class ChromaKeyEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         key_color = np.array(
             hex_to_rgb(str(params.get("key_color", "#00FF00"))),
@@ -53,7 +53,7 @@ class ChromaKeyEffect(EffectPlugin):
 
         soft_range = max(tolerance * softness, 1.0)
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             frame = source_clip.get_frame(t).astype(np.float32)
 
             # Euclidean distance from key colour per pixel

@@ -42,7 +42,7 @@ class BrightnessContrastEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         brightness = float(params.get("brightness", 1.0))
         contrast = float(params.get("contrast", 1.0))
@@ -54,7 +54,7 @@ class BrightnessContrastEffect(EffectPlugin):
         source_clip: VideoClip = ir
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             frame = source_clip.get_frame(t)
             img = Image.fromarray(frame)
 
@@ -63,7 +63,7 @@ class BrightnessContrastEffect(EffectPlugin):
             if contrast != 1.0:
                 img = ImageEnhance.Contrast(img).enhance(contrast)
 
-            return np.array(img)
+            return np.array(img)  # type: ignore[no-any-return]
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)

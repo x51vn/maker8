@@ -107,7 +107,7 @@ class KeyRing(Generic[T]):
             count=len(paths),
             files=labels,
         )
-        return cls(keys=[p.resolve() for p in paths], labels=labels)  # type: ignore[arg-type, return-value]
+        return cls(keys=[p.resolve() for p in paths], labels=labels)  # type: ignore[misc, return-value]
 
     @classmethod
     def from_text_dir(cls, directory: Path) -> KeyRing[str]:
