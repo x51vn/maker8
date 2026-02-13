@@ -34,7 +34,7 @@ class ColorOverlayEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         color = hex_to_rgb(str(params.get("color", "#000000")))
         opacity = float(params.get("opacity", 0.3))
@@ -46,10 +46,10 @@ class ColorOverlayEffect(EffectPlugin):
         duration = source_clip.duration or 1.0
         overlay = np.array(color, dtype=np.float32)
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             frame = source_clip.get_frame(t).astype(np.float32)
             blended = frame * (1.0 - opacity) + overlay * opacity
-            return np.clip(blended, 0, 255).astype(np.uint8)
+            return np.clip(blended, 0, 255).astype(np.uint8)  # type: ignore[no-any-return]
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)
