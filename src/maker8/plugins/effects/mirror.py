@@ -32,7 +32,7 @@ class MirrorEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         horizontal = bool(params.get("horizontal", True))
         vertical = bool(params.get("vertical", False))
@@ -43,13 +43,13 @@ class MirrorEffect(EffectPlugin):
         source_clip: VideoClip = ir
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             frame = source_clip.get_frame(t)
             if horizontal:
                 frame = np.fliplr(frame)
             if vertical:
                 frame = np.flipud(frame)
-            return frame.copy()  # ensure C-contiguous
+            return frame.copy()  # type: ignore[no-any-return]  # ensure C-contiguous
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)

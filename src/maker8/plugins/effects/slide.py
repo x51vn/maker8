@@ -51,7 +51,7 @@ class SlideEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         direction = str(params.get("direction", "left"))
         do_slide_in = bool(params.get("slide_in", True))
