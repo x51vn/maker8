@@ -8,6 +8,7 @@ text wrapping, stroke drawing, and alignment.  The ``layers`` module calls
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -17,7 +18,7 @@ from maker8.utils.color import hex_to_rgba
 
 # ── Font cache ───────────────────────────────────────────────────────────────
 
-_font_cache: dict[tuple[str, int], ImageFont.FreeTypeFont] = {}
+_font_cache: dict[tuple[str, int], ImageFont.FreeTypeFont | ImageFont.ImageFont] = {}
 
 _BUILTIN_FONTS: dict[str, str | None] = {
     "font:inter:regular": None,  # fall back to Pillow default
@@ -41,7 +42,7 @@ def _load_font(ref: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageF
         else:
             font = ImageFont.load_default(size)
 
-    _font_cache[key] = font  # type: ignore[assignment]
+    _font_cache[key] = font
     return font
 
 
@@ -82,7 +83,7 @@ def render_text_image(
     style: TextStyle,
     text_align: str = "left",
     valign: str = "top",
-) -> np.ndarray:
+) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
     """Return an RGBA ``numpy`` array of size ``(height, width, 4)``."""
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)

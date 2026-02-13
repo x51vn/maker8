@@ -55,7 +55,7 @@ class RenderStageImpl(Stage):
 
         ri = RenderInput(
             spec=ctx.render_spec,
-            asset_paths=asset_paths,
+            asset_paths=asset_paths,  # type: ignore[arg-type]
             tts_audio=tts_audio,
             output_dir=ctx.output_dir,
             job_id=ctx.job_id,
