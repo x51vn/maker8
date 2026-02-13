@@ -1,0 +1,12 @@
+{
+  "tts:vi:default": {
+    "provider": "gtts",
+    "lang": "vi",
+    "slow": false
+  },
+  "tts:en:default": {
+    "provider": "gtts",
+    "lang": "en",
+    "slow": false
+  }
+}

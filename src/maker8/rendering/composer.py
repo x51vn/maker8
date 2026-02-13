@@ -1,0 +1,227 @@
+"""Scene-based video composition using MoviePy.
+
+``compose_video()`` is the single public entry point.  It receives a
+``RenderInput`` dataclass (no dependency on ``pipeline.context``) and
+returns the output file path together with ``OutputMeta``.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from moviepy.audio.AudioClip import CompositeAudioClip
+from moviepy.audio.fx.all import audio_loop, volumex
+from moviepy.audio.io.AudioFileClip import AudioFileClip
+from moviepy.editor import ColorClip, CompositeVideoClip, VideoClip
+
+from maker8.models.common import OutputMeta
+from maker8.models.spec import Canvas, Defaults, RenderSpec, Scene
+from maker8.rendering.layers import build_layer_clip
+from maker8.utils.logging import get_logger
+
+log = get_logger(__name__)
+
+
+# ── Bridge dataclass (rendering ↔ pipeline) ─────────────────────────────────
+
+
+@dataclass
+class RenderInput:
+    """All data the composer needs – built by ``pipeline.render``."""
+
+    spec: RenderSpec
+    asset_paths: dict[str, Path]  # asset_id → local file (normalised or downloaded)
+    tts_audio: dict[str, tuple[Path, float]] = field(default_factory=dict)  # scene_id → (path, dur)
+    output_dir: Path = Path("/tmp")
+    job_id: str = ""
+
+
+# ── Public API ───────────────────────────────────────────────────────────────
+
+
+def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
+    """Compose all scenes and write the final video file.
+
+    Returns ``(output_path, output_meta)``.
+    """
+    canvas = ri.spec.canvas
+    defaults = ri.spec.defaults
+    output_cfg = ri.spec.output
+
+    scene_clips: list[VideoClip] = []
+    transition_durs: list[float] = []
+
+    for scene in ri.spec.scenes:
+        clip = _build_scene(scene, ri, canvas, defaults)
+        scene_clips.append(clip)
+        transition_durs.append(
+            scene.transition_out.duration if scene.transition_out else 0.0
+        )
+
+    final = _concatenate_with_transitions(scene_clips, transition_durs, canvas)
+
+    output_path = ri.output_dir / f"{ri.job_id}.mp4"
+    log.info("composer.write", path=str(output_path), duration=final.duration)
+
+    final.write_videofile(
+        str(output_path),
+        fps=canvas.fps,
+        codec=output_cfg.codec,
+        audio_codec=output_cfg.audio_codec,
+        bitrate=output_cfg.bitrate,
+        preset=output_cfg.preset,
+        ffmpeg_params=["-pix_fmt", output_cfg.pix_fmt],
+        logger=None,
+    )
+
+    meta = OutputMeta(
+        duration=round(final.duration, 3),
+        w=canvas.w,
+        h=canvas.h,
+        fps=canvas.fps,
+        size_bytes=output_path.stat().st_size,
+    )
+
+    # Clean up
+    final.close()
+    for c in scene_clips:
+        c.close()
+
+    return output_path, meta
+
+
+# ── Scene builder ────────────────────────────────────────────────────────────
+
+
+def _build_scene(
+    scene: Scene,
+    ri: RenderInput,
+    canvas: Canvas,
+    defaults: Defaults,
+) -> VideoClip:
+    """Compose layers + audio for a single scene."""
+
+    timing = defaults.scene_timing
+    tts_entry = ri.tts_audio.get(scene.scene_id)
+
+    # ── Duration policy ──────────────────────────────────────────────
+    if scene.duration is not None:
+        duration = scene.duration
+    elif tts_entry:
+        _, tts_dur = tts_entry
+        duration = timing.head_pad_sec + tts_dur + timing.tail_pad_sec
+    else:
+        duration = 5.0  # fallback
+
+    # ── Background colour clip ───────────────────────────────────────
+    bg = ColorClip(
+        size=(canvas.w, canvas.h),
+        color=_hex_to_rgb(canvas.bg),
+    ).set_duration(duration)
+
+    # ── Visual layers ────────────────────────────────────────────────
+    layer_clips: list[VideoClip] = [bg]
+    for layer in scene.layers:
+        lc = build_layer_clip(layer, ri.asset_paths, duration, canvas)
+        if lc is not None:
+            layer_clips.append(lc)
+
+    composite = CompositeVideoClip(layer_clips, size=(canvas.w, canvas.h))
+    composite = composite.set_duration(duration)
+
+    # ── Audio ────────────────────────────────────────────────────────
+    audio_clips: list[AudioFileClip] = []
+
+    if tts_entry:
+        narr_path, _ = tts_entry
+        narr = AudioFileClip(str(narr_path))
+        narr = narr.set_start(timing.head_pad_sec)
+        audio_clips.append(narr)
+
+    for track in scene.audio_tracks:
+        acl = _build_audio_track(track, ri.asset_paths, duration)
+        if acl is not None:
+            audio_clips.append(acl)
+
+    if audio_clips:
+        composite = composite.set_audio(CompositeAudioClip(audio_clips))
+
+    return composite
+
+
+# ── Audio track helper ───────────────────────────────────────────────────────
+
+
+def _build_audio_track(
+    track: object,  # AudioTrack (imported via spec but kept loose to avoid cycle)
+    asset_paths: dict[str, Path],
+    scene_duration: float,
+) -> AudioFileClip | None:
+    asset_ref: str = getattr(track, "asset_ref", "")
+    if asset_ref not in asset_paths:
+        return None
+
+    clip = AudioFileClip(str(asset_paths[asset_ref]))
+
+    trim = getattr(track, "trim", None)
+    if trim:
+        t_start = getattr(trim, "in_", 0)
+        t_end = getattr(trim, "out", 0) or clip.duration
+        clip = clip.subclip(t_start, min(t_end, clip.duration))
+
+    vol = getattr(track, "volume", 1.0)
+    if vol != 1.0:
+        clip = volumex(clip, vol)
+
+    if getattr(track, "loop", False):
+        clip = audio_loop(clip, duration=scene_duration)
+
+    return clip
+
+
+# ── Transition concatenation ─────────────────────────────────────────────────
+
+
+def _concatenate_with_transitions(
+    clips: list[VideoClip],
+    transition_durs: list[float],
+    canvas: Canvas,
+) -> VideoClip:
+    """Concatenate *clips*, overlapping by the transition duration."""
+    if not clips:
+        return ColorClip(size=(canvas.w, canvas.h), color=(0, 0, 0)).set_duration(0)
+
+    has_transitions = any(d > 0 for d in transition_durs)
+    if not has_transitions:
+        from moviepy.editor import concatenate_videoclips
+
+        return concatenate_videoclips(clips, method="compose")
+
+    # Calculate start times accounting for overlap
+    starts: list[float] = [0.0]
+    for i in range(1, len(clips)):
+        overlap = transition_durs[i - 1]
+        starts.append(starts[-1] + clips[i - 1].duration - overlap)
+
+    positioned: list[VideoClip] = []
+    for i, clip in enumerate(clips):
+        c = clip.set_start(starts[i])
+        # Crossfade-out for current scene
+        if transition_durs[i] > 0:
+            c = c.crossfadeout(transition_durs[i])
+        # Crossfade-in from previous scene
+        if i > 0 and transition_durs[i - 1] > 0:
+            c = c.crossfadein(transition_durs[i - 1])
+        positioned.append(c)
+
+    total_dur = starts[-1] + clips[-1].duration
+    return CompositeVideoClip(positioned, size=(canvas.w, canvas.h)).set_duration(total_dur)
+
+
+# ── Colour util ──────────────────────────────────────────────────────────────
+
+
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    h = hex_color.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
