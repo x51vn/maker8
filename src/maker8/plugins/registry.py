@@ -53,7 +53,12 @@ class PluginRegistry:
         """Register the built-in source connectors and effects shipped with Maker8."""
         from maker8.plugins.effects.blur import BlurEffect
         from maker8.plugins.effects.brightness_contrast import BrightnessContrastEffect
+        from maker8.plugins.effects.chroma_key import ChromaKeyEffect
+        from maker8.plugins.effects.color_overlay import ColorOverlayEffect
         from maker8.plugins.effects.fade import FadeEffect
+        from maker8.plugins.effects.grayscale import GrayscaleEffect
+        from maker8.plugins.effects.mirror import MirrorEffect
+        from maker8.plugins.effects.rotate import RotateEffect
         from maker8.plugins.effects.slide import SlideEffect
         from maker8.plugins.effects.zoom_pan import ZoomPanEffect
         from maker8.plugins.sources.http_source import HttpSourceConnector
@@ -69,3 +74,8 @@ class PluginRegistry:
         self.register_effect("effect:blur", BlurEffect())
         self.register_effect("effect:brightness_contrast", BrightnessContrastEffect())
         self.register_effect("effect:slide", SlideEffect())
+        self.register_effect("effect:color_overlay", ColorOverlayEffect())
+        self.register_effect("effect:grayscale", GrayscaleEffect())
+        self.register_effect("effect:rotate", RotateEffect())
+        self.register_effect("effect:mirror", MirrorEffect())
+        self.register_effect("effect:chroma_key", ChromaKeyEffect())
