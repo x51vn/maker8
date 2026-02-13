@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from moviepy.video.fx import FadeIn, FadeOut
+
 from maker8.plugins.base import EffectPlugin, PluginManifest
 
 
@@ -33,8 +35,12 @@ class FadeEffect(EffectPlugin):
         fade_out = float(params.get("fade_out_duration", 0.5))
 
         clip = ir
+        effects = []
         if fade_in > 0:
-            clip = clip.fadein(fade_in)
+            effects.append(FadeIn(fade_in))
         if fade_out > 0:
-            clip = clip.fadeout(fade_out)
+            effects.append(FadeOut(fade_out))
+
+        if effects:
+            clip = clip.with_effects(effects)
         return clip
