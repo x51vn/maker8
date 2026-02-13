@@ -53,11 +53,11 @@ class BlurEffect(EffectPlugin):
                 r = start_radius
 
             if r <= 0:
-                return frame
+                return frame  # type: ignore[no-any-return]
 
             img = Image.fromarray(frame)
             img = img.filter(ImageFilter.GaussianBlur(radius=r))
-            return np.array(img)  # type: ignore[no-any-return]
+            return np.array(img)
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)
