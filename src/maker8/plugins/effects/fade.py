@@ -34,7 +34,7 @@ class FadeEffect(EffectPlugin):
 
         clip = ir
         if fade_in > 0:
-            clip = clip.crossfadein(fade_in)
+            clip = clip.fadein(fade_in)
         if fade_out > 0:
-            clip = clip.crossfadeout(fade_out)
+            clip = clip.fadeout(fade_out)
         return clip

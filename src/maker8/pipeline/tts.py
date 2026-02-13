@@ -1,6 +1,16 @@
-"""TTS stage – generate narration audio for every scene."""
+"""TTS stage – generate narration audio for every scene.
+
+Credential rotation
+~~~~~~~~~~~~~~~~~~~
+At the start of each video (``execute()`` call) the stage acquires the
+*next* credential from the round-robin key rings exposed by
+``TTSService``.  All scenes of the same video share a single credential
+so that quota usage is predictable and error-reporting is meaningful.
+"""
 
 from __future__ import annotations
+
+from pathlib import Path
 
 from maker8.models.common import RenderStage
 from maker8.pipeline.context import PipelineContext, TTSResult
@@ -24,6 +34,10 @@ class TTSStage(Stage):
         ctx.ensure_dirs()
         defaults = ctx.render_spec.defaults.narration
 
+        # ── Acquire credentials for this video (round-robin) ─────────
+        google_creds: Path | None = self._tts.next_google_credentials()
+        elevenlabs_key: str = self._tts.next_elevenlabs_key()
+
         for scene in ctx.render_spec.scenes:
             sid = scene.scene_id
             if sid in ctx.tts_results:
@@ -35,7 +49,14 @@ class TTSStage(Stage):
             out_path = ctx.tts_dir / f"{sid}.mp3"
 
             try:
-                result = self._tts.synthesize(text, lang, preset, out_path)
+                result = self._tts.synthesize(
+                    text,
+                    lang,
+                    preset,
+                    out_path,
+                    google_credentials_path=google_creds,
+                    elevenlabs_api_key=elevenlabs_key,
+                )
                 ctx.tts_results[sid] = TTSResult(
                     scene_id=sid,
                     audio_path=result.audio_path,
