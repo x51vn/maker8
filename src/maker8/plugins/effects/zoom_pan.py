@@ -75,7 +75,7 @@ class ZoomPanEffect(EffectPlugin):
 
             img = Image.fromarray(cropped)
             img = img.resize((w, h), Image.Resampling.LANCZOS)
-            return np.array(img)  # type: ignore[no-any-return]
+            return np.array(img)
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)

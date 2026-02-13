@@ -63,7 +63,7 @@ class BrightnessContrastEffect(EffectPlugin):
             if contrast != 1.0:
                 img = ImageEnhance.Contrast(img).enhance(contrast)
 
-            return np.array(img)  # type: ignore[no-any-return]
+            return np.array(img)
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)
