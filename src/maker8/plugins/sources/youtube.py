@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from maker8.plugins.base import PluginManifest, ResolvedAssetPlan, SourceConnectorPlugin
 from maker8.utils.logging import get_logger
