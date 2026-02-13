@@ -25,7 +25,7 @@ class BlurEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:blur", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -43,7 +43,7 @@ class BlurEffect(EffectPlugin):
         source_clip: VideoClip = ir
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
             frame = source_clip.get_frame(t)
 
             if end_radius is not None:

@@ -6,7 +6,7 @@ import mimetypes
 from pathlib import Path
 from urllib.parse import urlparse
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from maker8.plugins.base import PluginManifest, ResolvedAssetPlan, SourceConnectorPlugin
 from maker8.utils.logging import get_logger
@@ -22,7 +22,7 @@ class HttpSourceConnector(SourceConnectorPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="source/http", version="1.0.0", deterministic=True)
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "kind": "http",
             "url": {"type": "string"},
@@ -30,7 +30,7 @@ class HttpSourceConnector(SourceConnectorPlugin):
 
     # ── Resolve ──────────────────────────────────────────────────────
 
-    def resolve(self, asset_id: str, source: dict) -> ResolvedAssetPlan:
+    def resolve(self, asset_id: str, source: dict[str, Any]) -> ResolvedAssetPlan:
         url = source["url"]
         parsed = urlparse(url)
         suffix = Path(parsed.path).suffix or ".bin"

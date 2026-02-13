@@ -7,6 +7,7 @@ for every inbound Kafka message.
 from __future__ import annotations
 
 import shutil
+from typing import Any
 
 from maker8.config import Settings
 from maker8.kafka.producer import KafkaProducer
@@ -69,7 +70,7 @@ class Orchestrator:
 
     # ── Public entry point ───────────────────────────────────────────
 
-    def handle(self, payload: dict) -> None:
+    def handle(self, payload: dict[str, Any]) -> None:
         """Parse the Kafka message and run the full pipeline."""
         try:
             request = RenderRequest.model_validate(payload)
