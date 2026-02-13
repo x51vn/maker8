@@ -9,7 +9,10 @@ Start with::
 
 from __future__ import annotations
 
+import atexit
+import os
 import signal
+import sys
 
 from maker8.config import get_settings
 from maker8.kafka.consumer import RenderConsumer
@@ -21,15 +24,26 @@ from maker8.services.tts_client import TTSService
 from maker8.utils.logging import get_logger, setup_logging
 
 
+# Global variables for shutdown coordination
+_shutdown_requested = False
+_consumer: RenderConsumer | None = None
+_producer: KafkaProducer | None = None
+_log: object | None = None
+
+
 def main() -> None:
+    global _consumer, _producer, _log, _shutdown_requested
+    
     settings = get_settings()
     setup_logging(level=settings.log_level, fmt=settings.log_format)
     log = get_logger("maker8.app")
+    _log = log
 
     log.info("app.starting", version="0.1.0")
 
     # ── Wire dependencies ────────────────────────────────────────────
     producer = KafkaProducer(settings)
+    _producer = producer
 
     registry = PluginRegistry()
     registry.load_defaults()
@@ -46,11 +60,40 @@ def main() -> None:
     )
 
     consumer = RenderConsumer(settings)
+    _consumer = consumer
+
+    # ── Fast exit handler (fallback for graceful shutdown hang) ───────
+    def _atexit() -> None:
+        """Run at exit to close resources and log completion."""
+        if _log is not None:
+            try:
+                _log.info("app.exiting")
+            except Exception:
+                pass
+
+    atexit.register(_atexit)
 
     # ── Graceful shutdown ────────────────────────────────────────────
     def _shutdown(sig: int, _frame: object) -> None:
-        log.info("app.shutdown", signal=sig)
-        consumer.stop()
+        global _shutdown_requested
+        
+        if _shutdown_requested:
+            # Already shutting down, force exit
+            if _log is not None:
+                _log.warning("app.force_exit", reason="shutdown_already_in_progress")
+            os._exit(0)
+        
+        _shutdown_requested = True
+        
+        if _log is not None:
+            _log.info("app.shutdown", signal=sig)
+        
+        try:
+            if _consumer is not None:
+                _consumer.stop()
+        except Exception as e:
+            if _log is not None:
+                _log.error("consumer.stop_failed", error=str(e))
 
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
@@ -61,8 +104,16 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        producer.close()
-        log.info("app.stopped")
+        try:
+            producer.close()
+            log.info("app.stopped")
+        except Exception as e:
+            log.error("producer.close_failed", error=str(e))
+        
+        # Use os._exit to avoid C extension cleanup issues on shutdown
+        # See: https://github.com/confluentinc/confluent-kafka-python/issues/...
+        _shutdown_requested = True
+        os._exit(0)
 
 
 if __name__ == "__main__":

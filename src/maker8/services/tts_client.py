@@ -1,9 +1,27 @@
 """TTS service – provider-agnostic narration synthesis.
 
-The concrete TTS backend is selected at runtime via ``tts_preset_ref`` which
-maps to a preset in ``config/tts_presets.json``.  The preset declares the
-``provider`` key (``"gtts"``, ``"google_cloud"``, ``"elevenlabs"``, etc.)
-and any provider-specific kwargs.
+Architecture
+~~~~~~~~~~~~
+* **TTSProvider** (ABC) – one ``synthesize()`` per provider.
+* **KeyRing** – thread-safe round-robin credential rotation.
+* **TTSService** – façade used by the pipeline; resolves presets,
+  picks the right provider, and injects the *next* credential from the
+  corresponding ``KeyRing`` (if available).
+
+Credential rotation
+~~~~~~~~~~~~~~~~~~~
+Both *Google Cloud TTS* and *ElevenLabs* support **multiple API keys /
+service accounts** that are rotated per-video (one ``next()`` call per
+``synthesize_video()`` invocation from the TTS pipeline stage).
+
+* **Google Cloud** – each key is a service-account JSON file placed in
+  ``gg-tts-keys/``.  The provider creates a client from the file path
+  returned by the ring.
+* **ElevenLabs** – each key is a plain-text API key placed in
+  ``elevenlabs-keys/`` (one key per ``.txt`` / ``.key`` file).
+
+If the key directory is empty or missing the provider falls back to a
+single credential from ``Settings`` (backward-compatible).
 """
 
 from __future__ import annotations
@@ -14,6 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from maker8.config import Settings
+from maker8.services.key_ring import KeyRing
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
@@ -34,6 +53,13 @@ class SynthesisResult:
 
 
 class TTSProvider(ABC):
+    """Base class for all TTS backends.
+
+    Subclasses **must** implement ``synthesize()``.  They receive the
+    credential for the current video via ``**kwargs`` (e.g.
+    ``credentials_path`` for Google Cloud, ``api_key`` for ElevenLabs).
+    """
+
     @abstractmethod
     def synthesize(
         self,
@@ -46,7 +72,7 @@ class TTSProvider(ABC):
         ...
 
 
-# ── Duration helper (shared by all providers) ────────────────────────────────
+# ── Duration helper (shared) ────────────────────────────────────────────────
 
 
 def _get_audio_duration(path: Path) -> float:
@@ -59,7 +85,7 @@ def _get_audio_duration(path: Path) -> float:
     return dur
 
 
-# ── gTTS provider (default) ─────────────────────────────────────────────────
+# ── gTTS provider (default, free) ───────────────────────────────────────────
 
 
 class GTTSProvider(TTSProvider):
@@ -90,9 +116,13 @@ class GTTSProvider(TTSProvider):
 
 
 class GoogleCloudTTSProvider(TTSProvider):
-    """Google Cloud Text-to-Speech (high quality, requires API credentials).
+    """Google Cloud Text-to-Speech with round-robin service-account rotation.
 
-    Preset kwargs:
+    Credentials are supplied per-call via the ``credentials_path`` kwarg
+    (a ``Path`` to a service-account JSON file).  If absent the provider
+    falls back to *Application Default Credentials* (ADC).
+
+    Preset kwargs (from ``tts_presets.json``):
         voice_name: str  – e.g. ``"vi-VN-Neural2-A"``
         speaking_rate: float – speed multiplier (default 1.0)
         pitch: float – semitones shift (default 0.0)
@@ -108,6 +138,11 @@ class GoogleCloudTTSProvider(TTSProvider):
     ) -> SynthesisResult:
         from google.cloud import texttospeech
 
+        # ── Credential handling ──────────────────────────────────────
+        credentials_path = kwargs.pop("credentials_path", None)
+        client = self._build_client(credentials_path)
+
+        # ── Voice / audio parameters ────────────────────────────────
         voice_name = str(kwargs.get("voice_name", ""))
         speaking_rate = float(kwargs.get("speaking_rate", 1.0))
         pitch = float(kwargs.get("pitch", 0.0))
@@ -122,15 +157,11 @@ class GoogleCloudTTSProvider(TTSProvider):
             encoding_name, texttospeech.AudioEncoding.MP3
         )
 
-        client = texttospeech.TextToSpeechClient()
-
         synthesis_input = texttospeech.SynthesisInput(text=text)
-
         voice_params = texttospeech.VoiceSelectionParams(
             language_code=lang,
             name=voice_name or None,
         )
-
         audio_config = texttospeech.AudioConfig(
             audio_encoding=audio_encoding,
             speaking_rate=speaking_rate,
@@ -142,7 +173,6 @@ class GoogleCloudTTSProvider(TTSProvider):
             voice=voice_params,
             audio_config=audio_config,
         )
-
         output_path.write_bytes(response.audio_content)
 
         return SynthesisResult(
@@ -150,16 +180,42 @@ class GoogleCloudTTSProvider(TTSProvider):
             duration_sec=_get_audio_duration(output_path),
         )
 
+    # ── Internal ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def _build_client(
+        credentials_path: object,
+    ) -> object:  # texttospeech.TextToSpeechClient
+        """Create a TTS client, optionally from a specific service-account."""
+        from google.cloud import texttospeech
+        from google.oauth2 import service_account
+
+        if credentials_path and Path(str(credentials_path)).is_file():
+            creds = service_account.Credentials.from_service_account_file(
+                str(credentials_path),
+                scopes=["https://www.googleapis.com/auth/cloud-platform"],
+            )
+            log.debug(
+                "google_cloud_tts.using_key",
+                key=Path(str(credentials_path)).name,
+            )
+            return texttospeech.TextToSpeechClient(credentials=creds)
+
+        # Fallback: ADC (GOOGLE_APPLICATION_CREDENTIALS or metadata server)
+        return texttospeech.TextToSpeechClient()
+
 
 # ── ElevenLabs provider ─────────────────────────────────────────────────────
 
 
 class ElevenLabsProvider(TTSProvider):
-    """ElevenLabs TTS (premium AI voices).
+    """ElevenLabs TTS with round-robin API-key rotation.
 
-    Requires env ``MAKER8_ELEVENLABS_API_KEY``.
+    The ``api_key`` kwarg is injected per-call by ``TTSService``.
+    If absent, the ElevenLabs SDK falls back to the
+    ``ELEVEN_API_KEY`` environment variable.
 
-    Preset kwargs:
+    Preset kwargs (from ``tts_presets.json``):
         voice_id: str – ElevenLabs voice ID
         model_id: str – e.g. ``"eleven_multilingual_v2"``
         stability: float – 0.0–1.0 (default 0.5)
@@ -223,11 +279,66 @@ class PresetStore:
         return self._presets.get(ref, self._DEFAULT_PRESET)
 
 
+# ── KeyRing helpers (loading) ────────────────────────────────────────────────
+
+
+def _load_google_key_ring(settings: Settings) -> KeyRing[Path] | None:
+    """Try to load Google Cloud service-account keys from disk.
+
+    Returns ``None`` (with a warning) if the directory is missing or
+    contains no JSON files – the provider will fall back to ADC.
+    """
+    keys_dir = settings.google_tts_keys_dir
+    try:
+        return KeyRing.from_json_dir(keys_dir)
+    except FileNotFoundError:
+        log.warning(
+            "tts.google_key_ring_unavailable",
+            directory=str(keys_dir),
+            hint="Place service-account JSON files in the directory "
+            "or set MAKER8_GOOGLE_APPLICATION_CREDENTIALS for a single key.",
+        )
+        return None
+
+
+def _load_elevenlabs_key_ring(settings: Settings) -> KeyRing[str] | None:
+    """Try to load ElevenLabs API keys from disk.
+
+    Returns ``None`` if the directory is missing or empty – the provider
+    will fall back to ``MAKER8_ELEVENLABS_API_KEY``.
+    """
+    keys_dir = settings.elevenlabs_keys_dir
+    try:
+        return KeyRing.from_text_dir(keys_dir)
+    except (FileNotFoundError, ValueError):
+        log.warning(
+            "tts.elevenlabs_key_ring_unavailable",
+            directory=str(keys_dir),
+            hint="Place .txt/.key files (one API key each) in the directory "
+            "or set MAKER8_ELEVENLABS_API_KEY for a single key.",
+        )
+        return None
+
+
 # ── Façade ───────────────────────────────────────────────────────────────────
 
 
 class TTSService:
-    """High-level entry point used by the TTS pipeline stage."""
+    """High-level entry point used by the TTS pipeline stage.
+
+    On construction the service loads all available key rings.  Each call
+    to ``next_google_credentials()`` / ``next_elevenlabs_key()`` advances
+    the ring by one position so that consecutive videos use different
+    credentials (round-robin).
+
+    Call hierarchy::
+
+        TTSStage.execute()
+          ├─ tts_service.next_google_credentials()   # once per video
+          ├─ tts_service.next_elevenlabs_key()        # once per video
+          └─ for scene in scenes:
+                tts_service.synthesize(…, google_credentials_path=…)
+    """
 
     _PROVIDERS: dict[str, type[TTSProvider]] = {
         "gtts": GTTSProvider,
@@ -240,14 +351,58 @@ class TTSService:
         self._default_provider = settings.tts_provider
         self._settings = settings
 
+        # ── Load key rings (best-effort) ─────────────────────────────
+        self._google_ring = _load_google_key_ring(settings)
+        self._elevenlabs_ring = _load_elevenlabs_key_ring(settings)
+
+        log.info(
+            "tts_service.ready",
+            default_provider=self._default_provider,
+            google_keys=self._google_ring.size if self._google_ring else 0,
+            elevenlabs_keys=(
+                self._elevenlabs_ring.size if self._elevenlabs_ring else 0
+            ),
+        )
+
+    # ── Per-video rotation ───────────────────────────────────────────
+
+    def next_google_credentials(self) -> Path | None:
+        """Advance the Google Cloud key ring and return a credentials path.
+
+        Returns ``None`` when no key ring is loaded (provider uses ADC).
+        """
+        if self._google_ring:
+            return self._google_ring.next()
+        return None
+
+    def next_elevenlabs_key(self) -> str:
+        """Advance the ElevenLabs key ring and return an API key.
+
+        Falls back to the single key from ``Settings`` when no ring is
+        loaded.
+        """
+        if self._elevenlabs_ring:
+            return self._elevenlabs_ring.next()
+        return self._settings.elevenlabs_api_key
+
+    # ── Per-scene synthesis ──────────────────────────────────────────
+
     def synthesize(
         self,
         text: str,
         lang: str,
         preset_ref: str,
         output_path: Path,
+        *,
+        google_credentials_path: Path | None = None,
+        elevenlabs_api_key: str | None = None,
     ) -> SynthesisResult:
-        """Synthesize *text* and write the audio to *output_path*."""
+        """Synthesize *text* and write the audio to *output_path*.
+
+        The optional ``google_credentials_path`` / ``elevenlabs_api_key``
+        parameters allow the TTS stage to pin a single credential for all
+        scenes of one video (round-robin per video, not per scene).
+        """
         preset = dict(self._preset_store.get(preset_ref))
         provider_name = preset.pop("provider", self._default_provider)
 
@@ -255,9 +410,15 @@ class TTSService:
         if provider_cls is None:
             raise ValueError(f"Unknown TTS provider: {provider_name!r}")
 
-        # Inject ElevenLabs API key from settings if not in preset
-        if provider_name == "elevenlabs" and "api_key" not in preset:
-            preset["api_key"] = self._settings.elevenlabs_api_key
+        # ── Inject credentials ───────────────────────────────────────
+        if provider_name == "google_cloud":
+            if google_credentials_path is not None:
+                preset["credentials_path"] = google_credentials_path
+        elif provider_name == "elevenlabs":
+            if elevenlabs_api_key:
+                preset["api_key"] = elevenlabs_api_key
+            elif "api_key" not in preset:
+                preset["api_key"] = self._settings.elevenlabs_api_key
 
         provider = provider_cls()
         effective_lang = preset.pop("lang", lang)
@@ -266,9 +427,6 @@ class TTSService:
             "tts.synthesize",
             provider=provider_name,
             lang=effective_lang,
-            chars=len(text),
-        )
-        return provider.synthesize(text, effective_lang, output_path, **preset)
             chars=len(text),
         )
         return provider.synthesize(text, effective_lang, output_path, **preset)
