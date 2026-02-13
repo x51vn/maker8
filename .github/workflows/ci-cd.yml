@@ -23,19 +23,34 @@ jobs:
           if [ -f pyproject.toml ]; then pip install -e .; fi
           pip install pytest pytest-cov
 
+      - name: Validate Dockerfile
+        run: |
+          if [ ! -f Dockerfile ]; then
+            echo "ERROR: Dockerfile not found in repository root"
+            exit 1
+          fi
+          echo "✓ Dockerfile exists and is readable"
+
       - name: Lint with flake8
         run: |
           pip install flake8
-          flake8 src/maker8 --count --select=E9,F63,F7,F82 --show-source --statistics || true
+          flake8 src/maker8 --count --select=E9,F63,F7,F82 --show-source --statistics
+          echo "✓ Flake8 linting passed"
 
       - name: Run tests with pytest
         run: |
-          pytest tests/ -v --tb=short || true
+          if [ -d tests/ ]; then
+            pytest tests/ -v --tb=short
+            echo "✓ pytest tests passed"
+          else
+            echo "⚠ No tests/ directory found, skipping pytest"
+          fi
 
       - name: Type checking with mypy
         run: |
           pip install mypy
-          mypy src/maker8 --ignore-missing-imports || true
+          mypy src/maker8 --ignore-missing-imports
+          echo "✓ mypy type checking passed"
 
   build-and-push:
     name: Maker8 - Build, Tag & Push Docker Image
@@ -59,9 +74,21 @@ jobs:
           echo "DEPLOYMENT_REPO_PAT=$GITHUB_PAT" >> $GITHUB_ENV
           echo "DOCKER_REGISTRY_HOST=$DOCKER_REGISTRY_HOST" >> $GITHUB_ENV
 
+      - name: Validate required environment variables
+        run: |
+          required_vars=("DOCKER_REGISTRY_HOST" "DOCKER_REGISTRY_USER" "DOCKER_REGISTRY_PASSWORD" "DEPLOY_USER" "DEPLOY_HOST")
+          for var in "${required_vars[@]}"; do
+            if [ -z "${!var}" ]; then
+              echo "ERROR: Required environment variable $var is not set"
+              exit 1
+            fi
+          done
+          echo "✓ All required environment variables are set"
+
       - name: Set image version
         run: |
-          echo "IMAGE_VERSION=$(date +'%Y%m%d')-${{ github.run_number }}" >> $GITHUB_ENV
+          echo "IMAGE_VERSION=$(date +'%Y%m%d.%H%M')" >> $GITHUB_ENV
+          echo "✓ Image version set to: ${{ env.IMAGE_VERSION }}"
 
       - name: Build Docker image
         run: |
@@ -100,5 +127,23 @@ jobs:
             git checkout master &&
             git pull origin master &&
             docker compose pull maker8 &&
-            docker compose up -d maker8
+            docker compose up -d maker8 &&
+            echo 'Deployment completed, verifying container health...'
+          "
+
+      - name: Verify deployment health
+        run: |
+          echo "Waiting 10 seconds for container to stabilize..."
+          sleep 10
+          ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
+            CONTAINER_STATUS=\$(docker compose -f /home/$DEPLOY_USER/deployment/worker-z440/docker-compose.yml ps maker8 | grep -E 'running|exited' | awk '{print \\$NF}')
+            if [ \"\$CONTAINER_STATUS\" = \"running\" ]; then
+              echo '✓ Container maker8 is running successfully'
+              docker compose -f /home/$DEPLOY_USER/deployment/worker-z440/docker-compose.yml logs maker8 --tail=20
+              exit 0
+            else
+              echo '✗ Container maker8 failed to start or exited'
+              docker compose -f /home/$DEPLOY_USER/deployment/worker-z440/docker-compose.yml logs maker8 --tail=50
+              exit 1
+            fi
           "
