@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from confluent_kafka import Producer
 
@@ -33,7 +34,7 @@ class KafkaProducer:
         
         self._producer = Producer(kafka_config)
 
-    def send(self, topic: str, key: str, value: dict) -> None:
+    def send(self, topic: str, key: str, value: dict[str, Any]) -> None:
         """Serialise *value* as JSON and produce to *topic*."""
         payload = json.dumps(value, ensure_ascii=False).encode("utf-8")
         self._producer.produce(

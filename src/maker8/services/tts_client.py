@@ -82,7 +82,7 @@ def _get_audio_duration(path: Path) -> float:
     clip = AudioFileClip(str(path))
     dur = clip.duration
     clip.close()
-    return dur
+    return float(dur)  # type: ignore[no-any-return]
 
 
 # ── gTTS provider (default, free) ───────────────────────────────────────────
@@ -144,8 +144,8 @@ class GoogleCloudTTSProvider(TTSProvider):
 
         # ── Voice / audio parameters ────────────────────────────────
         voice_name = str(kwargs.get("voice_name", ""))
-        speaking_rate = float(kwargs.get("speaking_rate", 1.0))
-        pitch = float(kwargs.get("pitch", 0.0))
+        speaking_rate = float(kwargs.get("speaking_rate", 1.0))  # type: ignore[arg-type]
+        pitch = float(kwargs.get("pitch", 0.0))  # type: ignore[arg-type]
         encoding_name = str(kwargs.get("audio_encoding", "MP3"))
 
         encoding_map = {
@@ -168,7 +168,7 @@ class GoogleCloudTTSProvider(TTSProvider):
             pitch=pitch,
         )
 
-        response = client.synthesize_speech(
+        response = client.synthesize_speech(  # type: ignore[attr-defined]
             input=synthesis_input,
             voice=voice_params,
             audio_config=audio_config,
@@ -191,7 +191,7 @@ class GoogleCloudTTSProvider(TTSProvider):
         from google.oauth2 import service_account
 
         if credentials_path and Path(str(credentials_path)).is_file():
-            creds = service_account.Credentials.from_service_account_file(
+            creds = service_account.Credentials.from_service_account_file(  # type: ignore[no-untyped-call]
                 str(credentials_path),
                 scopes=["https://www.googleapis.com/auth/cloud-platform"],
             )
@@ -235,9 +235,9 @@ class ElevenLabsProvider(TTSProvider):
         api_key = str(kwargs.get("api_key", ""))
         voice_id = str(kwargs.get("voice_id", "21m00Tcm4TlvDq8ikWAM"))
         model_id = str(kwargs.get("model_id", "eleven_multilingual_v2"))
-        stability = float(kwargs.get("stability", 0.5))
-        similarity_boost = float(kwargs.get("similarity_boost", 0.75))
-        style = float(kwargs.get("style", 0.0))
+        stability = float(kwargs.get("stability", 0.5))  # type: ignore[arg-type]
+        similarity_boost = float(kwargs.get("similarity_boost", 0.75))  # type: ignore[arg-type]
+        style = float(kwargs.get("style", 0.0))  # type: ignore[arg-type]
 
         client = ElevenLabs(api_key=api_key) if api_key else ElevenLabs()
 
@@ -268,14 +268,14 @@ class ElevenLabsProvider(TTSProvider):
 class PresetStore:
     """Load ``tts_preset_ref`` → provider kwargs from a JSON file."""
 
-    _DEFAULT_PRESET: dict = {"provider": "gtts", "lang": "vi"}
+    _DEFAULT_PRESET: dict[str, Any] = {"provider": "gtts", "lang": "vi"}
 
     def __init__(self, path: Path) -> None:
-        self._presets: dict[str, dict] = {}
+        self._presets: dict[str, dict[str, Any]] = {}
         if path.exists():
             self._presets = json.loads(path.read_text(encoding="utf-8"))
 
-    def get(self, ref: str) -> dict:
+    def get(self, ref: str) -> dict[str, Any]:
         return self._presets.get(ref, self._DEFAULT_PRESET)
 
 

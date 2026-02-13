@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from maker8.models.common import (
@@ -56,7 +58,7 @@ class RenderResult(BaseModel):
     dropbox: DropboxOutput = Field(default_factory=DropboxOutput)
     output_meta: OutputMeta = Field(default_factory=OutputMeta)
     publish_targets: list[PublishTarget] = Field(default_factory=list)
-    asset_report: list[dict] = Field(default_factory=list)
+    asset_report: list[dict[str, Any]] = Field(default_factory=list)
     engine_versions: EngineVersions = Field(default_factory=EngineVersions)
     error: ErrorInfo | None = None
 
@@ -72,5 +74,5 @@ class DLQPayload(BaseModel):
     failed_stage: str
     attempts: int
     last_error: ErrorInfo | None = None
-    dropbox: dict = Field(default_factory=dict)
+    dropbox: dict[str, Any] = Field(default_factory=dict)
     trace: Trace = Field(default_factory=Trace)

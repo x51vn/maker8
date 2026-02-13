@@ -23,7 +23,7 @@ class MirrorEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:mirror", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -43,7 +43,7 @@ class MirrorEffect(EffectPlugin):
         source_clip: VideoClip = ir
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
             frame = source_clip.get_frame(t)
             if horizontal:
                 frame = np.fliplr(frame)
