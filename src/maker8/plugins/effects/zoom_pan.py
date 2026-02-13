@@ -37,7 +37,7 @@ class ZoomPanEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         start_zoom = float(params.get("start_zoom", 1.0))
         end_zoom = float(params.get("end_zoom", 1.2))
@@ -48,7 +48,7 @@ class ZoomPanEffect(EffectPlugin):
         w, h = source_clip.size
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             progress = t / duration if duration > 0 else 0.0
             zoom = start_zoom + (end_zoom - start_zoom) * progress
 
@@ -75,7 +75,7 @@ class ZoomPanEffect(EffectPlugin):
 
             img = Image.fromarray(cropped)
             img = img.resize((w, h), Image.Resampling.LANCZOS)
-            return np.array(img)
+            return np.array(img)  # type: ignore[no-any-return]
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)

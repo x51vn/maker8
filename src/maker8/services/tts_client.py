@@ -83,7 +83,7 @@ def _get_audio_duration(path: Path) -> float:
     clip = AudioFileClip(str(path))
     dur = clip.duration
     clip.close()
-    return float(dur)  # type: ignore[no-any-return]
+    return float(dur)
 
 
 # ── gTTS provider (default, free) ───────────────────────────────────────────
