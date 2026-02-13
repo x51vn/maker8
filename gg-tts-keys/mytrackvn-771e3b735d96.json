@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "mytrackvn",
+  "private_key_id": "771e3b735d96c9a8e582258e70ae8f10110c4f8c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDCX6sdMcJYtTAp\n5ZjIefUy7jacQr5eHFwyVVuaMPl6DkOmX6G28zL/V1rtmOOigAk8CZkfIi4dJ/bK\nPEF38iEDuEbxQcKuFZl/sBtqZuZUUwAtHx/6nsdvAub9Bq6//aJ8Nv3kWqLIAwJL\noWVNlW+jzHTjJN5nU6/kIG8/W264EKX8QEnlLg5+jXPft5OGe9Mn8kbMO/NXXBcd\ntqPQ0VbAWTSyjUXNcFXnzRsF3KiNgD48YwxNvFOHbcKNJ5eFjL2986BoZt5tnFVv\nXoK46P7IcnPz3d0wCFZ7e32egH/F7cazE71H21NksCpoeLTSVDKh9Ynq+Yt6m8ZQ\nbZgZlPD7AgMBAAECggEACfEKt3uMDS13QS1VGyvhtrEoaeWgBwA8Vva2sLRAjlWc\ncC4D/2+A9D5rkCt5uR4DWubCxizhXuxkWwOp9ZCUz7PlLQHIC09fgoBnZpHMxhNY\ntvYYlKD6YlsrpVVqKre2T9QgOEXKfaBpxaSDoew6wY37jIKePXqyTGC8T+lFSHS6\nr+afpv5CE1jxkmVeyP4+5q4M7DEbYjgCEMfVTwkSp9dG7Q7EeGlFP4wSI/feMNx8\n8SktRRSJ1WRAIrARBF4AviHtbTXLT2MU3CfwUaKJHC/0xmkVdgHPX48dPSQDOiJP\nN3EqMBGCFyXKCGYYHkDRdd/k/SmFE5gX+wFjeWMuwQKBgQDqXSBwly1qnyOqg4DJ\nJL7RLUrGqVpCSZXTNa5JdNz80fNPldl8OAyqpvpR9ymPieFZrnCa0AMocnVP7nTQ\nOQnGZq/i4cXr+mMytKykoEupbXaeLUqBAQ33zPO1oaWY/b0A1JNZ0zro7GV04Kn3\nQ/LhhF9Z/ZSBPrg3Ib1t2I0TZwKBgQDUUW4WlaWFz+h+kNbG10Xf/8Zio1Zrwl11\n8kY1LQhiakdwsfULocgMVhtc6UbKJGiu98o9FH81Ujb01uSYhqEf9epEAczl1bas\nQfctZzZ6uP40miNBXrCkOo9bhQH53Sbk5TFyosdaiMwlels53R/2ymPeR+7zPLdL\nvPELfjstTQKBgCFLBXa5IyyIWuq4L61jWPAiPQMnv7i291+/uniY72PC94uQwAqT\nc8kyW1EViYPolGjHDRwQ/MHcMKogN9v0nlze7ZGPfSxer4TegcAJPXZeJIGn8XOO\nEMvpA54DzqCDOzxI9n3GMhIwsuD9oWeM8Y3z3g/MpDIQFN9QHbbjEnd1AoGAUcdn\nquVLEyaIu69YOtCSRnxDUpztXaZIz3RZHIRS9W1QRRUWeLuAzVehRIFJ1fR+Kd6h\nlDM/6C7Zoibfd+xrRV84M6ep32EY8nKaHW/i6RQ2Pdac+8HYMfmoXCz4HODU6Vdq\nW2hddv63+zuMxdXpSOqd2vFEFYZuZ4rIIZAmhQUCgYEAkHuiRTA//zH/x+G8m1ad\nR2m/+ZUL2PlYGcpHY0sKBfUooGrBWmYclYh1FZvLxnSv0MsnTsD7U63mEPKIl2GN\n++jeyaTISVrufUEwyUUwgme8whdb2AoxetrXCLW+6hMJIGbfEIctpWEhj+J2MCGN\nQqGhi0dLcaPUNlrSL38yUAY=\n-----END PRIVATE KEY-----\n",
+  "client_email": "mytrack@mytrackvn.iam.gserviceaccount.com",
+  "client_id": "117386410573917687944",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mytrack%40mytrackvn.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

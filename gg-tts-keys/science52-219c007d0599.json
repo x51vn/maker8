@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "science52",
+  "private_key_id": "5f02cac9f18f309021a59bfaf30c88bfa83358b5",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDjcgluEtFElE4Y\n22HKJ4nZXHDAQ+kt7YAiT3gnpx/UuYBu7gx1KyePXjo+giXzOXBu471gD0TzKSYL\nnJQ4eK9RbQSI+Wg2tGr6S60Pbso81O939eIbyixnaEau0dOk9s8B14tpjrXLIeKs\nm1aGqau8OgOuazCKoN1jmMuXmxEj+4zmXVS58bEZvWpFjn0e711dvMD8zgvFz/+x\nHGA7rmAdCGVVrE/m2D9lRU6jMfjGaYn5uttbIrXrDpEBXXN3ILUNkLLePjZfqZKp\nqAW2N+8CLcQjLDgTNMGCrGMdWvR1MVnqtx8Q9mdXZNfh8tgzk9TabqR3keRkjwBr\nGyYNJDazAgMBAAECggEATDOXrzZEwIpDhBZ0M+t9RsKuz+uwwv9wT456fiaDBp1D\nx2af692SenkiYHDwUAXtgmlwuC9FdYZSxc8m5aihbFFvFIki/jkCImuaRrJitXDN\n7k4F/DOHHvoTvFx2YS2De2WAwtPaWn022YeNvL452G1DcHtfHwL4SXcWtutwGbJ6\n9Z33vRtM8MwmKJQ1QSfp1CQj/uC9WHUGaD0WgIaTl3MxrLrwsHUWfIUGIwbkMB9p\nqiXUKiifYQpIfEn9UJyyOK+gJgcsCrEupuc54AO9ifNEK+6nO4ZBIasDmJAsQwYn\nXjo1IMEVbT72BI9hEFTkgU9ZYN1Bq1kPrNTz/K07kQKBgQD0YC4yZ56ISYUGTTJd\ngcF39yO7tNsv0xQlWoFdszEYHzARTE66IeATdKUXRBkH3P6f+zfmyRVdJ88YRQm5\ncGmRz97NA3uZxrMblu9Cq1kaE1O7IUpvxfn/i1QS+R0Lrs9shYfFORuOUGiD2Tpi\nT/bRYRalC8o48xp8jXcEp+B7yQKBgQDuQ7Fc1ocKxzri1ijHTaZ2rFTcENPI8QP9\nWQBjpZD+130p9aeIvdMwgNT6W8kwoP7iAEol+HH+cXOGCzIYOaR2LgPgE1yU53AZ\n3m6N0Mz5o77nJZiSm/VF7OWMh3y7F5JvvXkXSBJd1TVNr3cRlru/vl4cW0ZdDTl8\nCzKhdskkmwKBgQCDbQ6rUQrzpQaDwxSpMVWJXUK8eqG+8LhO9oPIjsyCepNxWiak\n9/74t6zp/Fex4OqXw5Xm6pIwzW4VUVvPfWNpZfAfNhZNN42v8taudlSvL2HCrD7K\nKiEvjBElOxCh7dvkM1Q3f2UQfrIW5sb9hJ/rL1nsXZDeW/AMuFAgEuEp8QKBgEQa\n6167H3ywOB/Q0XUut+9iERuaX78nTVmkkBzrnYeKtwdAZbQLdot9t+McS2TwEAsv\nxAIYgxUU/s2I87fC+kShoI/zWNpjUULDttwom/6blJzjvTnjBHgJYBAMRlYAReZU\nxYEnI8DYidT729AWQvJrCuGWIYXFmvHfDYjjuFkTAoGAZW3ZywFHkSui4bEbTM20\nDbz36OBNzl/f6w2p0Jmwf8fIV0pW5lCpOhla+ltDC1VQ44lBtmxWN9io0ajSDLkS\nXqQNuGUPLdprY4Wp/ioFabeiomzQei8Yer6acF3NMV2pSkROn7Ss9U5Z80pP+Tor\ndTYYNuHYXrSuTn0Z/ZJYQaA=\n-----END PRIVATE KEY-----\n",
+  "client_email": "x51news@science52.iam.gserviceaccount.com",
+  "client_id": "107376776744965703199",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/x51news%40science52.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

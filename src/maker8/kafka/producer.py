@@ -16,9 +16,22 @@ class KafkaProducer:
     """Thin wrapper around ``confluent_kafka.Producer``."""
 
     def __init__(self, settings: Settings) -> None:
-        self._producer = Producer(
-            {"bootstrap.servers": settings.kafka_bootstrap_servers}
-        )
+        # Build Kafka config
+        kafka_config = {
+            "bootstrap.servers": settings.kafka_bootstrap_servers,
+        }
+        
+        # Add SASL credentials if provided
+        if settings.kafka_security_protocol:
+            kafka_config["security.protocol"] = settings.kafka_security_protocol
+        if settings.kafka_sasl_mechanism:
+            kafka_config["sasl.mechanism"] = settings.kafka_sasl_mechanism
+        if settings.kafka_username:
+            kafka_config["sasl.username"] = settings.kafka_username
+        if settings.kafka_password:
+            kafka_config["sasl.password"] = settings.kafka_password
+        
+        self._producer = Producer(kafka_config)
 
     def send(self, topic: str, key: str, value: dict) -> None:
         """Serialise *value* as JSON and produce to *topic*."""

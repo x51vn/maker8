@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "plucky-command-371702",
+  "private_key_id": "81fa283c779e423028b3001a46fb7dc7da33f7d1",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCHSkpvswTsF9D3\nGeEVN2LGHucowytcUTlePIHQ0fpDobXlXpV3OvSE9Yuq71bPlrbtUjFreV5mxCl2\nRLzNBmRUXY5HTwORM+Q+JC9wAeNIw3BgfObetCwMm1Lrz7PHhXZfup02lcMXqfcd\nsLC6NEEQpcsVjxSceeQpNAj84TQTJO5K15P9k426ECkD1ReDRECoNwYLwvS/agjE\n1KVcFvtfXhZsB3tx80CuyaBeY4KQq3kAkWdhb5ool6Xkti5f5MmjMavuAiKhDRVE\nfGPNvwxiGW9yLyZSf1ev9i2K6mJ8twLYutG6E4qjX142nE21yLlsSIfdhYKcD7iu\nrHHZQLoVAgMBAAECggEAI/RZbfAMqdX2ggUNrX7HsFF8K3ga6PDpJyM7eMylDx5F\n4gxN+p7fZwp+sNHkp0ytlsqWObLKpNMTFcxUxMQjG8y1SDw2fXtl+CHTvZey2J6g\nGfR3ws3tOvh4hBTx+V99wxksONp6O6q+8tQHU6UZeZwmKbeZybAXM+ARV2teVIvE\nIQIGHpAXD2+fUeHQnghoDkL5NV+hC+7R1YILmZQLhUJykF1mFjUJ6lNPUvnJEeZd\nH6SM7VtRN2p3cGa9lsVUy4mzW7bu3tX4dei+4UJc1AxEBBAjo1VLdD0JHkw/hV7y\nLhk8aKhL8sMbTsqUdoBa21kCh4qk/kQLnO2nn2URrQKBgQC7J+togxBtPR+QfJDk\nrPpLgmJ79qY5w0Oobl0SSmgZ4p1rbKvVojf4E6LDVPxTYIjwIta6P8i3Q/y+0wNz\nmexDaDLivhoN1+Pw53gw0DgUEE2HlwHgwkLDK0N17InjopAjBOb9mTdt//ReYYdI\nBUdN7i0Zi497qlb6xH9jE/HNswKBgQC5Dkit0Hb2VyA1Bz4MH8AlLASNQJAPySnc\n/TTIreMSrZDqc+a3WjAD/Tcnfnko31UCGPQQkRN0P4xLblL4bNOun426bIhfQCzP\n8Cwufhqvu72HoujXRneJwFnrcJ2knh4Az0tVOZYu6E7Z4gSsiw6XdaSVGc+gmfUn\nUQfZJpJFFwKBgDS3fdumb04V1XpBXB7NioMSauM4CoJiugALdjPcuY3xAx5rMcuv\nMcyy2zniCmEB5BCf/5Peu47Dm8G0dlhtlts10n+DxJr5oL8OtBAr1l/wZ6Y1ptXE\nYkHPQeVJh12TQL5cdyQfsDlPy2l6Vzy2H+uXlySG5xeSV4WzK56g0495AoGBAJz+\neDw1YedFLQav2TzR5uHiQQ5Qmqc5wzE/AvvJQZ5D73Bn2XDtq1SHCraPvlwlc+nu\nn4g6e+WgT/ZiZzNoqAE6TTO+BcfBGwNhvynGQ/+YZ4dddunDV4Be1io+hQ72MYAA\nXOm1jCrJXLPN4qc65asq2/C+T/3w/yFWxjC8X1ULAoGBAKqCrUM2wOp3pA2hgCzs\nCj0DRTuSKKoSeRlTw29jt1Gia3B0f9N+5fEyXEBX/EIEcPZxmTbv3wGCxDTJp3Uh\nDba+XSnC3W/ccF88m/y7TvdWE3UNLzTaiqfLWpZFlx2govU2lkTU7JPXn90abd4O\nTSZMDsFu5K5yVbN+SAtVP+6q\n-----END PRIVATE KEY-----\n",
+  "client_email": "x51labs-tts@plucky-command-371702.iam.gserviceaccount.com",
+  "client_id": "112875258110152946179",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/x51labs-tts%40plucky-command-371702.iam.gserviceaccount.com"
+}
