@@ -41,7 +41,7 @@ def main():
         "client_id": app_key,
         "response_type": "code",
         "token_access_type": "offline",  # Get refresh token
-        "redirect_uri": "http://localhost:8080",
+        #"redirect_uri": "http://localhost:8080",
     }
 
     full_auth_url = f"{auth_url}?{urlencode(params)}"
