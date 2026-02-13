@@ -19,6 +19,7 @@ from moviepy import (
     concatenate_videoclips,
 )
 from moviepy.audio.fx import AudioLoop, MultiplyVolume
+from moviepy.video.fx import FadeIn, FadeOut
 
 from maker8.models.common import OutputMeta
 from maker8.models.spec import AudioTrack, Canvas, Defaults, RenderSpec, Scene
@@ -219,10 +220,10 @@ def _concatenate_with_transitions(
         c = clip.with_start(starts[i])
         # Fade-out for current scene tail
         if transition_durs[i] > 0:
-            c = c.fadeout(transition_durs[i])
+            c = c.with_effects([FadeOut(transition_durs[i])])
         # Fade-in from previous scene overlap
         if i > 0 and transition_durs[i - 1] > 0:
-            c = c.fadein(transition_durs[i - 1])
+            c = c.with_effects([FadeIn(transition_durs[i - 1])])
         positioned.append(c)
 
     total_dur = starts[-1] + clips[-1].duration
