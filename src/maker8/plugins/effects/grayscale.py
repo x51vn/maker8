@@ -49,16 +49,16 @@ class GrayscaleEffect(EffectPlugin):
         # ITU-R BT.601 luma weights
         weights = np.array([0.2989, 0.5870, 0.1140], dtype=np.float32)
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             frame = source_clip.get_frame(t).astype(np.float32)
             gray = np.dot(frame[..., :3], weights)
             gray_rgb = np.stack([gray, gray, gray], axis=-1)
 
             if intensity >= 1.0:
-                return gray_rgb.astype(np.uint8)
+                return gray_rgb.astype(np.uint8)  # type: ignore[no-any-return]
 
             blended = frame * (1.0 - intensity) + gray_rgb * intensity
-            return np.clip(blended, 0, 255).astype(np.uint8)
+            return np.clip(blended, 0, 255).astype(np.uint8)  # type: ignore[no-any-return]
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)

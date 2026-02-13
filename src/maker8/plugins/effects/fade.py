@@ -29,7 +29,7 @@ class FadeEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         fade_in = float(params.get("fade_in_duration", 0.5))
         fade_out = float(params.get("fade_out_duration", 0.5))
