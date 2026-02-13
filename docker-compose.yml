@@ -20,8 +20,10 @@ services:
       CLUSTER_ID: "maker8-local-dev-cluster"
 
   # ── Render Worker ──────────────────────────────────────────────
-  render-worker:
-    build: .
+  maker8:
+    image: ${MAKER8_IMAGE:-docker.x51.vn/x-ai/maker8:latest}
+    container_name: maker8-render-worker
+    restart: unless-stopped
     depends_on:
       - kafka
     env_file:
@@ -39,6 +41,28 @@ services:
       MAKER8_LOG_FORMAT: json
     volumes:
       - render-data:/data/maker8
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 2G
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/tmp/maker8_healthy') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      app: "maker8"
+      service: "render-worker"
+      version: "${MAKER8_VERSION:-latest}"
 
 volumes:
   render-data:
