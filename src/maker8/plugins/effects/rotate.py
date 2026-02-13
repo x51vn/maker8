@@ -36,7 +36,7 @@ class RotateEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         start_angle = float(params.get("start_angle", 0))
         end_angle = float(params.get("end_angle", 360))
@@ -46,7 +46,7 @@ class RotateEffect(EffectPlugin):
         w, h = source_clip.size
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:
             progress = t / duration if duration > 0 else 0.0
             angle = start_angle + (end_angle - start_angle) * progress
 

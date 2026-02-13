@@ -33,6 +33,7 @@ def _load_font(ref: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageF
         return _font_cache[key]
 
     path = _BUILTIN_FONTS.get(ref)
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont
     if path and Path(path).exists():
         font = ImageFont.truetype(path, size)
     else:
@@ -83,7 +84,7 @@ def render_text_image(
     style: TextStyle,
     text_align: str = "left",
     valign: str = "top",
-) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
+) -> np.ndarray[Any, Any]:
     """Return an RGBA ``numpy`` array of size ``(height, width, 4)``."""
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
