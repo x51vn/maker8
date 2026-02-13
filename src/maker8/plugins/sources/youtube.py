@@ -20,7 +20,7 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="source/youtube", version="1.0.0", deterministic=True)
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "kind": "youtube",
             "url": {"type": "string"},
@@ -32,7 +32,7 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
 
     # ── Resolve ──────────────────────────────────────────────────────
 
-    def resolve(self, asset_id: str, source: dict) -> ResolvedAssetPlan:
+    def resolve(self, asset_id: str, source: dict[str, Any]) -> ResolvedAssetPlan:
         url = source["url"]
         options = source.get("options", {})
         fmt = options.get("format", _DEFAULT_FORMAT)

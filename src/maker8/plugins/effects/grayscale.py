@@ -22,7 +22,7 @@ class GrayscaleEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:grayscale", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -36,7 +36,7 @@ class GrayscaleEffect(EffectPlugin):
             },
         }
 
-    def apply(self, ctx: Any, ir: Any, instance: dict) -> Any:
+    def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         intensity = float(params.get("intensity", 1.0))
 
@@ -49,7 +49,7 @@ class GrayscaleEffect(EffectPlugin):
         # ITU-R BT.601 luma weights
         weights = np.array([0.2989, 0.5870, 0.1140], dtype=np.float32)
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
             frame = source_clip.get_frame(t).astype(np.float32)
             gray = np.dot(frame[..., :3], weights)
             gray_rgb = np.stack([gray, gray, gray], axis=-1)

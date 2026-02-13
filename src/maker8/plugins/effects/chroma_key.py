@@ -29,7 +29,7 @@ class ChromaKeyEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:chroma_key", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -53,7 +53,7 @@ class ChromaKeyEffect(EffectPlugin):
 
         soft_range = max(tolerance * softness, 1.0)
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
             frame = source_clip.get_frame(t).astype(np.float32)
 
             # Euclidean distance from key colour per pixel
@@ -68,7 +68,7 @@ class ChromaKeyEffect(EffectPlugin):
             result[..., 1] *= alpha
             result[..., 2] *= alpha
 
-            return np.clip(result, 0, 255).astype(np.uint8)
+            return np.clip(result, 0, 255).astype(np.uint8)  # type: ignore[no-any-return]
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)

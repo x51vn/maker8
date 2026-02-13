@@ -26,7 +26,7 @@ class RotateEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:rotate", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -54,7 +54,7 @@ class RotateEffect(EffectPlugin):
             img = Image.fromarray(frame)
             rotated = img.rotate(
                 -angle,  # PIL positive = counter-clockwise; negate for intuitive CW
-                resample=Image.BICUBIC,
+                resample=Image.Resampling.BICUBIC,
                 expand=expand,
                 fillcolor=(0, 0, 0),
             )
@@ -63,7 +63,7 @@ class RotateEffect(EffectPlugin):
                 return np.array(rotated)
 
             # Resize back to original dimensions when expand=True
-            rotated = rotated.resize((w, h), Image.LANCZOS)
+            rotated = rotated.resize((w, h), Image.Resampling.LANCZOS)
             return np.array(rotated)
 
         result = VideoClip(_make_frame, duration=duration)
