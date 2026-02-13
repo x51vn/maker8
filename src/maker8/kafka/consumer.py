@@ -21,14 +21,26 @@ class RenderConsumer:
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._consumer = Consumer(
-            {
-                "bootstrap.servers": settings.kafka_bootstrap_servers,
-                "group.id": settings.kafka_group_id,
-                "auto.offset.reset": "earliest",
-                "enable.auto.commit": False,
-            }
-        )
+        
+        # Build Kafka config
+        kafka_config = {
+            "bootstrap.servers": settings.kafka_bootstrap_servers,
+            "group.id": settings.kafka_group_id,
+            "auto.offset.reset": "earliest",
+            "enable.auto.commit": False,
+        }
+        
+        # Add SASL credentials if provided
+        if settings.kafka_security_protocol:
+            kafka_config["security.protocol"] = settings.kafka_security_protocol
+        if settings.kafka_sasl_mechanism:
+            kafka_config["sasl.mechanism"] = settings.kafka_sasl_mechanism
+        if settings.kafka_username:
+            kafka_config["sasl.username"] = settings.kafka_username
+        if settings.kafka_password:
+            kafka_config["sasl.password"] = settings.kafka_password
+        
+        self._consumer = Consumer(kafka_config)
         self._running = False
 
     # ── Main loop ────────────────────────────────────────────────────
