@@ -30,6 +30,7 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from maker8.config import Settings
 from maker8.services.key_ring import KeyRing
