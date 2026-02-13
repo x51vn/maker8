@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     kafka_render_request_topic: str = "video.render.request.v1"
     kafka_render_result_topic: str = "video.render.result.v1"
     kafka_render_dlq_topic: str = "video.render.dlq.v1"
+    # SASL authentication (optional, leave empty if not required)
+    kafka_username: str = ""
+    kafka_password: str = ""
+    kafka_security_protocol: str = ""  # e.g., "SASL_PLAINTEXT", "SASL_SSL"
+    kafka_sasl_mechanism: str = ""  # e.g., "PLAIN"
 
     # ── Dropbox ──────────────────────────────────────────────────────
     dropbox_app_key: str = ""
@@ -39,6 +44,7 @@ class Settings(BaseSettings):
     # ── Google Cloud TTS ─────────────────────────────────────────────
     # Uses Application Default Credentials (ADC) or GOOGLE_APPLICATION_CREDENTIALS
     google_cloud_tts_enabled: bool = False
+    google_application_credentials: str = ""  # Path to GCP service account JSON
 
     # ── ElevenLabs TTS ───────────────────────────────────────────────
     elevenlabs_api_key: str = ""
