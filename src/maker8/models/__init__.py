@@ -1,11 +1,14 @@
 """Pydantic v2 models – public re-exports."""
 
+from __future__ import annotations
+
 from maker8.models.common import (
     DropboxFileRef,
     EngineVersions,
     ErrorInfo,
     JobStatus,
     OutputMeta,
+    PublishStage,
     PublishStatus,
     PublishTarget,
     RenderStage,
@@ -22,6 +25,7 @@ __all__ = [
     "ErrorInfo",
     "JobStatus",
     "OutputMeta",
+    "PublishStage",
     "PublishStatus",
     "PublishTarget",
     "RenderStage",

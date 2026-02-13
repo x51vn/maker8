@@ -9,6 +9,7 @@ from __future__ import annotations
 from maker8.models.common import RenderStage
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
+from maker8.plugins.registry import PluginRegistry
 from maker8.rendering.composer import RenderInput, compose_video
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
@@ -17,6 +18,9 @@ log = get_logger(__name__)
 
 
 class RenderStageImpl(Stage):
+    def __init__(self, registry: PluginRegistry) -> None:
+        self._registry = registry
+
     @property
     def name(self) -> RenderStage:
         return RenderStage.RENDER
@@ -24,7 +28,7 @@ class RenderStageImpl(Stage):
     def execute(self, ctx: PipelineContext) -> None:
         ctx.ensure_dirs()
 
-        # Build asset_paths: prefer normalised ➜ downloaded
+        # Build asset_paths: prefer normalised → downloaded
         asset_paths = {
             aid: ctx.asset_path(aid)
             for aid in ctx.downloaded_assets
@@ -37,12 +41,25 @@ class RenderStageImpl(Stage):
             for sid, r in ctx.tts_results.items()
         }
 
+        # Resolve effect plugins referenced by scenes
+        effects_map = {}
+        for scene in ctx.render_spec.scenes:
+            for ei in scene.effects:
+                if ei.plugin_id not in effects_map:
+                    try:
+                        effects_map[ei.plugin_id] = self._registry.get_effect(
+                            ei.plugin_id
+                        )
+                    except KeyError:
+                        log.warning("render.effect_not_found", plugin_id=ei.plugin_id)
+
         ri = RenderInput(
             spec=ctx.render_spec,
             asset_paths=asset_paths,
             tts_audio=tts_audio,
             output_dir=ctx.output_dir,
             job_id=ctx.job_id,
+            effects_map=effects_map,
         )
 
         try:

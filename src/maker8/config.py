@@ -13,7 +13,12 @@ class Settings(BaseSettings):
     Every field can be overridden via env var prefixed with ``MAKER8_``.
     """
 
-    model_config = SettingsConfigDict(env_prefix="MAKER8_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="MAKER8_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # ── Kafka ────────────────────────────────────────────────────────
     kafka_bootstrap_servers: str = "localhost:9092"
@@ -30,6 +35,13 @@ class Settings(BaseSettings):
     # ── TTS ───────────────────────────────────────────────────────────
     tts_provider: str = "gtts"
     tts_presets_path: Path = Path("config/tts_presets.json")
+
+    # ── Google Cloud TTS ─────────────────────────────────────────────
+    # Uses Application Default Credentials (ADC) or GOOGLE_APPLICATION_CREDENTIALS
+    google_cloud_tts_enabled: bool = False
+
+    # ── ElevenLabs TTS ───────────────────────────────────────────────
+    elevenlabs_api_key: str = ""
 
     # ── Work directory ───────────────────────────────────────────────
     work_dir: Path = Path("/tmp/maker8")

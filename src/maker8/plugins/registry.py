@@ -50,9 +50,22 @@ class PluginRegistry:
     # ── Bootstrap ────────────────────────────────────────────────────
 
     def load_defaults(self) -> None:
-        """Register the built-in source connectors shipped with Maker8."""
+        """Register the built-in source connectors and effects shipped with Maker8."""
+        from maker8.plugins.effects.blur import BlurEffect
+        from maker8.plugins.effects.brightness_contrast import BrightnessContrastEffect
+        from maker8.plugins.effects.fade import FadeEffect
+        from maker8.plugins.effects.slide import SlideEffect
+        from maker8.plugins.effects.zoom_pan import ZoomPanEffect
         from maker8.plugins.sources.http_source import HttpSourceConnector
         from maker8.plugins.sources.youtube import YouTubeSourceConnector
 
+        # Sources
         self.register_source("youtube", YouTubeSourceConnector())
         self.register_source("http", HttpSourceConnector())
+
+        # Effects
+        self.register_effect("effect:fade", FadeEffect())
+        self.register_effect("effect:zoom_pan", ZoomPanEffect())
+        self.register_effect("effect:blur", BlurEffect())
+        self.register_effect("effect:brightness_contrast", BrightnessContrastEffect())
+        self.register_effect("effect:slide", SlideEffect())

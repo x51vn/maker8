@@ -13,6 +13,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from maker8.models.spec import TextStyle
+from maker8.utils.color import hex_to_rgba
 
 # ── Font cache ───────────────────────────────────────────────────────────────
 
@@ -43,18 +44,6 @@ def _load_font(ref: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageF
     _font_cache[key] = font  # type: ignore[assignment]
     return font
 
-
-# ── Colour helpers ───────────────────────────────────────────────────────────
-
-
-def _hex_to_rgba(hex_color: str) -> tuple[int, int, int, int]:
-    """``"#RRGGBB"`` or ``"#RRGGBBAA"`` → (R, G, B, A) ints."""
-    h = hex_color.lstrip("#")
-    if len(h) == 6:
-        return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)
-    if len(h) == 8:
-        return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), int(h[6:8], 16))
-    return (255, 255, 255, 255)
 
 
 # ── Text wrapping ────────────────────────────────────────────────────────────
@@ -99,8 +88,8 @@ def render_text_image(
     draw = ImageDraw.Draw(img)
 
     font = _load_font(style.font_ref, style.size)
-    fill = _hex_to_rgba(style.color)
-    stroke_fill = _hex_to_rgba(style.stroke_color) if style.stroke_color else None
+    fill = hex_to_rgba(style.color)
+    stroke_fill = hex_to_rgba(style.stroke_color) if style.stroke_color else None
 
     # Wrap
     if style.wrap:

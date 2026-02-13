@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from maker8.models.common import EngineVersions, JobStatus, RenderStage
+from maker8.models.common import JobStatus, RenderStage
 from maker8.models.contracts import DropboxOutput, RenderResult
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.kafka.producer import KafkaProducer
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
+from maker8.utils.versions import collect_engine_versions
 
 log = get_logger(__name__)
 
@@ -38,8 +39,6 @@ class EmitResultStage(Stage):
 
     @staticmethod
     def _build_result(ctx: PipelineContext) -> RenderResult:
-        from maker8.pipeline.orchestrator import _collect_engine_versions
-
         dropbox = DropboxOutput()
         if ctx.dropbox_video_ref:
             dropbox.video = ctx.dropbox_video_ref
@@ -53,5 +52,5 @@ class EmitResultStage(Stage):
             dropbox=dropbox,
             output_meta=ctx.output_meta,
             publish_targets=ctx.render_spec.publish.targets,
-            engine_versions=_collect_engine_versions(),
+            engine_versions=collect_engine_versions(),
         )

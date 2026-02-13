@@ -8,5 +8,41 @@
     "provider": "gtts",
     "lang": "en",
     "slow": false
+  },
+
+  "tts:vi:google_cloud": {
+    "provider": "google_cloud",
+    "lang": "vi-VN",
+    "voice_name": "vi-VN-Neural2-A",
+    "speaking_rate": 1.0,
+    "pitch": 0.0,
+    "audio_encoding": "MP3"
+  },
+  "tts:en:google_cloud": {
+    "provider": "google_cloud",
+    "lang": "en-US",
+    "voice_name": "en-US-Neural2-J",
+    "speaking_rate": 1.0,
+    "pitch": 0.0,
+    "audio_encoding": "MP3"
+  },
+
+  "tts:vi:elevenlabs": {
+    "provider": "elevenlabs",
+    "lang": "vi",
+    "voice_id": "21m00Tcm4TlvDq8ikWAM",
+    "model_id": "eleven_multilingual_v2",
+    "stability": 0.5,
+    "similarity_boost": 0.75,
+    "style": 0.0
+  },
+  "tts:en:elevenlabs": {
+    "provider": "elevenlabs",
+    "lang": "en",
+    "voice_id": "21m00Tcm4TlvDq8ikWAM",
+    "model_id": "eleven_multilingual_v2",
+    "stability": 0.5,
+    "similarity_boost": 0.75,
+    "style": 0.0
   }
 }

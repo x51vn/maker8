@@ -10,7 +10,6 @@ Start with::
 from __future__ import annotations
 
 import signal
-import sys
 
 from maker8.config import get_settings
 from maker8.kafka.consumer import RenderConsumer

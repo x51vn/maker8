@@ -1,4 +1,4 @@
-"""Scene-based video composition using MoviePy.
+"""Scene-based video composition using MoviePy 2.x.
 
 ``compose_video()`` is the single public entry point.  It receives a
 ``RenderInput`` dataclass (no dependency on ``pipeline.context``) and
@@ -10,14 +10,21 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from moviepy.audio.AudioClip import CompositeAudioClip
-from moviepy.audio.fx.all import audio_loop, volumex
-from moviepy.audio.io.AudioFileClip import AudioFileClip
-from moviepy.editor import ColorClip, CompositeVideoClip, VideoClip
+from moviepy import (
+    AudioFileClip,
+    ColorClip,
+    CompositeAudioClip,
+    CompositeVideoClip,
+    VideoClip,
+    concatenate_videoclips,
+)
+from moviepy.audio.fx import AudioLoop, MultiplyVolume
 
 from maker8.models.common import OutputMeta
-from maker8.models.spec import Canvas, Defaults, RenderSpec, Scene
+from maker8.models.spec import AudioTrack, Canvas, Defaults, RenderSpec, Scene
+from maker8.plugins.base import EffectPlugin
 from maker8.rendering.layers import build_layer_clip
+from maker8.utils.color import hex_to_rgb
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
@@ -35,6 +42,7 @@ class RenderInput:
     tts_audio: dict[str, tuple[Path, float]] = field(default_factory=dict)  # scene_id → (path, dur)
     output_dir: Path = Path("/tmp")
     job_id: str = ""
+    effects_map: dict[str, EffectPlugin] = field(default_factory=dict)
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -72,6 +80,7 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
         bitrate=output_cfg.bitrate,
         preset=output_cfg.preset,
         ffmpeg_params=["-pix_fmt", output_cfg.pix_fmt],
+        audio_bitrate=output_cfg.audio_bitrate,
         logger=None,
     )
 
@@ -117,8 +126,8 @@ def _build_scene(
     # ── Background colour clip ───────────────────────────────────────
     bg = ColorClip(
         size=(canvas.w, canvas.h),
-        color=_hex_to_rgb(canvas.bg),
-    ).set_duration(duration)
+        color=hex_to_rgb(canvas.bg),
+    ).with_duration(duration)
 
     # ── Visual layers ────────────────────────────────────────────────
     layer_clips: list[VideoClip] = [bg]
@@ -128,7 +137,7 @@ def _build_scene(
             layer_clips.append(lc)
 
     composite = CompositeVideoClip(layer_clips, size=(canvas.w, canvas.h))
-    composite = composite.set_duration(duration)
+    composite = composite.with_duration(duration)
 
     # ── Audio ────────────────────────────────────────────────────────
     audio_clips: list[AudioFileClip] = []
@@ -136,7 +145,7 @@ def _build_scene(
     if tts_entry:
         narr_path, _ = tts_entry
         narr = AudioFileClip(str(narr_path))
-        narr = narr.set_start(timing.head_pad_sec)
+        narr = narr.with_start(timing.head_pad_sec)
         audio_clips.append(narr)
 
     for track in scene.audio_tracks:
@@ -145,7 +154,13 @@ def _build_scene(
             audio_clips.append(acl)
 
     if audio_clips:
-        composite = composite.set_audio(CompositeAudioClip(audio_clips))
+        composite = composite.with_audio(CompositeAudioClip(audio_clips))
+
+    # ── Effects plugins ────────────────────────────────────────────────
+    for effect_inst in scene.effects:
+        plugin = ri.effects_map.get(effect_inst.plugin_id)
+        if plugin:
+            composite = plugin.apply(None, composite, effect_inst.model_dump())
 
     return composite
 
@@ -154,28 +169,25 @@ def _build_scene(
 
 
 def _build_audio_track(
-    track: object,  # AudioTrack (imported via spec but kept loose to avoid cycle)
+    track: AudioTrack,
     asset_paths: dict[str, Path],
     scene_duration: float,
 ) -> AudioFileClip | None:
-    asset_ref: str = getattr(track, "asset_ref", "")
-    if asset_ref not in asset_paths:
+    if track.asset_ref not in asset_paths:
         return None
 
-    clip = AudioFileClip(str(asset_paths[asset_ref]))
+    clip = AudioFileClip(str(asset_paths[track.asset_ref]))
 
-    trim = getattr(track, "trim", None)
-    if trim:
-        t_start = getattr(trim, "in_", 0)
-        t_end = getattr(trim, "out", 0) or clip.duration
-        clip = clip.subclip(t_start, min(t_end, clip.duration))
+    if track.trim:
+        t_start = track.trim.in_
+        t_end = track.trim.out or clip.duration
+        clip = clip.subclipped(t_start, min(t_end, clip.duration))
 
-    vol = getattr(track, "volume", 1.0)
-    if vol != 1.0:
-        clip = volumex(clip, vol)
+    if track.volume != 1.0:
+        clip = clip.with_effects([MultiplyVolume(track.volume)])
 
-    if getattr(track, "loop", False):
-        clip = audio_loop(clip, duration=scene_duration)
+    if track.loop:
+        clip = clip.with_effects([AudioLoop(duration=scene_duration)])
 
     return clip
 
@@ -190,12 +202,10 @@ def _concatenate_with_transitions(
 ) -> VideoClip:
     """Concatenate *clips*, overlapping by the transition duration."""
     if not clips:
-        return ColorClip(size=(canvas.w, canvas.h), color=(0, 0, 0)).set_duration(0)
+        return ColorClip(size=(canvas.w, canvas.h), color=(0, 0, 0)).with_duration(0)
 
     has_transitions = any(d > 0 for d in transition_durs)
     if not has_transitions:
-        from moviepy.editor import concatenate_videoclips
-
         return concatenate_videoclips(clips, method="compose")
 
     # Calculate start times accounting for overlap
@@ -206,7 +216,7 @@ def _concatenate_with_transitions(
 
     positioned: list[VideoClip] = []
     for i, clip in enumerate(clips):
-        c = clip.set_start(starts[i])
+        c = clip.with_start(starts[i])
         # Crossfade-out for current scene
         if transition_durs[i] > 0:
             c = c.crossfadeout(transition_durs[i])
@@ -216,12 +226,5 @@ def _concatenate_with_transitions(
         positioned.append(c)
 
     total_dur = starts[-1] + clips[-1].duration
-    return CompositeVideoClip(positioned, size=(canvas.w, canvas.h)).set_duration(total_dur)
+    return CompositeVideoClip(positioned, size=(canvas.w, canvas.h)).with_duration(total_dur)
 
-
-# ── Colour util ──────────────────────────────────────────────────────────────
-
-
-def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
-    h = hex_color.lstrip("#")
-    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))

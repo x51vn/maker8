@@ -24,13 +24,17 @@ services:
     build: .
     depends_on:
       - kafka
+    env_file:
+      - .env
     environment:
       MAKER8_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       MAKER8_KAFKA_GROUP_ID: maker8-render
       MAKER8_DROPBOX_APP_KEY: ${DROPBOX_APP_KEY:-}
       MAKER8_DROPBOX_APP_SECRET: ${DROPBOX_APP_SECRET:-}
       MAKER8_DROPBOX_REFRESH_TOKEN: ${DROPBOX_REFRESH_TOKEN:-}
-      MAKER8_TTS_PROVIDER: gtts
+      MAKER8_TTS_PROVIDER: ${TTS_PROVIDER:-gtts}
+      MAKER8_ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      MAKER8_GOOGLE_CLOUD_TTS_ENABLED: ${GOOGLE_CLOUD_TTS_ENABLED:-false}
       MAKER8_LOG_LEVEL: INFO
       MAKER8_LOG_FORMAT: json
     volumes:

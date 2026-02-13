@@ -57,7 +57,7 @@ class NormalizeStage(Stage):
             str(dest),
         ]
         try:
-            subprocess.run(cmd, check=True, capture_output=True, timeout=600)
+            subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=600)
         except subprocess.CalledProcessError as exc:
             raise StageError(
                 RenderStage.NORMALIZE, "FFMPEG_ERROR",
@@ -79,7 +79,7 @@ class NormalizeStage(Stage):
             str(dest),
         ]
         try:
-            subprocess.run(cmd, check=True, capture_output=True, timeout=120)
+            subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
         except subprocess.CalledProcessError as exc:
             raise StageError(
                 RenderStage.NORMALIZE, "FFMPEG_ERROR",

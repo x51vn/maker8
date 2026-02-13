@@ -7,12 +7,10 @@ for every inbound Kafka message.
 from __future__ import annotations
 
 import shutil
-import subprocess
 
 from maker8.config import Settings
 from maker8.kafka.producer import KafkaProducer
 from maker8.models.common import (
-    EngineVersions,
     ErrorInfo,
     JobStatus,
     RenderStage,
@@ -33,6 +31,7 @@ from maker8.retry import RetryPolicy, StageError
 from maker8.services.dropbox_client import DropboxClient
 from maker8.services.tts_client import TTSService
 from maker8.utils.logging import get_logger
+from maker8.utils.versions import collect_engine_versions
 
 log = get_logger(__name__)
 
@@ -63,7 +62,7 @@ class Orchestrator:
             DownloadStage(registry),
             NormalizeStage(),
             TTSStage(tts_service),
-            RenderStageImpl(),
+            RenderStageImpl(registry),
             UploadDropboxStage(dbx_client),
             EmitResultStage(producer, settings.kafka_render_result_topic),
         ]
@@ -119,6 +118,7 @@ class Orchestrator:
                 return  # success
             except StageError as exc:
                 last_exc = exc
+                ctx.attempt = attempt
                 if not policy.is_retryable(stage.name) or not exc.retryable:
                     raise
                 if attempt >= policy.max_attempts:
@@ -148,7 +148,7 @@ class Orchestrator:
                 status=JobStatus.FAILED,
                 job_key=ctx.job_key,
                 output_meta=ctx.output_meta,
-                engine_versions=_collect_engine_versions(),
+                engine_versions=collect_engine_versions(),
                 error=ErrorInfo(
                     code=exc.code,
                     stage=exc.stage.value,
@@ -172,7 +172,7 @@ class Orchestrator:
                 job_id=ctx.job_id,
                 job_key=ctx.job_key,
                 failed_stage=exc.stage.value,
-                attempts=self._retry_policy.max_attempts,
+                attempts=ctx.attempt,
                 last_error=ErrorInfo(
                     code=exc.code,
                     stage=exc.stage.value,
@@ -203,43 +203,3 @@ class Orchestrator:
                 shutil.rmtree(ctx.work_dir)
         except Exception:
             log.exception("orchestrator.cleanup_error", work_dir=str(ctx.work_dir))
-
-
-# ── Shared helper (also used by upload + emit stages) ────────────────────────
-
-
-def _collect_engine_versions() -> EngineVersions:
-    """Detect installed versions of MoviePy, FFmpeg, and yt-dlp."""
-    versions = EngineVersions()
-
-    try:
-        import moviepy
-
-        versions.moviepy = getattr(moviepy, "__version__", "unknown")
-    except ImportError:
-        pass
-
-    try:
-        out = subprocess.run(
-            ["ffmpeg", "-version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        first_line = out.stdout.split("\n", 1)[0]
-        versions.ffmpeg = first_line.split(" ")[2] if len(first_line.split(" ")) > 2 else first_line
-    except Exception:
-        pass
-
-    try:
-        out = subprocess.run(
-            ["yt-dlp", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        versions.youtube_dlp = out.stdout.strip()
-    except Exception:
-        pass
-
-    return versions

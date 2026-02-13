@@ -1,4 +1,4 @@
-"""Convert scene layer definitions into MoviePy clips.
+"""Convert scene layer definitions into MoviePy 2.x clips.
 
 Every public function here returns a ``VideoClip`` (or ``None``) that is
 ready to be composited.  This module must NOT import from ``pipeline/``.
@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
-from moviepy.editor import ImageClip, VideoFileClip
+from moviepy import ImageClip, VideoFileClip
 
 from maker8.models.spec import Canvas, Layer, TextStyle
 from maker8.rendering.text import render_text_image
@@ -51,14 +50,14 @@ def _build_video(
     if layer.trim:
         t_start = layer.trim.in_
         t_end = layer.trim.out if layer.trim.out > 0 else clip.duration
-        clip = clip.subclip(t_start, min(t_end, clip.duration))
+        clip = clip.subclipped(t_start, min(t_end, clip.duration))
 
     # Fit / resize
     clip = _apply_fit(clip, layer)
 
     # Clamp to scene duration
     if clip.duration > duration:
-        clip = clip.subclip(0, duration)
+        clip = clip.subclipped(0, duration)
 
     clip = _apply_geometry(clip, layer)
     return clip
@@ -77,7 +76,7 @@ def _build_image(
 
     clip = ImageClip(str(asset_paths[layer.asset_ref]))
     clip = _apply_fit(clip, layer)
-    clip = clip.set_duration(duration)
+    clip = clip.with_duration(duration)
     clip = _apply_geometry(clip, layer)
     return clip
 
@@ -102,7 +101,7 @@ def _build_text(layer: Layer, duration: float) -> ImageClip | None:
         valign=layer.valign or "top",
     )
 
-    clip = ImageClip(arr, ismask=False).set_duration(duration)
+    clip = ImageClip(arr, is_mask=False).with_duration(duration)
     clip = _apply_geometry(clip, layer)
     return clip
 
@@ -123,28 +122,28 @@ def _apply_fit(clip: VideoFileClip | ImageClip, layer: Layer) -> VideoFileClip |
 
     if fit == "cover":
         if clip_ratio > target_ratio:
-            clip = clip.resize(height=rh)
+            clip = clip.resized(height=rh)
         else:
-            clip = clip.resize(width=rw)
+            clip = clip.resized(width=rw)
         # Centre-crop to rect
         cw2, ch2 = clip.size
         x1 = (cw2 - rw) // 2
         y1 = (ch2 - rh) // 2
-        clip = clip.crop(x1=x1, y1=y1, x2=x1 + rw, y2=y1 + rh)
+        clip = clip.cropped(x1=x1, y1=y1, x2=x1 + rw, y2=y1 + rh)
     else:  # contain
         if clip_ratio > target_ratio:
-            clip = clip.resize(width=rw)
+            clip = clip.resized(width=rw)
         else:
-            clip = clip.resize(height=rh)
+            clip = clip.resized(height=rh)
 
     return clip
 
 
-# ── Geometry (position, opacity, anchor) ─────────────────────────────────────
+# ── Geometry (position, opacity, anchor, rotation, scale) ────────────────────
 
 
 def _apply_geometry(clip: object, layer: Layer) -> object:
-    """Set position and opacity on a MoviePy clip."""
+    """Set position, opacity, rotation, and scale on a MoviePy 2.x clip."""
     x, y = layer.rect.x, layer.rect.y
     cw, ch = clip.size  # type: ignore[attr-defined]
 
@@ -158,9 +157,15 @@ def _apply_geometry(clip: object, layer: Layer) -> object:
         x = layer.rect.x + layer.rect.w - cw
         y = layer.rect.y + layer.rect.h - ch
 
-    clip = clip.set_position((x, y))  # type: ignore[attr-defined]
+    clip = clip.with_position((x, y))  # type: ignore[attr-defined]
 
     if layer.opacity < 1.0:
-        clip = clip.set_opacity(layer.opacity)  # type: ignore[attr-defined]
+        clip = clip.with_opacity(layer.opacity)  # type: ignore[attr-defined]
+
+    if layer.rotation_deg != 0.0:
+        clip = clip.rotated(layer.rotation_deg)  # type: ignore[attr-defined]
+
+    if layer.scale != 1.0:
+        clip = clip.resized(layer.scale)  # type: ignore[attr-defined]
 
     return clip

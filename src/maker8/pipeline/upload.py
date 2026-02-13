@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from maker8.models.common import RenderStage
 from maker8.models.manifest import Manifest, ManifestDropbox
 from maker8.pipeline.context import PipelineContext
@@ -69,7 +67,7 @@ class UploadDropboxStage(Stage):
 
     @staticmethod
     def _build_manifest(ctx: PipelineContext) -> Manifest:
-        from maker8.pipeline.orchestrator import _collect_engine_versions
+        from maker8.utils.versions import collect_engine_versions
 
         return Manifest(
             job_id=ctx.job_id,
@@ -79,5 +77,5 @@ class UploadDropboxStage(Stage):
             ),
             output_meta=ctx.output_meta,
             publish_targets=ctx.render_spec.publish.targets,
-            engine_versions=_collect_engine_versions(),
+            engine_versions=collect_engine_versions(),
         )
