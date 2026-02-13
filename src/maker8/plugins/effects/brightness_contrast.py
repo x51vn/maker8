@@ -25,7 +25,7 @@ class BrightnessContrastEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:brightness_contrast", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -54,7 +54,7 @@ class BrightnessContrastEffect(EffectPlugin):
         source_clip: VideoClip = ir
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
             frame = source_clip.get_frame(t)
             img = Image.fromarray(frame)
 

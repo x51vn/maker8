@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Callable
+from typing import Any, Callable
 
 from confluent_kafka import Consumer, KafkaError, KafkaException, Message
 
@@ -45,7 +45,7 @@ class RenderConsumer:
 
     # ── Main loop ────────────────────────────────────────────────────
 
-    def start(self, handler: Callable[[dict], None]) -> None:
+    def start(self, handler: Callable[[dict[str, Any]], None]) -> None:
         """Block forever, calling *handler(payload)* for each message."""
         topic = self._settings.kafka_render_request_topic
         self._consumer.subscribe([topic])
