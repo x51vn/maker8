@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from maker8.models.common import DropboxFileRef, OutputMeta, Trace
 from maker8.models.spec import RenderSpec
@@ -43,7 +44,7 @@ class PipelineContext:
     output_dir: Path = field(default_factory=lambda: Path("/tmp/maker8/output"))
 
     # ── Stage outputs ────────────────────────────────────────────────
-    resolved_plans: dict = field(default_factory=dict)  # asset_id → ResolvedAssetPlan
+    resolved_plans: dict[str, Any] = field(default_factory=dict)  # asset_id → ResolvedAssetPlan
     downloaded_assets: dict[str, Path] = field(default_factory=dict)
     normalized_assets: dict[str, Path] = field(default_factory=dict)
     tts_results: dict[str, TTSResult] = field(default_factory=dict)

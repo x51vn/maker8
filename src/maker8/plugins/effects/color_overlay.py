@@ -25,7 +25,7 @@ class ColorOverlayEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:color_overlay", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -46,7 +46,7 @@ class ColorOverlayEffect(EffectPlugin):
         duration = source_clip.duration or 1.0
         overlay = np.array(color, dtype=np.float32)
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
             frame = source_clip.get_frame(t).astype(np.float32)
             blended = frame * (1.0 - opacity) + overlay * opacity
             return np.clip(blended, 0, 255).astype(np.uint8)

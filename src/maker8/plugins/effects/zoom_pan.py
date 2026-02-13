@@ -26,7 +26,7 @@ class ZoomPanEffect(EffectPlugin):
     def manifest(self) -> PluginManifest:
         return PluginManifest(id="effect:zoom_pan", version="1.0.0")
 
-    def schema(self) -> dict:
+    def schema(self) -> dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -48,7 +48,7 @@ class ZoomPanEffect(EffectPlugin):
         w, h = source_clip.size
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray:
+        def _make_frame(t: float) -> np.ndarray[Any, Any]:  # type: ignore[type-arg]
             progress = t / duration if duration > 0 else 0.0
             zoom = start_zoom + (end_zoom - start_zoom) * progress
 
@@ -74,7 +74,7 @@ class ZoomPanEffect(EffectPlugin):
             from PIL import Image
 
             img = Image.fromarray(cropped)
-            img = img.resize((w, h), Image.LANCZOS)
+            img = img.resize((w, h), Image.Resampling.LANCZOS)
             return np.array(img)
 
         result = VideoClip(_make_frame, duration=duration)
