@@ -113,6 +113,16 @@ jobs:
       - name: Update deployment files
         run: |
           sed -i "s|docker.x51.vn/x-ai/maker8:[^ ]*|docker.x51.vn/x-ai/maker8:${{ env.IMAGE_VERSION }}|g" deployment-repo/worker-z440/docker-compose.yml
+          
+          # Validate YAML syntax after sed
+          echo "Validating YAML syntax..."
+          if ! docker compose -f deployment-repo/worker-z440/docker-compose.yml config > /dev/null 2>&1; then
+            echo "ERROR: YAML syntax validation failed after sed replacement"
+            cat deployment-repo/worker-z440/docker-compose.yml | grep -A 5 -B 5 "maker8:"
+            exit 1
+          fi
+          echo "✓ YAML syntax is valid"
+          
           cd deployment-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -125,7 +135,19 @@ jobs:
           ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
             cd /home/$DEPLOY_USER/deployment/worker-z440 &&
             git checkout master &&
-            git pull origin master &&
+            
+            # Reset any local changes to avoid conflicts
+            git fetch origin &&
+            git reset --hard origin/master &&
+            
+            echo 'Validating YAML syntax before deployment...' &&
+            if ! docker compose config > /dev/null 2>&1; then
+              echo '✗ ERROR: YAML syntax validation failed' &&
+              docker compose config 2>&1 | head -20 &&
+              exit 1
+            fi &&
+            echo '✓ YAML syntax is valid' &&
+            
             docker compose pull maker8 &&
             docker compose up -d maker8 &&
             echo 'Deployment completed, verifying container health...'
