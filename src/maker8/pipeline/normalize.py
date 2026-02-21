@@ -58,10 +58,17 @@ class NormalizeStage(Stage):
         ]
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired as exc:
+            raise StageError(
+                RenderStage.NORMALIZE, "FFMPEG_TIMEOUT",
+                f"FFmpeg video normalisation timed out after {exc.timeout}s for {src.name}",
+                retryable=False,
+            ) from exc
         except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr.strip() if exc.stderr else "(no stderr output)"
             raise StageError(
                 RenderStage.NORMALIZE, "FFMPEG_ERROR",
-                f"FFmpeg normalisation failed for {src.name}: {exc.stderr}",
+                f"FFmpeg normalisation failed for {src.name} (rc={exc.returncode}): {stderr}",
                 retryable=False,
             ) from exc
         return dest
@@ -80,10 +87,17 @@ class NormalizeStage(Stage):
         ]
         try:
             subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired as exc:
+            raise StageError(
+                RenderStage.NORMALIZE, "FFMPEG_TIMEOUT",
+                f"FFmpeg audio normalisation timed out after {exc.timeout}s for {src.name}",
+                retryable=False,
+            ) from exc
         except subprocess.CalledProcessError as exc:
+            stderr = exc.stderr.strip() if exc.stderr else "(no stderr output)"
             raise StageError(
                 RenderStage.NORMALIZE, "FFMPEG_ERROR",
-                f"Audio normalisation failed for {src.name}: {exc.stderr}",
+                f"Audio normalisation failed for {src.name} (rc={exc.returncode}): {stderr}",
                 retryable=False,
             ) from exc
         return dest

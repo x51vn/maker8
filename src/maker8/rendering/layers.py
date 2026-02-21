@@ -166,6 +166,8 @@ def _apply_geometry(clip: object, layer: Layer) -> object:
         clip = clip.rotated(layer.rotation_deg)  # type: ignore[attr-defined]
 
     if layer.scale != 1.0:
-        clip = clip.resized(layer.scale)  # type: ignore[attr-defined]
+        new_w = int(clip.size[0] * layer.scale)  # type: ignore[attr-defined]
+        new_h = int(clip.size[1] * layer.scale)  # type: ignore[attr-defined]
+        clip = clip.resized(width=new_w, height=new_h)  # type: ignore[attr-defined]
 
     return clip

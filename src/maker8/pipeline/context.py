@@ -81,9 +81,13 @@ class PipelineContext:
         )
 
     def ensure_dirs(self) -> None:
-        """Create all working directories (idempotent)."""
+        """Create all working directories (idempotent).
+
+        Mode 0o700 restricts each per-job directory to the process owner only,
+        preventing other local users from reading job assets (video, audio, TTS).
+        """
         for d in (self.work_dir, self.assets_dir, self.tts_dir, self.output_dir):
-            d.mkdir(parents=True, exist_ok=True)
+            d.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     def asset_path(self, asset_id: str) -> Path | None:
         """Prefer normalised file, fall back to downloaded file."""

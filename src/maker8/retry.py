@@ -51,7 +51,8 @@ class RetryPolicy:
         """Compute back-off delay in seconds for a 1-based *attempt*."""
         base = min(self.min_delay_sec * (2 ** (attempt - 1)), self.max_delay_sec)
         jitter = base * self.jitter_factor * random.random()
-        return float(base + jitter)
+        # Cap the total so jitter never pushes the result above max_delay_sec.
+        return min(float(base + jitter), self.max_delay_sec)
 
     def sleep(self, attempt: int) -> None:  # pragma: no cover
         """Block the current thread for the computed back-off delay."""

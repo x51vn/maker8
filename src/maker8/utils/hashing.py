@@ -37,3 +37,22 @@ def dropbox_content_hash(path: Path) -> str:
                 break
             block_digests += hashlib.sha256(block).digest()
     return hashlib.sha256(block_digests).hexdigest()
+
+
+def sha256_and_dropbox_hash(path: Path) -> tuple[str, str]:
+    """Compute SHA-256 and Dropbox content-hash in a single file read.
+
+    Both digests are computed together so the file is only read once,
+    which is ~2x faster than calling ``sha256_file`` + ``dropbox_content_hash``
+    separately.  Returns ``(sha256_hex, dropbox_content_hash_hex)``.
+    """
+    h_sha256 = hashlib.sha256()
+    block_digests = b""
+    with open(path, "rb") as fh:
+        while True:
+            block = fh.read(_DROPBOX_BLOCK)  # 4 MiB slices satisfy both algorithms
+            if not block:
+                break
+            h_sha256.update(block)
+            block_digests += hashlib.sha256(block).digest()
+    return h_sha256.hexdigest(), hashlib.sha256(block_digests).hexdigest()

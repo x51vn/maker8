@@ -26,7 +26,9 @@ single credential from ``Settings`` (backward-compatible).
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
+import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -77,7 +79,30 @@ class TTSProvider(ABC):
 
 
 def _get_audio_duration(path: Path) -> float:
-    """Return the duration in seconds of an audio file using MoviePy 2.x."""
+    """Return the duration in seconds of an audio file.
+
+    Uses ``ffprobe`` for speed (no full decode required).  Falls back to
+    ``AudioFileClip`` if ffprobe is unavailable or cannot parse the file,
+    so unusual codecs produced by TTS providers remain supported.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return float(result.stdout.strip())
+    except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
+        pass
+
+    # Fallback: MoviePy handles edge-cases ffprobe may reject.
     from moviepy import AudioFileClip
 
     clip = AudioFileClip(str(path))
@@ -143,6 +168,10 @@ class GoogleCloudTTSProvider(TTSProvider):
         credentials_path = kwargs.pop("credentials_path", None)
         client = self._build_client(credentials_path)
 
+        # ── Timeout ──────────────────────────────────────────────────
+        # Injected by TTSService; falls back to a conservative default.
+        timeout_sec = float(kwargs.pop("timeout", 120.0))  # type: ignore[arg-type]
+
         # ── Voice / audio parameters ────────────────────────────────
         voice_name = str(kwargs.get("voice_name", ""))
         speaking_rate = float(kwargs.get("speaking_rate", 1.0))  # type: ignore[arg-type]
@@ -173,6 +202,7 @@ class GoogleCloudTTSProvider(TTSProvider):
             input=synthesis_input,
             voice=voice_params,
             audio_config=audio_config,
+            timeout=timeout_sec,
         )
         output_path.write_bytes(response.audio_content)
 
@@ -239,8 +269,14 @@ class ElevenLabsProvider(TTSProvider):
         stability = float(kwargs.get("stability", 0.5))  # type: ignore[arg-type]
         similarity_boost = float(kwargs.get("similarity_boost", 0.75))  # type: ignore[arg-type]
         style = float(kwargs.get("style", 0.0))  # type: ignore[arg-type]
+        # Injected by TTSService; falls back to a conservative default.
+        timeout_sec = float(kwargs.get("timeout", 120.0))  # type: ignore[arg-type]
 
-        client = ElevenLabs(api_key=api_key) if api_key else ElevenLabs()
+        client = (
+            ElevenLabs(api_key=api_key, timeout=timeout_sec)
+            if api_key
+            else ElevenLabs(timeout=timeout_sec)
+        )
 
         audio_gen = client.text_to_speech.convert(
             voice_id=voice_id,
@@ -274,7 +310,15 @@ class PresetStore:
     def __init__(self, path: Path) -> None:
         self._presets: dict[str, dict[str, Any]] = {}
         if path.exists():
-            self._presets = json.loads(path.read_text(encoding="utf-8"))
+            try:
+                self._presets = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as exc:
+                log.error(
+                    "tts.preset_load_failed",
+                    path=str(path),
+                    error=str(exc),
+                    fallback="all presets will use default gtts provider",
+                )
 
     def get(self, ref: str) -> dict[str, Any]:
         return self._presets.get(ref, self._DEFAULT_PRESET)
@@ -421,6 +465,14 @@ class TTSService:
             elif "api_key" not in preset:
                 preset["api_key"] = self._settings.elevenlabs_api_key
 
+        # ── Inject timeout ───────────────────────────────────────────
+        # Providers that support native timeouts (google_cloud, elevenlabs)
+        # pop this value and pass it to the SDK.  gTTS ignores it but the
+        # concurrent.futures backstop below still enforces the wall-clock
+        # limit for *all* providers.
+        timeout_sec = self._settings.tts_timeout_sec
+        preset["timeout"] = timeout_sec
+
         provider = provider_cls()
         effective_lang = preset.pop("lang", lang)
 
@@ -429,5 +481,22 @@ class TTSService:
             provider=provider_name,
             lang=effective_lang,
             chars=len(text),
+            timeout_sec=timeout_sec,
         )
-        return provider.synthesize(text, effective_lang, output_path, **preset)
+
+        # ── Thread-based backstop ────────────────────────────────────
+        # Bounds every provider (including gTTS which has no native
+        # timeout API) to tts_timeout_sec wall-clock seconds.  Raises
+        # TimeoutError which the TTS pipeline stage converts to a
+        # retryable StageError.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as _pool:
+            _future = _pool.submit(
+                provider.synthesize, text, effective_lang, output_path, **preset
+            )
+            try:
+                return _future.result(timeout=timeout_sec)
+            except concurrent.futures.TimeoutError:
+                raise TimeoutError(
+                    f"TTS synthesis timed out after {timeout_sec:.0f}s "
+                    f"(provider={provider_name!r}, chars={len(text)})"
+                )
