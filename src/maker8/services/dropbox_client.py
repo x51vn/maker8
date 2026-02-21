@@ -11,7 +11,7 @@ from dropbox.files import WriteMode
 
 from maker8.config import Settings
 from maker8.models.common import DropboxFileRef
-from maker8.utils.hashing import dropbox_content_hash, sha256_file
+from maker8.utils.hashing import sha256_and_dropbox_hash
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
@@ -86,12 +86,13 @@ class DropboxClient:
                 rev=result.rev,
             )
 
+            sha256_hex, dbx_hash = sha256_and_dropbox_hash(local_path)
             return DropboxFileRef(
                 path=result.path_display,
                 file_id=result.id,
                 rev=result.rev,
-                content_hash=dropbox_content_hash(local_path),
-                sha256=sha256_file(local_path),
+                content_hash=dbx_hash,
+                sha256=sha256_hex,
                 bytes_=file_size,
                 mime=mime or mimetypes.guess_type(local_path.name)[0] or "",
             )

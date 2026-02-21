@@ -68,8 +68,10 @@ def main() -> None:
         if _log is not None:
             try:
                 _log.info("app.exiting")
-            except Exception:
-                pass
+            except Exception as _e:
+                # Logger itself failed (e.g. broken pipe on shutdown).
+                # Print to stderr so the error is not silently lost.
+                print(f"[maker8] app.exiting log failed: {_e}", file=sys.stderr)
 
     atexit.register(_atexit)
 

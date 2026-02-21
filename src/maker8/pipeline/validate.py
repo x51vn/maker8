@@ -33,7 +33,7 @@ class ValidateStage(Stage):
 
         # ── Rule: scenes must have narration.text ────────────────────
         for scene in spec.scenes:
-            if not scene.narration.text.strip():
+            if not (scene.narration.text and scene.narration.text.strip()):
                 raise StageError(
                     self.name, "EMPTY_NARRATION",
                     f"Scene {scene.scene_id} has empty narration.text",

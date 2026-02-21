@@ -196,11 +196,26 @@ class Orchestrator:
 
     # ── Cleanup ──────────────────────────────────────────────────────
 
-    @staticmethod
-    def _cleanup(ctx: PipelineContext) -> None:
-        """Remove the job work directory."""
+    def _cleanup(self, ctx: PipelineContext) -> None:
+        """Remove the job work directory.
+
+        Verifies the path is a descendant of the configured base work dir
+        before deletion to prevent accidental removal of unrelated directories
+        if ``ctx.work_dir`` is somehow tampered or resolved unexpectedly.
+        """
         try:
-            if ctx.work_dir.exists():
-                shutil.rmtree(ctx.work_dir)
+            wd = ctx.work_dir.resolve()
+            base = self._settings.work_dir.resolve()
+            try:
+                wd.relative_to(base)  # raises ValueError if wd is not under base
+            except ValueError:
+                log.error(
+                    "orchestrator.cleanup_path_outside_base",
+                    work_dir=str(wd),
+                    base=str(base),
+                )
+                return
+            if wd.exists():
+                shutil.rmtree(wd)
         except Exception:
             log.exception("orchestrator.cleanup_error", work_dir=str(ctx.work_dir))
