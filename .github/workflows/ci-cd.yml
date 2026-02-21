@@ -157,13 +157,13 @@ jobs:
           echo "Waiting 10 seconds for container to stabilize..."
           sleep 10
           ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
-            CONTAINER_STATUS=\$(docker compose -f /home/$DEPLOY_USER/deployment/worker-z440/docker-compose.yml ps maker8 | grep -E 'running|exited' | awk '{print \\$NF}')
+            CONTAINER_STATUS=\$(docker inspect --format='{{.State.Status}}' maker8-render-worker 2>/dev/null || echo 'missing')
             if [ \"\$CONTAINER_STATUS\" = \"running\" ]; then
               echo '✓ Container maker8 is running successfully'
               docker compose -f /home/$DEPLOY_USER/deployment/worker-z440/docker-compose.yml logs maker8 --tail=20
               exit 0
             else
-              echo '✗ Container maker8 failed to start or exited'
+              echo '✗ Container maker8 failed to start or exited (status: '\"\$CONTAINER_STATUS\"')'
               docker compose -f /home/$DEPLOY_USER/deployment/worker-z440/docker-compose.yml logs maker8 --tail=50
               exit 1
             fi
