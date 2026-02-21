@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     # Directory with API key files (.txt/.key) for round-robin rotation
     elevenlabs_keys_dir: Path = Path("elevenlabs-keys")
 
+    # ── TTS timeout ──────────────────────────────────────────────────
+    # Maximum seconds to wait for a single TTS synthesis call.
+    # Prevents the worker from hanging indefinitely on network stalls.
+    tts_timeout_sec: float = 120.0
+
     # ── Work directory ───────────────────────────────────────────────
     work_dir: Path = Path("/tmp/maker8")
 

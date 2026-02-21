@@ -58,8 +58,20 @@ class RenderConsumer:
                 continue
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
+                    # Normal condition – consumer has reached the end of the
+                    # partition.  Log at DEBUG so operators can trace it but
+                    # don't treat it as an error.
+                    log.debug(
+                        "consumer.partition_eof",
+                        partition=msg.partition(),
+                        offset=msg.offset(),
+                    )
                     continue
-                log.error("consumer.error", error=str(msg.error()))
+                log.error(
+                    "consumer.error",
+                    error=str(msg.error()),
+                    code=msg.error().code(),
+                )
                 raise KafkaException(msg.error())
 
             try:
@@ -68,8 +80,19 @@ class RenderConsumer:
             except Exception:
                 log.exception("consumer.handler_error", offset=msg.offset())
             finally:
-                # Always commit to avoid infinite re-processing
-                self._consumer.commit(msg)
+                # Always commit to avoid infinite re-processing.
+                # Wrap separately so a transient broker disconnect after a
+                # successful handler does not kill the consumer loop.
+                # Worst case: the message is re-delivered and processed again
+                # (idempotent pipeline via job_key deduplication handles this).
+                try:
+                    self._consumer.commit(msg)
+                except Exception:
+                    log.exception(
+                        "consumer.commit_failed",
+                        offset=msg.offset(),
+                        partition=msg.partition(),
+                    )
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
