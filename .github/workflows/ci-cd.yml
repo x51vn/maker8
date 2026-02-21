@@ -114,14 +114,21 @@ jobs:
         run: |
           sed -i "s|<registry>/<org>/maker8:[^ ]*|<registry>/<org>/maker8:${{ env.IMAGE_VERSION }}|g" deployment-repo/worker-z440/docker-compose.yml
           
-          # Validate YAML syntax after sed
+          # Validate YAML syntax after sed (use python yaml parser instead of
+          # docker compose config, which requires all env_file/build contexts)
           echo "Validating YAML syntax..."
-          if ! docker compose -f deployment-repo/worker-z440/docker-compose.yml config > /dev/null 2>&1; then
+          if ! python3 -c "import yaml, sys; yaml.safe_load(open(sys.argv[1]))" deployment-repo/worker-z440/docker-compose.yml; then
             echo "ERROR: YAML syntax validation failed after sed replacement"
-            cat deployment-repo/worker-z440/docker-compose.yml | grep -A 5 -B 5 "maker8:"
+            grep -n -A 5 -B 5 "maker8:" deployment-repo/worker-z440/docker-compose.yml
             exit 1
           fi
-          echo "✓ YAML syntax is valid"
+          
+          # Verify the image tag was updated correctly
+          if ! grep -q "<registry>/<org>/maker8:${{ env.IMAGE_VERSION }}" deployment-repo/worker-z440/docker-compose.yml; then
+            echo "ERROR: Image tag was not updated correctly"
+            exit 1
+          fi
+          echo "✓ YAML syntax is valid and image tag updated to ${{ env.IMAGE_VERSION }}"
           
           cd deployment-repo
           git config user.name "github-actions[bot]"
