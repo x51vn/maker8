@@ -102,6 +102,15 @@ def main() -> None:
 
     # ── Run ──────────────────────────────────────────────────────────
     try:
+        # Write health file so Docker healthcheck can verify the app is running
+        _health_file = "/tmp/maker8_healthy"
+        try:
+            import pathlib
+            pathlib.Path(_health_file).touch()
+            log.info("app.health_file_created", path=_health_file)
+        except Exception as _e:
+            log.warning("app.health_file_failed", path=_health_file, error=str(_e))
+
         consumer.start(handler=orchestrator.handle)
     except KeyboardInterrupt:
         pass
