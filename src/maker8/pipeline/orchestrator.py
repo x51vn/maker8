@@ -16,7 +16,7 @@ from maker8.models.common import (
     JobStatus,
     RenderStage,
 )
-from maker8.models.contracts import DLQPayload, RenderRequest, RenderResult
+from maker8.models.contracts import DLQPayload, DropboxOutput, RenderRequest, RenderResult
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.download import DownloadStage
 from maker8.pipeline.emit import EmitResultStage
@@ -132,6 +132,14 @@ class Orchestrator:
                     delay=policy.delay(attempt),
                 )
                 policy.sleep(attempt)
+            except Exception as exc:
+                # Wrap unexpected exceptions as non-retryable StageError
+                raise StageError(
+                    stage.name,
+                    "UNEXPECTED_ERROR",
+                    f"Unexpected error in {stage.name.value}: {exc}",
+                    retryable=False,
+                ) from exc
 
         # Should not reach here, but just in case
         if last_exc:
@@ -142,14 +150,13 @@ class Orchestrator:
     def _send_failed_result(self, ctx: PipelineContext, exc: StageError) -> None:
         """Best-effort: produce a FAILED RenderResult."""
         try:
-            from maker8.models.contracts import DropboxOutput
-
             result = RenderResult(
                 job_id=ctx.job_id,
                 status=JobStatus.FAILED,
                 job_key=ctx.job_key,
                 output_meta=ctx.output_meta,
                 engine_versions=collect_engine_versions(),
+                trace=ctx.trace,
                 error=ErrorInfo(
                     code=exc.code,
                     stage=exc.stage.value,

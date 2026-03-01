@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "ErrorInfo": {
+      "description": "Serialisable error data included in Kafka result / DLQ messages.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "stage": {
+          "title": "Stage",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "stage"
+      ],
+      "title": "ErrorInfo",
+      "type": "object"
+    },
+    "Trace": {
+      "description": "Distributed-tracing context.",
+      "properties": {
+        "correlation_id": {
+          "default": "",
+          "title": "Correlation Id",
+          "type": "string"
+        }
+      },
+      "title": "Trace",
+      "type": "object"
+    }
+  },
+  "description": "``video.render.dlq.v1`` payload.",
+  "properties": {
+    "job_id": {
+      "title": "Job Id",
+      "type": "string"
+    },
+    "job_key": {
+      "default": "",
+      "title": "Job Key",
+      "type": "string"
+    },
+    "failed_stage": {
+      "title": "Failed Stage",
+      "type": "string"
+    },
+    "attempts": {
+      "title": "Attempts",
+      "type": "integer"
+    },
+    "last_error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "dropbox": {
+      "additionalProperties": true,
+      "title": "Dropbox",
+      "type": "object"
+    },
+    "trace": {
+      "$ref": "#/$defs/Trace"
+    }
+  },
+  "required": [
+    "job_id",
+    "failed_stage",
+    "attempts"
+  ],
+  "title": "DLQPayload",
+  "type": "object"
+}

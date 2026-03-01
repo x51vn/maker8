@@ -15,6 +15,10 @@ from maker8.utils.logging import get_logger
 log = get_logger(__name__)
 
 _CHUNK = 64 * 1024  # 64 KiB stream chunks
+_CONNECT_TIMEOUT = 30  # seconds
+_READ_TIMEOUT = 600  # seconds
+_MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB safety limit
+_USER_AGENT = "Maker8-RenderWorker/1.0"
 
 
 class HttpSourceConnector(SourceConnectorPlugin):
@@ -57,11 +61,24 @@ class HttpSourceConnector(SourceConnectorPlugin):
         dest = dest_dir / plan.filename
         log.info("http.download", asset_id=plan.asset_id, url=plan.url)
 
-        resp = requests.get(plan.url, stream=True, timeout=600)
+        resp = requests.get(
+            plan.url,
+            stream=True,
+            timeout=(_CONNECT_TIMEOUT, _READ_TIMEOUT),
+            headers={"User-Agent": _USER_AGENT},
+        )
         resp.raise_for_status()
 
+        downloaded = 0
         with open(dest, "wb") as fh:
             for chunk in resp.iter_content(chunk_size=_CHUNK):
+                downloaded += len(chunk)
+                if downloaded > _MAX_DOWNLOAD_BYTES:
+                    resp.close()
+                    dest.unlink(missing_ok=True)
+                    raise RuntimeError(
+                        f"HTTP download exceeded {_MAX_DOWNLOAD_BYTES / (1024**3):.0f} GiB limit"
+                    )
                 fh.write(chunk)
 
         return dest

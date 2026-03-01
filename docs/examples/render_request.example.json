@@ -1,0 +1,200 @@
+{
+  "job_id": "job-2025-01-15-abc123",
+  "spec_version": "1.0",
+  "render_spec": {
+    "spec_version": "1.0",
+    "canvas": {
+      "w": 1080,
+      "h": 1920,
+      "fps": 30,
+      "bg": "#000000"
+    },
+    "defaults": {
+      "narration": {
+        "lang": "vi-VN",
+        "tts_preset_ref": "tts:vi:default"
+      },
+      "scene_timing": {
+        "head_pad_sec": 0.15,
+        "tail_pad_sec": 0.45,
+        "duration_mode": "auto_from_tts"
+      }
+    },
+    "assets": [
+      {
+        "id": "bg-video-1",
+        "type": "video",
+        "source": {
+          "kind": "youtube",
+          "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "options": {
+            "format": "bestvideo[height<=1080]+bestaudio/best",
+            "max_duration_sec": 300
+          }
+        }
+      },
+      {
+        "id": "logo-img",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/assets/logo.png",
+          "options": {}
+        }
+      },
+      {
+        "id": "bgm-audio",
+        "type": "audio",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/assets/background-music.mp3",
+          "options": {}
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "scene-001",
+        "narration": {
+          "text": "Chào mừng bạn đến với video hôm nay. Hãy cùng khám phá những điều thú vị nhé!",
+          "lang": "vi-VN",
+          "tts_preset_ref": "tts:vi:google_cloud"
+        },
+        "layers": [
+          {
+            "layer_id": "bg-layer",
+            "type": "video",
+            "asset_ref": "bg-video-1",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "fit": "cover",
+            "trim": { "in": 0, "out": 15 },
+            "opacity": 1.0
+          },
+          {
+            "layer_id": "title-text",
+            "type": "text",
+            "text": "KHÁM PHÁ THẾ GIỚI",
+            "rect": { "x": 100, "y": 800, "w": 880, "h": 200 },
+            "text_align": "center",
+            "valign": "center",
+            "style": {
+              "font_ref": "font:inter:bold",
+              "size": 72,
+              "color": "#FFFFFF",
+              "stroke_color": "#000000",
+              "stroke_width": 3,
+              "line_height": 1.2,
+              "wrap": true
+            }
+          },
+          {
+            "layer_id": "logo-overlay",
+            "type": "image",
+            "asset_ref": "logo-img",
+            "rect": { "x": 40, "y": 40, "w": 120, "h": 120 },
+            "opacity": 0.9
+          }
+        ],
+        "audio_tracks": [
+          {
+            "asset_ref": "bgm-audio",
+            "volume": 0.15,
+            "loop": true
+          }
+        ],
+        "effects": [
+          {
+            "plugin_id": "effect:zoom_pan",
+            "params": {
+              "start_zoom": 1.0,
+              "end_zoom": 1.15,
+              "direction": "center"
+            }
+          },
+          {
+            "plugin_id": "effect:fade",
+            "params": {
+              "fade_in": 0.5,
+              "fade_out": 0.5
+            }
+          }
+        ],
+        "transition_out": {
+          "type": "crossfade",
+          "duration": 0.5
+        }
+      },
+      {
+        "scene_id": "scene-002",
+        "narration": {
+          "text": "Đây là cảnh thứ hai. Chúng ta sẽ tìm hiểu sâu hơn về chủ đề này."
+        },
+        "layers": [
+          {
+            "layer_id": "bg-layer-2",
+            "type": "video",
+            "asset_ref": "bg-video-1",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "fit": "cover",
+            "trim": { "in": 15, "out": 30 }
+          },
+          {
+            "layer_id": "subtitle-text",
+            "type": "text",
+            "text": "Tìm hiểu sâu hơn",
+            "rect": { "x": 100, "y": 1600, "w": 880, "h": 100 },
+            "text_align": "center",
+            "style": {
+              "size": 48,
+              "color": "#FFFF00"
+            }
+          }
+        ],
+        "audio_tracks": [
+          {
+            "asset_ref": "bgm-audio",
+            "volume": 0.1,
+            "loop": true
+          }
+        ],
+        "effects": [
+          {
+            "plugin_id": "effect:brightness_contrast",
+            "params": {
+              "brightness": 1.1,
+              "contrast": 1.05
+            }
+          }
+        ]
+      }
+    ],
+    "output": {
+      "codec": "libx264",
+      "audio_codec": "aac",
+      "bitrate": "4000k",
+      "audio_bitrate": "192k",
+      "preset": "medium",
+      "pix_fmt": "yuv420p"
+    },
+    "publish": {
+      "targets": [
+        {
+          "platform": "youtube",
+          "account_ref": "channel:my-channel-123",
+          "metadata": {
+            "title": "Khám Phá Thế Giới | Tập 1",
+            "description": "Video khám phá thế giới tuyệt vời",
+            "tags": ["khám phá", "thế giới", "việt nam"]
+          },
+          "params": {
+            "privacy": "public",
+            "category": "22"
+          }
+        }
+      ]
+    }
+  },
+  "trace": {
+    "correlation_id": "corr-20250115-xyz789"
+  }
+}

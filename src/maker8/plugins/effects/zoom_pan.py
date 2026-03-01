@@ -16,6 +16,7 @@ from typing import Any
 
 import numpy as np
 from moviepy import ImageClip, VideoClip
+from PIL import Image
 
 from maker8.plugins.base import EffectPlugin, PluginManifest
 
@@ -70,9 +71,7 @@ class ZoomPanEffect(EffectPlugin):
             frame = source_clip.get_frame(t)
             cropped = frame[y1 : y1 + crop_h, x1 : x1 + crop_w]
 
-            # Scale back to original size via simple nearest-neighbour resize
-            from PIL import Image
-
+            # Scale back to original size via LANCZOS resize
             img = Image.fromarray(cropped)
             img = img.resize((w, h), Image.Resampling.LANCZOS)
             return np.array(img)

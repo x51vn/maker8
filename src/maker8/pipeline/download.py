@@ -31,6 +31,13 @@ class DownloadStage(Stage):
             try:
                 local_path = connector.download(plan, ctx.assets_dir)
                 ctx.downloaded_assets[asset_id] = local_path
+                # Record asset in report for RenderResult
+                ctx.asset_report.append({
+                    "asset_id": asset_id,
+                    "source_kind": plan.source_kind,
+                    "filename": local_path.name,
+                    "size_bytes": local_path.stat().st_size if local_path.exists() else 0,
+                })
                 log.info("download.ok", asset_id=asset_id, path=str(local_path))
             except Exception as exc:
                 raise StageError(

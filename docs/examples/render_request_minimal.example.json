@@ -1,0 +1,62 @@
+{
+  "job_id": "job-2025-01-15-abc123",
+  "spec_version": "1.0",
+  "render_spec": {
+    "spec_version": "1.0",
+    "canvas": {
+      "w": 1080,
+      "h": 1920,
+      "fps": 30,
+      "bg": "#000000"
+    },
+    "defaults": {
+      "narration": {
+        "lang": "vi-VN",
+        "tts_preset_ref": "tts:vi:default"
+      },
+      "scene_timing": {
+        "head_pad_sec": 0.15,
+        "tail_pad_sec": 0.45,
+        "duration_mode": "auto_from_tts"
+      }
+    },
+    "assets": [
+      {
+        "id": "bg-video-1",
+        "type": "video",
+        "source": {
+          "kind": "youtube",
+          "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "options": {
+            "format": "bestvideo[height<=1080]+bestaudio/best",
+            "max_duration_sec": 300
+          }
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "scene-001",
+        "narration": {
+          "text": "This is a minimal example with just one scene and one background video."
+        },
+        "layers": [
+          {
+            "layer_id": "bg",
+            "type": "video",
+            "asset_ref": "bg-video-1",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "fit": "cover"
+          }
+        ],
+        "audio_tracks": [],
+        "effects": []
+      }
+    ],
+    "output": {},
+    "publish": { "targets": [] }
+  },
+  "trace": {
+    "correlation_id": "corr-minimal-001"
+  }
+}

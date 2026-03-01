@@ -42,9 +42,7 @@ class Settings(BaseSettings):
     tts_presets_path: Path = Path("config/tts_presets.json")
 
     # ── Google Cloud TTS ─────────────────────────────────────────────
-    # Single-key fallback (ADC or explicit path)
-    google_cloud_tts_enabled: bool = False
-    google_application_credentials: str = ""
+
     # Directory with service-account JSON files for round-robin rotation
     google_tts_keys_dir: Path = Path("gg-tts-keys")
 

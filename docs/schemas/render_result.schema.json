@@ -1,0 +1,251 @@
+{
+  "$defs": {
+    "DropboxFileRef": {
+      "description": "Reference to a file stored in Dropbox.",
+      "properties": {
+        "path": {
+          "default": "",
+          "title": "Path",
+          "type": "string"
+        },
+        "file_id": {
+          "default": "",
+          "title": "File Id",
+          "type": "string"
+        },
+        "rev": {
+          "default": "",
+          "title": "Rev",
+          "type": "string"
+        },
+        "content_hash": {
+          "default": "",
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "sha256": {
+          "default": "",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "bytes": {
+          "default": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "mime": {
+          "default": "",
+          "title": "Mime",
+          "type": "string"
+        }
+      },
+      "title": "DropboxFileRef",
+      "type": "object"
+    },
+    "DropboxOutput": {
+      "description": "References to the files uploaded to Dropbox.",
+      "properties": {
+        "video": {
+          "$ref": "#/$defs/DropboxFileRef"
+        },
+        "manifest": {
+          "$ref": "#/$defs/DropboxFileRef"
+        }
+      },
+      "title": "DropboxOutput",
+      "type": "object"
+    },
+    "EngineVersions": {
+      "description": "Versions of the core tools used during rendering.",
+      "properties": {
+        "moviepy": {
+          "default": "",
+          "title": "Moviepy",
+          "type": "string"
+        },
+        "ffmpeg": {
+          "default": "",
+          "title": "Ffmpeg",
+          "type": "string"
+        },
+        "youtube_dlp": {
+          "default": "",
+          "title": "Youtube Dlp",
+          "type": "string"
+        }
+      },
+      "title": "EngineVersions",
+      "type": "object"
+    },
+    "ErrorInfo": {
+      "description": "Serialisable error data included in Kafka result / DLQ messages.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "stage": {
+          "title": "Stage",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "stage"
+      ],
+      "title": "ErrorInfo",
+      "type": "object"
+    },
+    "JobStatus": {
+      "enum": [
+        "DONE",
+        "FAILED",
+        "PARTIAL"
+      ],
+      "title": "JobStatus",
+      "type": "string"
+    },
+    "OutputMeta": {
+      "description": "Basic metadata about the rendered video.",
+      "properties": {
+        "duration": {
+          "default": 0,
+          "title": "Duration",
+          "type": "number"
+        },
+        "w": {
+          "default": 0,
+          "title": "W",
+          "type": "integer"
+        },
+        "h": {
+          "default": 0,
+          "title": "H",
+          "type": "integer"
+        },
+        "fps": {
+          "default": 0,
+          "title": "Fps",
+          "type": "number"
+        },
+        "size_bytes": {
+          "default": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "title": "OutputMeta",
+      "type": "object"
+    },
+    "PublishTarget": {
+      "description": "One publishing destination (forwarded to Publisher Worker).",
+      "properties": {
+        "platform": {
+          "title": "Platform",
+          "type": "string"
+        },
+        "account_ref": {
+          "title": "Account Ref",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "platform",
+        "account_ref"
+      ],
+      "title": "PublishTarget",
+      "type": "object"
+    },
+    "Trace": {
+      "description": "Distributed-tracing context.",
+      "properties": {
+        "correlation_id": {
+          "default": "",
+          "title": "Correlation Id",
+          "type": "string"
+        }
+      },
+      "title": "Trace",
+      "type": "object"
+    }
+  },
+  "description": "``video.render.result.v1`` payload.",
+  "properties": {
+    "job_id": {
+      "title": "Job Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/JobStatus"
+    },
+    "job_key": {
+      "default": "",
+      "title": "Job Key",
+      "type": "string"
+    },
+    "dropbox": {
+      "$ref": "#/$defs/DropboxOutput"
+    },
+    "output_meta": {
+      "$ref": "#/$defs/OutputMeta"
+    },
+    "publish_targets": {
+      "items": {
+        "$ref": "#/$defs/PublishTarget"
+      },
+      "title": "Publish Targets",
+      "type": "array"
+    },
+    "asset_report": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Asset Report",
+      "type": "array"
+    },
+    "engine_versions": {
+      "$ref": "#/$defs/EngineVersions"
+    },
+    "trace": {
+      "$ref": "#/$defs/Trace"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "job_id",
+    "status"
+  ],
+  "title": "RenderResult",
+  "type": "object"
+}

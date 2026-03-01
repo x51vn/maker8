@@ -1,0 +1,763 @@
+{
+  "$defs": {
+    "Asset": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/AssetSource"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "source"
+      ],
+      "title": "Asset",
+      "type": "object"
+    },
+    "AssetSource": {
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/AssetSourceOptions"
+        }
+      },
+      "required": [
+        "kind",
+        "url"
+      ],
+      "title": "AssetSource",
+      "type": "object"
+    },
+    "AssetSourceOptions": {
+      "properties": {
+        "format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        },
+        "max_duration_sec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Duration Sec"
+        }
+      },
+      "title": "AssetSourceOptions",
+      "type": "object"
+    },
+    "AudioTrack": {
+      "properties": {
+        "asset_ref": {
+          "title": "Asset Ref",
+          "type": "string"
+        },
+        "trim": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Trim"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "volume": {
+          "default": 1.0,
+          "title": "Volume",
+          "type": "number"
+        },
+        "loop": {
+          "default": false,
+          "title": "Loop",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "asset_ref"
+      ],
+      "title": "AudioTrack",
+      "type": "object"
+    },
+    "Canvas": {
+      "properties": {
+        "w": {
+          "default": 1080,
+          "title": "W",
+          "type": "integer"
+        },
+        "h": {
+          "default": 1920,
+          "title": "H",
+          "type": "integer"
+        },
+        "fps": {
+          "default": 30,
+          "title": "Fps",
+          "type": "integer"
+        },
+        "bg": {
+          "default": "#000000",
+          "title": "Bg",
+          "type": "string"
+        },
+        "safe_area": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SafeArea"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Canvas",
+      "type": "object"
+    },
+    "Defaults": {
+      "properties": {
+        "narration": {
+          "$ref": "#/$defs/NarrationDefaults"
+        },
+        "scene_timing": {
+          "$ref": "#/$defs/SceneTiming"
+        }
+      },
+      "title": "Defaults",
+      "type": "object"
+    },
+    "EffectInstance": {
+      "properties": {
+        "plugin_id": {
+          "title": "Plugin Id",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "plugin_id"
+      ],
+      "title": "EffectInstance",
+      "type": "object"
+    },
+    "Layer": {
+      "description": "A single visual layer inside a scene.\n\nThe discriminating field is ``type``; image/video-specific and\ntext-specific attributes are present on the same model but are\nonly meaningful for the matching ``type``.",
+      "properties": {
+        "layer_id": {
+          "title": "Layer Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "image",
+            "video",
+            "text"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "anchor": {
+          "default": "top_left",
+          "title": "Anchor",
+          "type": "string"
+        },
+        "opacity": {
+          "default": 1.0,
+          "title": "Opacity",
+          "type": "number"
+        },
+        "rotation_deg": {
+          "default": 0.0,
+          "title": "Rotation Deg",
+          "type": "number"
+        },
+        "scale": {
+          "default": 1.0,
+          "title": "Scale",
+          "type": "number"
+        },
+        "asset_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asset Ref"
+        },
+        "fit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fit"
+        },
+        "align": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Align"
+        },
+        "trim": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Trim"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "text_align": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text Align"
+        },
+        "valign": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valign"
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TextStyle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "layer_id",
+        "type"
+      ],
+      "title": "Layer",
+      "type": "object"
+    },
+    "NarrationDefaults": {
+      "properties": {
+        "lang": {
+          "default": "vi-VN",
+          "title": "Lang",
+          "type": "string"
+        },
+        "tts_preset_ref": {
+          "default": "tts:vi:default",
+          "title": "Tts Preset Ref",
+          "type": "string"
+        }
+      },
+      "title": "NarrationDefaults",
+      "type": "object"
+    },
+    "OutputConfig": {
+      "properties": {
+        "codec": {
+          "default": "libx264",
+          "title": "Codec",
+          "type": "string"
+        },
+        "audio_codec": {
+          "default": "aac",
+          "title": "Audio Codec",
+          "type": "string"
+        },
+        "bitrate": {
+          "default": "4000k",
+          "title": "Bitrate",
+          "type": "string"
+        },
+        "audio_bitrate": {
+          "default": "192k",
+          "title": "Audio Bitrate",
+          "type": "string"
+        },
+        "preset": {
+          "default": "medium",
+          "title": "Preset",
+          "type": "string"
+        },
+        "pix_fmt": {
+          "default": "yuv420p",
+          "title": "Pix Fmt",
+          "type": "string"
+        }
+      },
+      "title": "OutputConfig",
+      "type": "object"
+    },
+    "PublishConfig": {
+      "properties": {
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/PublishTarget"
+          },
+          "title": "Targets",
+          "type": "array"
+        }
+      },
+      "title": "PublishConfig",
+      "type": "object"
+    },
+    "PublishTarget": {
+      "description": "One publishing destination (forwarded to Publisher Worker).",
+      "properties": {
+        "platform": {
+          "title": "Platform",
+          "type": "string"
+        },
+        "account_ref": {
+          "title": "Account Ref",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "platform",
+        "account_ref"
+      ],
+      "title": "PublishTarget",
+      "type": "object"
+    },
+    "Rect": {
+      "properties": {
+        "x": {
+          "default": 0,
+          "title": "X",
+          "type": "integer"
+        },
+        "y": {
+          "default": 0,
+          "title": "Y",
+          "type": "integer"
+        },
+        "w": {
+          "default": 0,
+          "title": "W",
+          "type": "integer"
+        },
+        "h": {
+          "default": 0,
+          "title": "H",
+          "type": "integer"
+        }
+      },
+      "title": "Rect",
+      "type": "object"
+    },
+    "RenderSpec": {
+      "properties": {
+        "spec_version": {
+          "default": "1.0",
+          "title": "Spec Version",
+          "type": "string"
+        },
+        "canvas": {
+          "$ref": "#/$defs/Canvas"
+        },
+        "defaults": {
+          "$ref": "#/$defs/Defaults"
+        },
+        "assets": {
+          "items": {
+            "$ref": "#/$defs/Asset"
+          },
+          "title": "Assets",
+          "type": "array"
+        },
+        "scenes": {
+          "items": {
+            "$ref": "#/$defs/Scene"
+          },
+          "title": "Scenes",
+          "type": "array"
+        },
+        "output": {
+          "$ref": "#/$defs/OutputConfig"
+        },
+        "publish": {
+          "$ref": "#/$defs/PublishConfig"
+        }
+      },
+      "title": "RenderSpec",
+      "type": "object"
+    },
+    "ResultDestination": {
+      "description": "Where to deliver the render result.",
+      "properties": {
+        "type": {
+          "default": "kafka",
+          "title": "Type",
+          "type": "string"
+        },
+        "topic": {
+          "default": "video.render.result.v1",
+          "title": "Topic",
+          "type": "string"
+        },
+        "key": {
+          "default": "",
+          "title": "Key",
+          "type": "string"
+        }
+      },
+      "title": "ResultDestination",
+      "type": "object"
+    },
+    "SafeArea": {
+      "description": "Insets that mark the UI-safe region of the canvas.",
+      "properties": {
+        "top": {
+          "default": 0,
+          "title": "Top",
+          "type": "integer"
+        },
+        "right": {
+          "default": 0,
+          "title": "Right",
+          "type": "integer"
+        },
+        "bottom": {
+          "default": 0,
+          "title": "Bottom",
+          "type": "integer"
+        },
+        "left": {
+          "default": 0,
+          "title": "Left",
+          "type": "integer"
+        }
+      },
+      "title": "SafeArea",
+      "type": "object"
+    },
+    "Scene": {
+      "properties": {
+        "scene_id": {
+          "title": "Scene Id",
+          "type": "string"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        },
+        "narration": {
+          "$ref": "#/$defs/SceneNarration"
+        },
+        "layers": {
+          "items": {
+            "$ref": "#/$defs/Layer"
+          },
+          "title": "Layers",
+          "type": "array"
+        },
+        "audio_tracks": {
+          "items": {
+            "$ref": "#/$defs/AudioTrack"
+          },
+          "title": "Audio Tracks",
+          "type": "array"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/EffectInstance"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "transition_out": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Transition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "scene_id",
+        "narration"
+      ],
+      "title": "Scene",
+      "type": "object"
+    },
+    "SceneNarration": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "lang": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lang"
+        },
+        "tts_preset_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tts Preset Ref"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "SceneNarration",
+      "type": "object"
+    },
+    "SceneTiming": {
+      "properties": {
+        "head_pad_sec": {
+          "default": 0.15,
+          "title": "Head Pad Sec",
+          "type": "number"
+        },
+        "tail_pad_sec": {
+          "default": 0.45,
+          "title": "Tail Pad Sec",
+          "type": "number"
+        },
+        "duration_mode": {
+          "default": "auto_from_tts",
+          "title": "Duration Mode",
+          "type": "string"
+        }
+      },
+      "title": "SceneTiming",
+      "type": "object"
+    },
+    "TextStyle": {
+      "properties": {
+        "font_ref": {
+          "default": "font:inter:regular",
+          "title": "Font Ref",
+          "type": "string"
+        },
+        "size": {
+          "default": 48,
+          "title": "Size",
+          "type": "integer"
+        },
+        "color": {
+          "default": "#FFFFFF",
+          "title": "Color",
+          "type": "string"
+        },
+        "stroke_color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stroke Color"
+        },
+        "stroke_width": {
+          "default": 0,
+          "title": "Stroke Width",
+          "type": "integer"
+        },
+        "line_height": {
+          "default": 1.15,
+          "title": "Line Height",
+          "type": "number"
+        },
+        "wrap": {
+          "default": true,
+          "title": "Wrap",
+          "type": "boolean"
+        }
+      },
+      "title": "TextStyle",
+      "type": "object"
+    },
+    "Trace": {
+      "description": "Distributed-tracing context.",
+      "properties": {
+        "correlation_id": {
+          "default": "",
+          "title": "Correlation Id",
+          "type": "string"
+        }
+      },
+      "title": "Trace",
+      "type": "object"
+    },
+    "Transition": {
+      "properties": {
+        "type": {
+          "default": "crossfade",
+          "title": "Type",
+          "type": "string"
+        },
+        "duration": {
+          "default": 0.5,
+          "title": "Duration",
+          "type": "number"
+        }
+      },
+      "title": "Transition",
+      "type": "object"
+    },
+    "Trim": {
+      "properties": {
+        "in": {
+          "default": 0,
+          "title": "In",
+          "type": "number"
+        },
+        "out": {
+          "default": 0,
+          "title": "Out",
+          "type": "number"
+        }
+      },
+      "title": "Trim",
+      "type": "object"
+    }
+  },
+  "description": "``video.render.request.v1`` payload.",
+  "properties": {
+    "job_id": {
+      "title": "Job Id",
+      "type": "string"
+    },
+    "spec_version": {
+      "default": "1.0",
+      "title": "Spec Version",
+      "type": "string"
+    },
+    "render_spec": {
+      "$ref": "#/$defs/RenderSpec"
+    },
+    "result": {
+      "$ref": "#/$defs/ResultDestination"
+    },
+    "trace": {
+      "$ref": "#/$defs/Trace"
+    }
+  },
+  "required": [
+    "job_id",
+    "render_spec"
+  ],
+  "title": "RenderRequest",
+  "type": "object"
+}
