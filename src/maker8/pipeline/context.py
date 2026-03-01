@@ -52,6 +52,9 @@ class PipelineContext:
     rendered_video: Path | None = None
     output_meta: OutputMeta = field(default_factory=OutputMeta)
 
+    # ── Asset report (carried into RenderResult) ─────────────────────
+    asset_report: list[dict[str, Any]] = field(default_factory=list)
+
     # ── Dropbox refs ─────────────────────────────────────────────────
     dropbox_video_ref: DropboxFileRef | None = None
     dropbox_manifest_ref: DropboxFileRef | None = None

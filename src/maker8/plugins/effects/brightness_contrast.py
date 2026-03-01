@@ -1,11 +1,13 @@
 """Brightness / Contrast adjustment effect plugin.
 
-Changes the brightness and contrast of every frame using a simple linear
-transform:  ``pixel = contrast * pixel + brightness_offset``.
+Changes the brightness and contrast of every frame using Pillow's
+``ImageEnhance`` (multiplicative factor, where 1.0 = no change).
 
 Params:
-    brightness: float – additive offset (-255 … 255, default 0)
-    contrast:   float – multiplicative factor (0.0 … 3.0, default 1.0)
+    brightness: float – multiplicative factor (0.0 … 3.0, default 1.0;
+                       >1 brighter, <1 darker)
+    contrast:   float – multiplicative factor (0.0 … 3.0, default 1.0;
+                       >1 more contrast, <1 less)
 """
 
 from __future__ import annotations

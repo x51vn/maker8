@@ -24,8 +24,6 @@ class PluginManifest:
 
     id: str
     version: str
-    priority: int = 0
-    cost: float = 0.0
     deterministic: bool = True
 
 
