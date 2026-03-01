@@ -52,5 +52,7 @@ class EmitResultStage(Stage):
             dropbox=dropbox,
             output_meta=ctx.output_meta,
             publish_targets=ctx.render_spec.publish.targets,
+            asset_report=ctx.asset_report,
             engine_versions=collect_engine_versions(),
+            trace=ctx.trace,
         )

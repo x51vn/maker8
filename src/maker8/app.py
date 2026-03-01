@@ -13,6 +13,7 @@ import atexit
 import os
 import signal
 import sys
+from pathlib import Path
 
 from maker8.config import get_settings
 from maker8.kafka.consumer import RenderConsumer
@@ -103,13 +104,12 @@ def main() -> None:
     # ── Run ──────────────────────────────────────────────────────────
     try:
         # Write health file so Docker healthcheck can verify the app is running
-        _health_file = "/tmp/maker8_healthy"
+        _health_file = Path("/tmp/maker8_healthy")
         try:
-            import pathlib
-            pathlib.Path(_health_file).touch()
-            log.info("app.health_file_created", path=_health_file)
+            _health_file.touch()
+            log.info("app.health_file_created", path=str(_health_file))
         except Exception as _e:
-            log.warning("app.health_file_failed", path=_health_file, error=str(_e))
+            log.warning("app.health_file_failed", path=str(_health_file), error=str(_e))
 
         consumer.start(handler=orchestrator.handle)
     except KeyboardInterrupt:

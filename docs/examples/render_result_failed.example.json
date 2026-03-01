@@ -1,0 +1,32 @@
+{
+  "job_id": "job-2025-01-15-abc123",
+  "status": "FAILED",
+  "job_key": "sha256:a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
+  "dropbox": {
+    "video": {},
+    "manifest": {}
+  },
+  "output_meta": {
+    "duration": 0,
+    "w": 0,
+    "h": 0,
+    "fps": 0,
+    "size_bytes": 0
+  },
+  "publish_targets": [],
+  "asset_report": [],
+  "engine_versions": {
+    "moviepy": "2.1.1",
+    "ffmpeg": "6.1.1",
+    "youtube_dlp": "2024.12.06"
+  },
+  "trace": {
+    "correlation_id": "corr-20250115-xyz789"
+  },
+  "error": {
+    "code": "DOWNLOAD_FAILED",
+    "stage": "DOWNLOAD",
+    "retryable": true,
+    "message": "HTTP 503 from https://example.com/assets/video.mp4 after 5 attempts"
+  }
+}

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../deployment"
+		},
+		{
+			"path": "../editor8"
+		}
+	],
+	"settings": {}
+}
