@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     kafka_password: str = ""
     kafka_security_protocol: str = ""  # e.g., "SASL_PLAINTEXT", "SASL_SSL"
     kafka_sasl_mechanism: str = ""  # e.g., "PLAIN"
+    # Max time (ms) between two consumer poll() calls before broker considers
+    # the consumer dead.  Must exceed the worst-case pipeline duration
+    # (yt-dlp resolve 120 s + download 600 s + TTS + render + upload ≈ 30 min).
+    kafka_max_poll_interval_ms: int = 1_800_000  # 30 minutes
 
     # ── Dropbox ──────────────────────────────────────────────────────
     dropbox_app_key: str = ""
