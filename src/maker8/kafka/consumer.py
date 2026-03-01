@@ -28,6 +28,10 @@ class RenderConsumer:
             "group.id": settings.kafka_group_id,
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
+            # Allow enough time for the full synchronous pipeline to complete
+            # (resolve + download + TTS + render + upload) before the broker
+            # considers this consumer dead and revokes partition ownership.
+            "max.poll.interval.ms": settings.kafka_max_poll_interval_ms,
         }
         
         # Add SASL credentials if provided

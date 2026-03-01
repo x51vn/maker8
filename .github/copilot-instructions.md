@@ -74,6 +74,9 @@ src/maker8/
 - Every file starts with `from __future__ import annotations`.
 - Use `structlog` for all logging (via `utils/logging.py`).
 - Prefer explicit imports; avoid wildcard imports.
+- **All imports must be at the top of the file** – never put `import` or `from … import` statements inside functions, methods, or class bodies.
+  - Exception: circular-import guards that cannot be resolved otherwise (very rare). In that case add a `# noqa: PLC0415` comment to acknowledge the deliberate exception.
+  - For optional/heavy dependencies that may not be installed, use a module-level `try/except ImportError` block at the top, **not** a lazy import inside a function.
 
 ### Models – DRY Rules
 

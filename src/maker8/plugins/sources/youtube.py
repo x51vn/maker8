@@ -34,7 +34,11 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
     # ── Resolve ──────────────────────────────────────────────────────
 
     def resolve(self, asset_id: str, source: dict[str, Any]) -> ResolvedAssetPlan:
-        url = source["url"]
+        url = source.get("url")
+        if not url:
+            raise ValueError(
+                f"Asset {asset_id!r} has no 'url' in its source – cannot resolve."
+            )
         options = source.get("options", {})
         fmt = options.get("format", _DEFAULT_FORMAT)
         max_dur = options.get("max_duration_sec")
