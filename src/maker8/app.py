@@ -24,10 +24,10 @@ from maker8.observability.state import WorkerState
 from maker8.pipeline.orchestrator import Orchestrator
 from maker8.plugins.registry import PluginRegistry
 from maker8.rendering.encoder import probe_gpu_capabilities
+from maker8.rendering.ffmpeg_runtime import bind_moviepy_ffmpeg, diagnose_runtime
 from maker8.services.dropbox_client import DropboxClient
 from maker8.services.tts_client import TTSService
 from maker8.utils.logging import get_logger, setup_logging
-
 
 # Global variables for shutdown coordination
 _shutdown_requested = False
@@ -46,6 +46,20 @@ def main() -> None:
     _log = log
 
     log.info("app.starting", version="0.1.0")
+
+    # ── FFmpeg runtime resolution ────────────────────────────────────
+    # Must run before any MoviePy import to ensure a single binary.
+    bind_moviepy_ffmpeg()
+    rt = diagnose_runtime()
+    log.info(
+        "app.ffmpeg_runtime",
+        render_ffmpeg_path=rt.render_ffmpeg_path,
+        render_ffmpeg_version=rt.render_ffmpeg_version,
+        system_ffmpeg_path=rt.system_ffmpeg_path,
+        same_binary=rt.same_binary,
+        imageio_ffmpeg_path=rt.imageio_ffmpeg_path,
+        render_nvenc_available=rt.render_nvenc_available,
+    )
 
     # ── GPU capability probe ─────────────────────────────────────────
     gpu = probe_gpu_capabilities()

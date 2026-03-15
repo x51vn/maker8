@@ -12,7 +12,6 @@ from typing import Any
 from maker8.models.spec import RenderSpec
 from maker8.utils.hashing import sha256_bytes
 
-
 # ── Public API ───────────────────────────────────────────────────────────────
 
 

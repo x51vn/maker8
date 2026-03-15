@@ -14,7 +14,6 @@ from typing import Any
 from maker8.models.common import AssetWarning, DropboxFileRef, OutputMeta, Trace
 from maker8.models.spec import RenderSpec
 
-
 # ── TTS result (pipeline-internal) ──────────────────────────────────────────
 
 

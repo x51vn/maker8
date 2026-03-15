@@ -24,11 +24,10 @@ sys.modules.setdefault("prometheus_client", _prom_stub)
 
 from maker8.pipeline.resolve import ResolveAssetsStage, _classify_value_error  # noqa: E402
 from maker8.plugins.sources.youtube import (  # noqa: E402
-    YouTubeSourceConnector,
     _DEFAULT_FORMAT,
+    YouTubeSourceConnector,
 )
 from maker8.retry import StageError  # noqa: E402
-
 
 # ── YouTubeSourceConnector.resolve format handling ───────────────────────────
 
@@ -130,7 +129,6 @@ class TestResolveNonRetryableErrors:
 
     def _make_ctx(self, assets: list[dict]) -> MagicMock:
         """Build a minimal mock PipelineContext."""
-        from unittest.mock import PropertyMock
 
         ctx = MagicMock()
         ctx.job_id = "test-job"

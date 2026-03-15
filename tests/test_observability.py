@@ -6,12 +6,9 @@ import json
 import time
 from pathlib import Path
 
-import pytest
-
 from maker8.observability.health import HealthManager
 from maker8.observability.helpers import Timer, sanitize_url, timed, truncate_stderr
 from maker8.observability.state import WorkerState
-
 
 # ── Timer tests ──────────────────────────────────────────────────────────────
 
