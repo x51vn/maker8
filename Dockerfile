@@ -15,8 +15,14 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg \
         libsm6 libxext6 libxrender1 \
-        ca-certificates curl \
+        ca-certificates curl unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Deno – required by yt-dlp for full YouTube format extraction.
+# Without it, yt-dlp falls back to Android VR API which only offers AV1
+# streams, causing expensive CPU transcodes during normalisation.
+RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
+    && deno --version
 
 WORKDIR /app
 
