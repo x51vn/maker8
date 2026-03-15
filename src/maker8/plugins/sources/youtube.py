@@ -45,14 +45,30 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
         fmt = options.get("format", _DEFAULT_FORMAT)
         max_dur = options.get("max_duration_sec")
 
-        cmd = ["yt-dlp", "--dump-json", "--no-download", "-f", fmt, url]
+        if fmt is None:
+            raise ValueError(
+                f"Invalid yt-dlp format spec: None (asset_id={asset_id!r}). "
+                "Provide a valid format string or omit to use the default."
+            )
+
         safe_url = sanitize_url(url)
+        log.info(
+            "ytdlp.resolve.start",
+            asset_id=asset_id,
+            url=safe_url,
+            format_spec=fmt,
+            max_duration_sec=max_dur,
+            timeout_sec=120,
+        )
+
+        cmd = ["yt-dlp", "--dump-json", "--no-download", "-f", fmt, url]
         log.info(
             "subprocess.start",
             asset_id=asset_id,
             command="yt-dlp",
             operation="resolve",
             url=safe_url,
+            format_spec=fmt,
         )
         timer = Timer().start()
         try:
@@ -68,6 +84,7 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
                 asset_id=asset_id,
                 command="yt-dlp",
                 operation="resolve",
+                format_spec=fmt,
                 duration_ms=timer.elapsed_ms,
             )
         except subprocess.CalledProcessError as exc:
@@ -78,6 +95,7 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
                 asset_id=asset_id,
                 command="yt-dlp",
                 operation="resolve",
+                format_spec=fmt,
                 returncode=exc.returncode,
                 stderr=truncate_stderr(exc.stderr or ""),
                 duration_ms=timer.elapsed_ms,
@@ -123,6 +141,14 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
         fmt = plan.format_spec or _DEFAULT_FORMAT
         output_tpl = str(dest_dir / f"{plan.asset_id}.%(ext)s")
 
+        safe_url = sanitize_url(plan.url)
+        log.info(
+            "ytdlp.download.start",
+            asset_id=plan.asset_id,
+            url=safe_url,
+            format_spec=fmt,
+        )
+
         cmd = [
             "yt-dlp",
             "-f", fmt,
@@ -130,13 +156,13 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
             "--merge-output-format", "mp4",
             plan.url,
         ]
-        safe_url = sanitize_url(plan.url)
         log.info(
             "subprocess.start",
             asset_id=plan.asset_id,
             command="yt-dlp",
             operation="download",
             url=safe_url,
+            format_spec=fmt,
         )
         timer = Timer().start()
         try:
