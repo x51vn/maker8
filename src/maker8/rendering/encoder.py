@@ -148,8 +148,6 @@ def _gpu_config(pix_fmt: str) -> EncoderConfig:
         ffmpeg_params=[
             "-pix_fmt",
             pix_fmt,
-            "-rc:v",
-            "vbr",
             "-cq",
             "23",
             "-movflags",
