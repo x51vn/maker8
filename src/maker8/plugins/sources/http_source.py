@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-import requests  # type: ignore[import-untyped]
+import requests
 
 from maker8.plugins.base import PluginManifest, ResolvedAssetPlan, SourceConnectorPlugin
 from maker8.utils.logging import get_logger

@@ -35,33 +35,38 @@ Kafka ──► RenderConsumer ──► Orchestrator ──► [Stage pipeline]
 ## Project Structure
 
 ```
-src/maker8/
-├── models/          # Pydantic v2 models
-│   ├── common.py    # Shared enums, ErrorInfo, DropboxFileRef, OutputMeta, etc.
-│   ├── spec.py      # RenderSpec: Canvas, Defaults, Asset, Scene, Layer, etc.
-│   ├── contracts.py # RenderRequest, RenderResult, DLQPayload
-│   └── manifest.py  # Dropbox manifest
-├── kafka/           # Kafka consumer / producer wrappers
-├── pipeline/        # Pipeline stages (one file per stage)
-│   ├── context.py   # PipelineContext (mutable state passed between stages)
-│   ├── stage.py     # Stage ABC
-│   └── orchestrator.py
-├── plugins/         # Extensible plugin system
-│   ├── base.py      # ABCs: SourceConnectorPlugin, EffectPlugin
-│   ├── registry.py  # Singleton plugin registry
-│   └── sources/     # Built-in source connectors (youtube, http)
-├── rendering/       # MoviePy / Pillow video composition
-│   ├── composer.py  # Scenes → final video
-│   ├── layers.py    # Layer → MoviePy clip
-│   └── text.py      # Text rendering via Pillow
-├── services/        # External service clients
-│   ├── dropbox_client.py
-│   └── tts_client.py
-├── utils/           # Hashing, logging
-├── canon.py         # Canonicalization + job_key
-├── retry.py         # RetryPolicy, StageError, backoff
-├── config.py        # Pydantic Settings (env vars)
-└── app.py           # Entry point
+src/
+├── render_contracts/  # Canonical wire-format models (shared with editor8)
+│   ├── __init__.py
+│   ├── render_spec.py  # 25+ Pydantic models: Canvas, Scene, Layer, RenderSpec, etc.
+│   └── events.py      # Kafka topic constants
+└── maker8/
+    ├── models/          # Pydantic v2 models
+    │   ├── common.py    # Shared enums, ErrorInfo, DropboxFileRef + re-exports from render_contracts
+    │   ├── spec.py      # Re-exports all wire-format types from render_contracts
+    │   ├── contracts.py # RenderRequest (re-export), RenderResult, DLQPayload
+    │   └── manifest.py  # Dropbox manifest
+    ├── kafka/           # Kafka consumer / producer wrappers
+    ├── pipeline/        # Pipeline stages (one file per stage)
+    │   ├── context.py   # PipelineContext (mutable state passed between stages)
+    │   ├── stage.py     # Stage ABC
+    │   └── orchestrator.py
+    ├── plugins/         # Extensible plugin system
+    │   ├── base.py      # ABCs: SourceConnectorPlugin, EffectPlugin
+    │   ├── registry.py  # Singleton plugin registry
+    │   └── sources/     # Built-in source connectors (youtube, http)
+    ├── rendering/       # MoviePy / Pillow video composition
+    │   ├── composer.py  # Scenes → final video
+    │   ├── layers.py    # Layer → MoviePy clip
+    │   └── text.py      # Text rendering via Pillow
+    ├── services/        # External service clients
+    │   ├── dropbox_client.py
+    │   └── tts_client.py
+    ├── utils/           # Hashing, logging
+    ├── canon.py         # Canonicalization + job_key
+    ├── retry.py         # RetryPolicy, StageError, backoff
+    ├── config.py        # Pydantic Settings (env vars)
+    └── app.py           # Entry point
 ```
 
 ---
@@ -77,14 +82,30 @@ src/maker8/
 - **All imports must be at the top of the file** – never put `import` or `from … import` statements inside functions, methods, or class bodies.
   - Exception: circular-import guards that cannot be resolved otherwise (very rare). In that case add a `# noqa: PLC0415` comment to acknowledge the deliberate exception.
   - For optional/heavy dependencies that may not be installed, use a module-level `try/except ImportError` block at the top, **not** a lazy import inside a function.
+- **`mypy --strict`** is enforced in CI. `no_implicit_reexport` is active.
+  - Any module that re-exports a symbol from another package **must** declare an explicit `__all__` containing every re-exported name.
+  - Do **not** suppress `attr-defined` or `no_implicit_reexport` errors with blanket ignores. Fix the export surface instead.
+  - Remove stale `# type: ignore[…]` comments when the underlying issue is resolved — unused ignores fail CI.
+
+### Shared Wire-Format Contracts (`render_contracts`)
+
+- **`render_contracts/render_spec.py`** is the **single source of truth** for all wire-format Pydantic models (`Canvas`, `Scene`, `Layer`, `RenderSpec`, `RenderRequest`, `Trace`, `PublishTarget`, etc.).
+- **Never duplicate** these model definitions in `maker8`. Import from `render_contracts` instead.
+- `maker8.models.spec` re-exports all 25 types from `render_contracts.render_spec`.
+- `maker8.models.common` re-exports `PublishTarget` and `Trace`.
+- `maker8.models.contracts` re-exports `RenderRequest` and `ResultDestination`.
+- When adding a field to the wire format, edit `render_contracts/render_spec.py` and update the same file in editor8. Both projects must stay in sync.
+- Re-export modules **must** include the re-exported names in their `__all__` list (required by `mypy --strict` / `no_implicit_reexport`).
 
 ### Models – DRY Rules
 
-- **All shared types** live in `models/common.py` – never duplicate.
-- Import `PublishTarget`, `ErrorInfo`, `DropboxFileRef`, etc. from `common`.
+- **Wire-format types** are defined in `render_contracts/render_spec.py` and re-exported via `models/spec.py`, `models/common.py`, `models/contracts.py`.
+- **maker8-internal types** (enums, `ErrorInfo`, `DropboxFileRef`, `OutputMeta`, etc.) live in `models/common.py` – never duplicate.
+- Import `PublishTarget`, `Trace` from `models/common.py`; import `RenderRequest`, `ResultDestination` from `models/contracts.py`.
 - Use `Field(alias=...)` for Python keyword conflicts (`in` → `in_`, `bytes` → `bytes_`).
 - Use `model_config = {"populate_by_name": True}` when aliases exist.
 - Serialize with `model_dump(mode="json", by_alias=True)` for Kafka / Dropbox output.
+- **Every re-export module must have `__all__`** listing all public names (for `mypy --strict`).
 
 ### Pipeline Stages
 
