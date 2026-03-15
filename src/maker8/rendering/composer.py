@@ -7,6 +7,7 @@ returns the output file path together with ``OutputMeta``.
 
 from __future__ import annotations
 
+import signal
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -29,6 +30,16 @@ from maker8.utils.color import hex_to_rgb
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
+
+_RENDER_TIMEOUT = 1800  # 30 minutes hard limit for write_videofile
+
+
+class _RenderTimeout(Exception):
+    """Raised when write_videofile exceeds the hard timeout."""
+
+
+def _timeout_handler(signum: int, frame: object) -> None:
+    raise _RenderTimeout(f"write_videofile exceeded {_RENDER_TIMEOUT}s timeout")
 
 
 # ── Bridge dataclass (rendering ↔ pipeline) ─────────────────────────────────
@@ -71,18 +82,40 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
     final = _concatenate_with_transitions(scene_clips, transition_durs, canvas)
 
     output_path = ri.output_dir / f"{ri.job_id}.mp4"
-    log.info("composer.write", path=str(output_path), duration=final.duration)
+    log.info(
+        "composer.write.start",
+        job_id=ri.job_id,
+        path=str(output_path),
+        duration=final.duration,
+        timeout_sec=_RENDER_TIMEOUT,
+    )
 
-    final.write_videofile(
-        str(output_path),
-        fps=canvas.fps,
-        codec=output_cfg.codec,
-        audio_codec=output_cfg.audio_codec,
-        bitrate=output_cfg.bitrate,
-        preset=output_cfg.preset,
-        ffmpeg_params=["-pix_fmt", output_cfg.pix_fmt],
-        audio_bitrate=output_cfg.audio_bitrate,
-        logger=None,
+    # Set a hard timeout so a stuck encode cannot block the worker forever.
+    prev_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+    signal.alarm(_RENDER_TIMEOUT)
+    try:
+        final.write_videofile(
+            str(output_path),
+            fps=canvas.fps,
+            codec=output_cfg.codec,
+            audio_codec=output_cfg.audio_codec,
+            bitrate=output_cfg.bitrate,
+            preset=output_cfg.preset,
+            ffmpeg_params=["-pix_fmt", output_cfg.pix_fmt],
+            audio_bitrate=output_cfg.audio_bitrate,
+            logger="bar",
+        )
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, prev_handler)
+
+    size_bytes = output_path.stat().st_size
+    log.info(
+        "composer.write.returned",
+        job_id=ri.job_id,
+        path=str(output_path),
+        output_size_bytes=size_bytes,
+        duration=final.duration,
     )
 
     meta = OutputMeta(
@@ -90,7 +123,7 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
         w=canvas.w,
         h=canvas.h,
         fps=canvas.fps,
-        size_bytes=output_path.stat().st_size,
+        size_bytes=size_bytes,
     )
 
     # Clean up
