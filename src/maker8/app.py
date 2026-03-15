@@ -23,6 +23,7 @@ from maker8.observability.metrics import WORKER_READY, WORKER_UP
 from maker8.observability.state import WorkerState
 from maker8.pipeline.orchestrator import Orchestrator
 from maker8.plugins.registry import PluginRegistry
+from maker8.rendering.encoder import probe_gpu_capabilities
 from maker8.services.dropbox_client import DropboxClient
 from maker8.services.tts_client import TTSService
 from maker8.utils.logging import get_logger, setup_logging
@@ -45,6 +46,16 @@ def main() -> None:
     _log = log
 
     log.info("app.starting", version="0.1.0")
+
+    # ── GPU capability probe ─────────────────────────────────────────
+    gpu = probe_gpu_capabilities()
+    log.info(
+        "app.gpu_capabilities",
+        nvidia_smi=gpu.nvidia_smi,
+        nvenc_available=gpu.nvenc_available,
+        cuda_hwaccel=gpu.cuda_hwaccel,
+        gpu_render_enabled=gpu.gpu_render_enabled,
+    )
 
     # ── Observability bootstrap ──────────────────────────────────────
     worker_state = WorkerState()

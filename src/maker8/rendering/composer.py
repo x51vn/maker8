@@ -23,8 +23,9 @@ from moviepy.audio.fx import AudioLoop, MultiplyVolume
 from moviepy.video.fx import FadeIn, FadeOut
 
 from maker8.models.common import OutputMeta
-from maker8.models.spec import AudioTrack, Canvas, Defaults, RenderSpec, Scene
+from maker8.models.spec import AudioTrack, Canvas, Defaults, OutputConfig, RenderSpec, Scene
 from maker8.plugins.base import EffectPlugin
+from maker8.rendering.encoder import EncoderConfig, resolve_encoder
 from maker8.rendering.layers import build_layer_clip
 from maker8.utils.color import hex_to_rgb
 from maker8.utils.logging import get_logger
@@ -82,32 +83,29 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
     final = _concatenate_with_transitions(scene_clips, transition_durs, canvas)
 
     output_path = ri.output_dir / f"{ri.job_id}.mp4"
-    log.info(
-        "composer.write.start",
-        job_id=ri.job_id,
-        path=str(output_path),
-        duration=final.duration,
-        timeout_sec=_RENDER_TIMEOUT,
-    )
 
-    # Set a hard timeout so a stuck encode cannot block the worker forever.
-    prev_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-    signal.alarm(_RENDER_TIMEOUT)
+    # Resolve encoder: auto → GPU when available, explicit → honoured
+    encoder = resolve_encoder(output_cfg.codec, output_cfg.preset, output_cfg.pix_fmt)
+
     try:
-        final.write_videofile(
-            str(output_path),
-            fps=canvas.fps,
-            codec=output_cfg.codec,
-            audio_codec=output_cfg.audio_codec,
-            bitrate=output_cfg.bitrate,
-            preset=output_cfg.preset,
-            ffmpeg_params=["-pix_fmt", output_cfg.pix_fmt],
-            audio_bitrate=output_cfg.audio_bitrate,
-            logger="bar",
-        )
-    finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, prev_handler)
+        _write_final_video(final, output_path, ri.job_id, canvas.fps, output_cfg, encoder)
+    except _RenderTimeout:
+        raise  # Never retry on timeout — CPU would also timeout
+    except Exception as exc:
+        if encoder.is_gpu:
+            log.warning(
+                "composer.gpu_encode_failed",
+                job_id=ri.job_id,
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
+            output_path.unlink(missing_ok=True)
+            cpu_encoder = resolve_encoder("libx264", output_cfg.preset, output_cfg.pix_fmt)
+            _write_final_video(
+                final, output_path, ri.job_id, canvas.fps, output_cfg, cpu_encoder,
+            )
+        else:
+            raise
 
     size_bytes = output_path.stat().st_size
     log.info(
@@ -116,6 +114,8 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
         path=str(output_path),
         output_size_bytes=size_bytes,
         duration=final.duration,
+        codec=encoder.codec,
+        is_gpu=encoder.is_gpu,
     )
 
     meta = OutputMeta(
@@ -132,6 +132,48 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
         c.close()
 
     return output_path, meta
+
+
+# ── Final video writer ───────────────────────────────────────────────────────
+
+
+def _write_final_video(
+    clip: VideoClip,
+    output_path: Path,
+    job_id: str,
+    fps: int,
+    output_cfg: OutputConfig,
+    encoder: EncoderConfig,
+) -> None:
+    """Write *clip* to *output_path* using *encoder*, with SIGALRM timeout."""
+    log.info(
+        "composer.write.start",
+        job_id=job_id,
+        path=str(output_path),
+        duration=clip.duration,
+        codec=encoder.codec,
+        preset=encoder.preset,
+        is_gpu=encoder.is_gpu,
+        timeout_sec=_RENDER_TIMEOUT,
+    )
+
+    prev_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+    signal.alarm(_RENDER_TIMEOUT)
+    try:
+        clip.write_videofile(
+            str(output_path),
+            fps=fps,
+            codec=encoder.codec,
+            audio_codec=output_cfg.audio_codec,
+            bitrate=output_cfg.bitrate,
+            preset=encoder.preset,
+            ffmpeg_params=encoder.ffmpeg_params,
+            audio_bitrate=output_cfg.audio_bitrate,
+            logger="bar",
+        )
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, prev_handler)
 
 
 # ── Scene builder ────────────────────────────────────────────────────────────
