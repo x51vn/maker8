@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import signal
 import subprocess
 from pathlib import Path
 
@@ -18,6 +19,17 @@ log = get_logger(__name__)
 
 _VIDEO_TIMEOUT = 600  # seconds per video asset
 _AUDIO_TIMEOUT = 120  # seconds per audio asset
+
+# Signals that indicate an external kill (OOM, cgroup, operator) rather than
+# a normal FFmpeg processing error.  Negative return codes = -(signal_number).
+_EXTERNAL_KILL_SIGNALS: frozenset[int] = frozenset(
+    {signal.SIGKILL, signal.SIGTERM, signal.SIGXCPU, signal.SIGXFSZ}
+)
+
+
+def _is_external_kill(returncode: int) -> bool:
+    """Return ``True`` when *returncode* indicates the process was killed externally."""
+    return returncode < 0 and (-returncode) in _EXTERNAL_KILL_SIGNALS
 
 
 def _has_video_stream(path: Path) -> bool:
@@ -175,6 +187,8 @@ class NormalizeStage(Stage):
                 stage="NORMALIZE", source_kind="ffmpeg"
             ).inc()
             stderr = truncate_stderr(exc.stderr)
+            killed = _is_external_kill(exc.returncode)
+            error_code = "FFMPEG_KILLED" if killed else "FFMPEG_ERROR"
             log.error(
                 "subprocess.failure",
                 job_id=job_id,
@@ -183,14 +197,18 @@ class NormalizeStage(Stage):
                 operation="normalize_video",
                 encoder=encoder,
                 returncode=exc.returncode,
+                signal_name=signal.Signals(-exc.returncode).name
+                if exc.returncode < 0
+                else None,
+                external_kill=killed,
                 stderr=stderr,
                 duration_sec=timer.elapsed_sec,
             )
             raise StageError(
-                RenderStage.NORMALIZE, "FFMPEG_ERROR",
+                RenderStage.NORMALIZE, error_code,
                 f"FFmpeg normalisation failed for {src.name} "
                 f"(rc={exc.returncode}): {stderr}",
-                retryable=False,
+                retryable=killed,
             ) from exc
         except subprocess.TimeoutExpired as exc:
             timer.stop()
@@ -282,6 +300,8 @@ class NormalizeStage(Stage):
                 stage="NORMALIZE", source_kind="ffmpeg"
             ).inc()
             stderr = truncate_stderr(exc.stderr)
+            killed = _is_external_kill(exc.returncode)
+            error_code = "FFMPEG_KILLED" if killed else "FFMPEG_ERROR"
             log.error(
                 "subprocess.failure",
                 job_id=job_id,
@@ -290,14 +310,18 @@ class NormalizeStage(Stage):
                 operation="normalize_video",
                 encoder="libx264",
                 returncode=exc.returncode,
+                signal_name=signal.Signals(-exc.returncode).name
+                if exc.returncode < 0
+                else None,
+                external_kill=killed,
                 stderr=stderr,
                 duration_sec=timer.elapsed_sec,
             )
             raise StageError(
-                RenderStage.NORMALIZE, "FFMPEG_ERROR",
+                RenderStage.NORMALIZE, error_code,
                 f"FFmpeg normalisation failed for {src.name} "
                 f"(rc={exc.returncode}): {stderr}",
-                retryable=False,
+                retryable=killed,
             ) from exc
         return dest
 
@@ -359,6 +383,8 @@ class NormalizeStage(Stage):
             timer.stop()
             SUBPROCESS_FAILURES.labels(stage="NORMALIZE", source_kind="ffmpeg").inc()
             stderr = truncate_stderr(exc.stderr)
+            killed = _is_external_kill(exc.returncode)
+            error_code = "FFMPEG_KILLED" if killed else "FFMPEG_ERROR"
             log.error(
                 "subprocess.failure",
                 job_id=job_id,
@@ -366,11 +392,15 @@ class NormalizeStage(Stage):
                 executable="ffmpeg",
                 operation="normalize_audio",
                 returncode=exc.returncode,
+                signal_name=signal.Signals(-exc.returncode).name
+                if exc.returncode < 0
+                else None,
+                external_kill=killed,
                 stderr=stderr,
             )
             raise StageError(
-                RenderStage.NORMALIZE, "FFMPEG_ERROR",
+                RenderStage.NORMALIZE, error_code,
                 f"Audio normalisation failed for {src.name} (rc={exc.returncode}): {stderr}",
-                retryable=False,
+                retryable=killed,
             ) from exc
         return dest
