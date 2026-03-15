@@ -18,6 +18,7 @@ RENDER_RETRYABLE_STAGES: frozenset[RenderStage] = frozenset(
     {
         RenderStage.RESOLVE_ASSETS,
         RenderStage.DOWNLOAD,
+        RenderStage.NORMALIZE,
         RenderStage.TTS,
         RenderStage.UPLOAD_DROPBOX,
         RenderStage.EMIT_RESULT,
