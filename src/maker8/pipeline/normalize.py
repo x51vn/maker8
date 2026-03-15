@@ -20,6 +20,28 @@ _VIDEO_TIMEOUT = 600  # seconds per video asset
 _AUDIO_TIMEOUT = 120  # seconds per audio asset
 
 
+def _has_video_stream(path: Path) -> bool:
+    """Return ``True`` if *path* contains at least one video stream."""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-select_streams", "v",
+                "-show_entries", "stream=codec_type",
+                "-of", "csv=p=0",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        return "video" in result.stdout
+    except Exception:
+        # If probe fails, assume there is a video stream and let FFmpeg
+        # deal with it downstream.
+        return True
+
+
 def _build_video_cmd(src: Path, dest: Path, *, use_nvenc: bool) -> list[str]:
     """Build the FFmpeg command for video normalisation."""
     if use_nvenc:
@@ -57,7 +79,20 @@ class NormalizeStage(Stage):
                 continue  # already done
 
             if asset.type == "video":
-                normalised = self._normalize_video(src, ctx.assets_dir, ctx.job_id, asset.id)
+                if _has_video_stream(src):
+                    normalised = self._normalize_video(
+                        src, ctx.assets_dir, ctx.job_id, asset.id,
+                    )
+                else:
+                    log.warning(
+                        "normalize.no_video_stream",
+                        job_id=ctx.job_id,
+                        asset_id=asset.id,
+                        path=str(src),
+                    )
+                    normalised = self._normalize_audio(
+                        src, ctx.assets_dir, ctx.job_id, asset.id,
+                    )
             elif asset.type == "audio":
                 normalised = self._normalize_audio(src, ctx.assets_dir, ctx.job_id, asset.id)
             else:
