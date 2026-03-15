@@ -43,7 +43,6 @@ __all__ = [
     "TTS_DURATION",
     "WORKER_READY",
     "WORKER_UP",
-    "start_metrics_server",
 ]
 
 
