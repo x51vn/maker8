@@ -10,6 +10,7 @@ from maker8.observability.helpers import Timer, truncate_stderr
 from maker8.observability.metrics import SUBPROCESS_DURATION, SUBPROCESS_FAILURES
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
+from maker8.rendering.encoder import check_nvenc
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 
@@ -17,30 +18,6 @@ log = get_logger(__name__)
 
 _VIDEO_TIMEOUT = 600  # seconds per video asset
 _AUDIO_TIMEOUT = 120  # seconds per audio asset
-
-
-def _has_nvenc() -> bool:
-    """Return True if h264_nvenc is available in the installed FFmpeg."""
-    try:
-        result = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-encoders"],
-            capture_output=True, text=True, timeout=10,
-        )
-        return "h264_nvenc" in result.stdout
-    except Exception:
-        return False
-
-
-# Cache the result at import time so we probe only once.
-_NVENC_AVAILABLE: bool | None = None
-
-
-def _check_nvenc() -> bool:
-    global _NVENC_AVAILABLE  # noqa: PLW0603
-    if _NVENC_AVAILABLE is None:
-        _NVENC_AVAILABLE = _has_nvenc()
-        log.info("normalize.gpu_probe", nvenc_available=_NVENC_AVAILABLE)
-    return _NVENC_AVAILABLE
 
 
 def _build_video_cmd(src: Path, dest: Path, *, use_nvenc: bool) -> list[str]:
@@ -111,7 +88,7 @@ class NormalizeStage(Stage):
         if dest.exists():
             return dest
 
-        use_nvenc = _check_nvenc()
+        use_nvenc = check_nvenc()
         encoder = "h264_nvenc" if use_nvenc else "libx264"
         cmd = _build_video_cmd(src, dest, use_nvenc=use_nvenc)
 

@@ -35,6 +35,9 @@ COPY config/ config/
 COPY .env.example .env.example
 
 ENV MAKER8_WORK_DIR=/data/maker8
+# Ensure the NVIDIA container runtime exposes GPU devices and capabilities.
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
 VOLUME /data/maker8
 
 ENTRYPOINT ["maker8"]
