@@ -8,6 +8,8 @@ from typing import Any, Callable
 from confluent_kafka import Consumer, KafkaError, KafkaException, Message
 
 from maker8.config import Settings
+from maker8.observability.metrics import JOBS_RECEIVED, KAFKA_CONSUMER_RUNNING
+from maker8.observability.state import WorkerState
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
@@ -19,8 +21,13 @@ class RenderConsumer:
     One message at a time – manual commit after successful handling.
     """
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        worker_state: WorkerState | None = None,
+    ) -> None:
         self._settings = settings
+        self._state = worker_state
         
         # Build Kafka config
         kafka_config = {
@@ -54,6 +61,9 @@ class RenderConsumer:
         topic = self._settings.kafka_render_request_topic
         self._consumer.subscribe([topic])
         self._running = True
+        KAFKA_CONSUMER_RUNNING.set(1)
+        if self._state:
+            self._state.consumer_running = True
         log.info("consumer.started", topic=topic)
 
         while self._running:
@@ -62,9 +72,6 @@ class RenderConsumer:
                 continue
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
-                    # Normal condition – consumer has reached the end of the
-                    # partition.  Log at DEBUG so operators can trace it but
-                    # don't treat it as an error.
                     log.debug(
                         "consumer.partition_eof",
                         partition=msg.partition(),
@@ -78,29 +85,68 @@ class RenderConsumer:
                 )
                 raise KafkaException(msg.error())
 
+            # ── Message received ─────────────────────────────────────
+            partition = msg.partition()
+            offset = msg.offset()
+            msg_key = msg.key().decode("utf-8", errors="replace") if msg.key() else ""
+            payload_size = len(msg.value()) if msg.value() else 0
+
+            log.info(
+                "consumer.message_received",
+                topic=topic,
+                partition=partition,
+                offset=offset,
+                key=msg_key,
+                payload_bytes=payload_size,
+            )
+            JOBS_RECEIVED.inc()
+            if self._state:
+                self._state.on_message_received(partition=partition, offset=offset)
+
             try:
                 payload = json.loads(msg.value().decode("utf-8"))
+                log.info(
+                    "consumer.handler_started",
+                    partition=partition,
+                    offset=offset,
+                    key=msg_key,
+                )
                 handler(payload)
+                log.info(
+                    "consumer.handler_finished",
+                    partition=partition,
+                    offset=offset,
+                    key=msg_key,
+                    result="success",
+                )
             except Exception:
-                log.exception("consumer.handler_error", offset=msg.offset())
+                log.exception(
+                    "consumer.handler_error",
+                    partition=partition,
+                    offset=offset,
+                    key=msg_key,
+                )
             finally:
-                # Always commit to avoid infinite re-processing.
-                # Wrap separately so a transient broker disconnect after a
-                # successful handler does not kill the consumer loop.
-                # Worst case: the message is re-delivered and processed again
-                # (idempotent pipeline via job_key deduplication handles this).
                 try:
                     self._consumer.commit(msg)
+                    log.debug(
+                        "consumer.commit_succeeded",
+                        partition=partition,
+                        offset=offset,
+                    )
                 except Exception:
                     log.exception(
                         "consumer.commit_failed",
-                        offset=msg.offset(),
-                        partition=msg.partition(),
+                        offset=offset,
+                        partition=partition,
                     )
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
     def stop(self) -> None:
         self._running = False
+        KAFKA_CONSUMER_RUNNING.set(0)
+        if self._state:
+            self._state.consumer_running = False
         self._consumer.close()
         log.info("consumer.stopped")
