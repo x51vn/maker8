@@ -113,11 +113,15 @@ def resolve_encoder(
 
     Rules:
 
-    - ``"auto"`` → ``h264_nvenc`` when available, else ``libx264``
+    - ``"auto"`` or ``"libx264"`` → ``h264_nvenc`` when available, else ``libx264``
     - ``"h264_nvenc"`` → honour if available, else warn + fallback
-    - anything else → honour as-is (assumed CPU)
+    - anything else → honour as-is
+
+    ``"libx264"`` is treated as upgradeable because it is the historical
+    default.  Requests generated before the ``"auto"`` contract change
+    carry ``"libx264"`` but should still benefit from GPU acceleration.
     """
-    if requested_codec == "auto":
+    if requested_codec in ("auto", "libx264"):
         if check_nvenc():
             return _gpu_config(pix_fmt)
         return _cpu_config(requested_preset, pix_fmt)
