@@ -64,7 +64,7 @@ class RenderStageImpl(Stage):
         )
 
         log.info(
-            "render.compose.start",
+            "render.start",
             job_id=ctx.job_id,
             scenes=len(ctx.render_spec.scenes),
             assets=len(asset_paths),
@@ -78,7 +78,7 @@ class RenderStageImpl(Stage):
             ctx.rendered_video = video_path
             ctx.output_meta = meta
             log.info(
-                "render.compose.success",
+                "render.success",
                 job_id=ctx.job_id,
                 path=str(video_path),
                 duration=meta.duration,
@@ -88,7 +88,7 @@ class RenderStageImpl(Stage):
         except Exception as exc:
             timer.stop()
             log.error(
-                "render.compose.failure",
+                "render.failure",
                 job_id=ctx.job_id,
                 error_type=type(exc).__name__,
                 error_message=str(exc),
