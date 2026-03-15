@@ -336,6 +336,15 @@ class Orchestrator:
                 value=payload,
             )
             DLQ_EMITTED.labels(stage=exc.stage.value).inc()
-                shutil.rmtree(wd)
         except Exception:
-            log.exception("orchestrator.cleanup_error", work_dir=str(ctx.work_dir))
+            log.exception("orchestrator.dlq_emit_error", job_id=ctx.job_id)
+
+    def _cleanup(self, ctx: PipelineContext) -> None:
+        """Best-effort: remove the per-job work directory."""
+        wd = ctx.work_dir
+        if not wd.exists():
+            return
+        try:
+            shutil.rmtree(wd)
+        except Exception:
+            log.exception("orchestrator.cleanup_error", work_dir=str(wd))
