@@ -54,6 +54,34 @@ def _has_video_stream(path: Path) -> bool:
         return True
 
 
+_MIN_VALID_VIDEO_BYTES = 1024  # a real MP4 with even one frame is > 1 KiB
+_MIN_VALID_AUDIO_BYTES = 256
+
+
+def _is_valid_media(path: Path, *, min_bytes: int = _MIN_VALID_VIDEO_BYTES) -> bool:
+    """Return ``True`` if *path* exists, exceeds *min_bytes*, and ffprobe can read it."""
+    if not path.exists():
+        return False
+    if path.stat().st_size < min_bytes:
+        return False
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "csv=p=0",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        # ffprobe should return a numeric duration for any valid media
+        return result.returncode == 0 and result.stdout.strip() != ""
+    except Exception:
+        return False
+
+
 def _build_video_cmd(src: Path, dest: Path, *, use_nvenc: bool) -> list[str]:
     """Build the FFmpeg command for video normalisation."""
     if use_nvenc:
@@ -83,12 +111,30 @@ class NormalizeStage(Stage):
     def execute(self, ctx: PipelineContext) -> None:
         ctx.ensure_dirs()
 
+        # On retry, purge stale normalized_assets entries whose files are
+        # missing or corrupt (e.g. partial write from a killed FFmpeg).
+        if ctx.attempt > 1:
+            stale = [
+                aid for aid, p in ctx.normalized_assets.items()
+                if not _is_valid_media(p)
+            ]
+            for aid in stale:
+                stale_path = ctx.normalized_assets.pop(aid)
+                stale_path.unlink(missing_ok=True)
+                log.warning(
+                    "normalize.stale_artifact_purged",
+                    job_id=ctx.job_id,
+                    asset_id=aid,
+                    path=str(stale_path),
+                    attempt=ctx.attempt,
+                )
+
         for asset in ctx.render_spec.assets:
             src = ctx.downloaded_assets.get(asset.id)
             if src is None:
                 continue
             if asset.id in ctx.normalized_assets:
-                continue  # already done
+                continue  # already done (validated above on retry)
 
             if asset.type == "video":
                 if _has_video_stream(src):
@@ -132,8 +178,17 @@ class NormalizeStage(Stage):
         falling back transparently to software ``libx264`` on failure.
         """
         dest = dest_dir / f"{src.stem}_norm.mp4"
-        if dest.exists():
+        if _is_valid_media(dest):
+            log.info(
+                "normalize.reuse_existing",
+                job_id=job_id,
+                asset_id=asset_id,
+                path=str(dest),
+                size_bytes=dest.stat().st_size,
+            )
             return dest
+        # Remove any partial/corrupt leftover before encoding
+        dest.unlink(missing_ok=True)
 
         use_nvenc = check_nvenc()
         encoder = "h264_nvenc" if use_nvenc else "libx264"
@@ -177,6 +232,8 @@ class NormalizeStage(Stage):
                     job_id=job_id,
                     asset_id=asset_id,
                     returncode=exc.returncode,
+                    fallback_encoder="libx264",
+                    reason="nvenc_encode_failed",
                     stderr=truncate_stderr(exc.stderr),
                 )
                 dest.unlink(missing_ok=True)
@@ -204,6 +261,7 @@ class NormalizeStage(Stage):
                 stderr=stderr,
                 duration_sec=timer.elapsed_sec,
             )
+            dest.unlink(missing_ok=True)
             raise StageError(
                 RenderStage.NORMALIZE, error_code,
                 f"FFmpeg normalisation failed for {src.name} "
@@ -212,6 +270,7 @@ class NormalizeStage(Stage):
             ) from exc
         except subprocess.TimeoutExpired as exc:
             timer.stop()
+            dest.unlink(missing_ok=True)
             SUBPROCESS_FAILURES.labels(
                 stage="NORMALIZE", source_kind="ffmpeg"
             ).inc()
@@ -288,6 +347,7 @@ class NormalizeStage(Stage):
                 timeout_sec=exc.timeout,
                 duration_sec=timer.elapsed_sec,
             )
+            dest.unlink(missing_ok=True)
             raise StageError(
                 RenderStage.NORMALIZE, "FFMPEG_TIMEOUT",
                 f"FFmpeg video normalisation timed out after "
@@ -296,6 +356,7 @@ class NormalizeStage(Stage):
             ) from exc
         except subprocess.CalledProcessError as exc:
             timer.stop()
+            dest.unlink(missing_ok=True)
             SUBPROCESS_FAILURES.labels(
                 stage="NORMALIZE", source_kind="ffmpeg"
             ).inc()
@@ -331,8 +392,16 @@ class NormalizeStage(Stage):
     ) -> Path:
         """Convert to mono 44.1 kHz WAV for consistent MoviePy handling."""
         dest = dest_dir / f"{src.stem}_norm.wav"
-        if dest.exists():
+        if _is_valid_media(dest, min_bytes=_MIN_VALID_AUDIO_BYTES):
+            log.info(
+                "normalize.reuse_existing",
+                job_id=job_id,
+                asset_id=asset_id,
+                path=str(dest),
+                size_bytes=dest.stat().st_size,
+            )
             return dest
+        dest.unlink(missing_ok=True)
 
         cmd = [
             "ffmpeg", "-y", "-i", str(src),
@@ -374,6 +443,7 @@ class NormalizeStage(Stage):
                 reason="timeout",
                 timeout_sec=exc.timeout,
             )
+            dest.unlink(missing_ok=True)
             raise StageError(
                 RenderStage.NORMALIZE, "FFMPEG_TIMEOUT",
                 f"FFmpeg audio normalisation timed out after {exc.timeout}s for {src.name}",
@@ -381,6 +451,7 @@ class NormalizeStage(Stage):
             ) from exc
         except subprocess.CalledProcessError as exc:
             timer.stop()
+            dest.unlink(missing_ok=True)
             SUBPROCESS_FAILURES.labels(stage="NORMALIZE", source_kind="ffmpeg").inc()
             stderr = truncate_stderr(exc.stderr)
             killed = _is_external_kill(exc.returncode)
