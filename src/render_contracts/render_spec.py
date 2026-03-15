@@ -169,7 +169,7 @@ class Scene(BaseModel):
 
 
 class OutputConfig(BaseModel):
-    codec: str = "libx264"
+    codec: str = "auto"
     audio_codec: str = "aac"
     bitrate: str = "4000k"
     audio_bitrate: str = "192k"
