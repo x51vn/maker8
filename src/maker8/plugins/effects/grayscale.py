@@ -55,7 +55,7 @@ class GrayscaleEffect(EffectPlugin):
             gray_rgb = np.stack([gray, gray, gray], axis=-1)
 
             if intensity >= 1.0:
-                return gray_rgb.astype(np.uint8)  # type: ignore[no-any-return]
+                return gray_rgb.astype(np.uint8)
 
             blended = frame * (1.0 - intensity) + gray_rgb * intensity
             return np.clip(blended, 0, 255).astype(np.uint8)  # type: ignore[no-any-return]
