@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from maker8.models.common import DropboxFileRef, OutputMeta, Trace
+from maker8.models.common import AssetWarning, DropboxFileRef, OutputMeta, Trace
 from maker8.models.spec import RenderSpec
 
 
@@ -62,6 +62,11 @@ class PipelineContext:
     # ── Retry tracking ───────────────────────────────────────────────
     attempt: int = 1
 
+    # ── Degradation tracking ─────────────────────────────────────────
+    warnings: list[AssetWarning] = field(default_factory=list)
+    failed_assets: set[str] = field(default_factory=set)
+    skipped_scenes: set[str] = field(default_factory=set)
+
     # ── Factory ──────────────────────────────────────────────────────
 
     @classmethod
@@ -95,3 +100,8 @@ class PipelineContext:
     def asset_path(self, asset_id: str) -> Path | None:
         """Prefer normalised file, fall back to downloaded file."""
         return self.normalized_assets.get(asset_id) or self.downloaded_assets.get(asset_id)
+
+    @property
+    def is_degraded(self) -> bool:
+        """``True`` when the job completed with at least one tolerated failure."""
+        return bool(self.warnings)

@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from render_contracts.render_spec import PublishTarget, Trace  # noqa: F401
 
 __all__ = [
+    "AssetWarning",
     "DropboxFileRef",
     "EngineVersions",
     "ErrorInfo",
@@ -106,5 +107,22 @@ class EngineVersions(BaseModel):
     moviepy: str = ""
     ffmpeg: str = ""
     youtube_dlp: str = ""
+
+
+# ── Degradation tracking ─────────────────────────────────────────────────────
+
+
+class AssetWarning(BaseModel):
+    """Describes one asset/scene-level issue that was tolerated during rendering.
+
+    Collected in ``PipelineContext.warnings`` and surfaced in ``RenderResult``.
+    """
+
+    asset_id: str = ""
+    scene_id: str = ""
+    stage: str = ""
+    code: str = ""
+    message: str = ""
+    fallback_used: str = ""
 
 

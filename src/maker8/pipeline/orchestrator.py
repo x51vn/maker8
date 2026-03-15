@@ -124,6 +124,9 @@ class Orchestrator:
             self._run_stages(ctx)
             job_timer.stop()
 
+            # Determine job status: PARTIAL when degraded, DONE otherwise
+            status = JobStatus.PARTIAL if ctx.is_degraded else JobStatus.DONE
+
             output_video_path = str(ctx.rendered_video) if ctx.rendered_video else ""
             output_size_bytes = (
                 ctx.output_meta.size_bytes if ctx.output_meta else 0
@@ -133,6 +136,11 @@ class Orchestrator:
                 job_id=ctx.job_id,
                 job_key=ctx.job_key,
                 correlation_id=correlation_id,
+                status=status.value,
+                degraded=ctx.is_degraded,
+                warnings_count=len(ctx.warnings),
+                failed_assets=len(ctx.failed_assets),
+                skipped_scenes=len(ctx.skipped_scenes),
                 duration_ms=job_timer.elapsed_ms,
                 output_video_path=output_video_path,
                 output_size_bytes=output_size_bytes,
@@ -290,6 +298,7 @@ class Orchestrator:
                 status=JobStatus.FAILED,
                 job_key=ctx.job_key,
                 output_meta=ctx.output_meta,
+                warnings=ctx.warnings,
                 engine_versions=collect_engine_versions(),
                 trace=ctx.trace,
                 error=ErrorInfo(
@@ -333,6 +342,9 @@ class Orchestrator:
                     "resolved_asset_ids": list(ctx.resolved_plans.keys())[:20],
                     "downloaded_asset_ids": list(ctx.downloaded_assets.keys())[:20],
                     "tts_scene_ids": list(ctx.tts_results.keys())[:20],
+                    "failed_asset_ids": list(ctx.failed_assets)[:20],
+                    "skipped_scene_ids": list(ctx.skipped_scenes)[:20],
+                    "warnings_count": len(ctx.warnings),
                 },
             )
             payload = dlq.model_dump(mode="json", by_alias=True)
