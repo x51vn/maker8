@@ -1,0 +1,77 @@
+{
+  "job_id": "golden-minimal-001",
+  "spec_version": "1.0",
+  "render_spec": {
+    "spec_version": "1.0",
+    "canvas": {
+      "w": 1080,
+      "h": 1920,
+      "fps": 30,
+      "bg": "#000000"
+    },
+    "defaults": {
+      "narration": {
+        "lang": "vi-VN",
+        "tts_preset_ref": "tts:vi:default"
+      },
+      "scene_timing": {
+        "head_pad_sec": 0.15,
+        "tail_pad_sec": 0.45,
+        "duration_mode": "auto_from_tts"
+      }
+    },
+    "assets": [
+      {
+        "id": "asset_01",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/img1.jpg",
+          "options": {}
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "scene_01",
+        "narration": {
+          "text": "Minimal test scene narration."
+        },
+        "layers": [
+          {
+            "layer_id": "scene_01_bg",
+            "type": "image",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "anchor": "top_left",
+            "opacity": 1.0,
+            "rotation_deg": 0.0,
+            "scale": 1.0,
+            "asset_ref": "asset_01"
+          }
+        ],
+        "audio_tracks": [],
+        "effects": [],
+        "transition_out": null
+      }
+    ],
+    "output": {
+      "codec": "libx264",
+      "audio_codec": "aac",
+      "bitrate": "4000k",
+      "audio_bitrate": "192k",
+      "preset": "medium",
+      "pix_fmt": "yuv420p"
+    },
+    "publish": {
+      "targets": []
+    }
+  },
+  "result": {
+    "type": "kafka",
+    "topic": "video.render.result.v1",
+    "key": ""
+  },
+  "trace": {
+    "correlation_id": "golden-corr-001"
+  }
+}

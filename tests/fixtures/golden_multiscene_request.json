@@ -1,0 +1,229 @@
+{
+  "job_id": "golden-multi-scene-001",
+  "spec_version": "1.0",
+  "render_spec": {
+    "spec_version": "1.0",
+    "canvas": {
+      "w": 1920,
+      "h": 1080,
+      "fps": 24,
+      "bg": "#1A1A2E",
+      "safe_area": {
+        "top": 50,
+        "right": 50,
+        "bottom": 50,
+        "left": 50
+      }
+    },
+    "defaults": {
+      "narration": {
+        "lang": "en-US",
+        "tts_preset_ref": "tts:en:default"
+      },
+      "scene_timing": {
+        "head_pad_sec": 0.2,
+        "tail_pad_sec": 0.5,
+        "duration_mode": "auto_from_tts"
+      }
+    },
+    "assets": [
+      {
+        "id": "bg_video",
+        "type": "video",
+        "source": {
+          "kind": "youtube",
+          "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "options": {
+            "format": "mp4",
+            "max_duration_sec": 120
+          }
+        }
+      },
+      {
+        "id": "overlay_img",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/overlay.png",
+          "options": {}
+        }
+      },
+      {
+        "id": "bg_music",
+        "type": "audio",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/music.mp3",
+          "options": {}
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "intro",
+        "duration": 5.0,
+        "narration": {
+          "text": "Welcome to the golden fixture test.",
+          "lang": "en-US",
+          "tts_preset_ref": "tts:en:premium"
+        },
+        "layers": [
+          {
+            "layer_id": "intro_bg",
+            "type": "video",
+            "rect": { "x": 0, "y": 0, "w": 1920, "h": 1080 },
+            "anchor": "top_left",
+            "opacity": 1.0,
+            "rotation_deg": 0.0,
+            "scale": 1.0,
+            "asset_ref": "bg_video",
+            "fit": "cover",
+            "trim": { "in": 10.0, "out": 15.0 }
+          },
+          {
+            "layer_id": "intro_title",
+            "type": "text",
+            "rect": { "x": 100, "y": 400, "w": 1720, "h": 280 },
+            "anchor": "top_left",
+            "opacity": 0.95,
+            "rotation_deg": 0.0,
+            "scale": 1.0,
+            "text": "Golden Fixture",
+            "text_align": "center",
+            "valign": "middle",
+            "style": {
+              "font_ref": "font:inter:bold",
+              "size": 72,
+              "color": "#FFFFFF",
+              "stroke_color": "#000000",
+              "stroke_width": 2,
+              "line_height": 1.2,
+              "wrap": true
+            }
+          }
+        ],
+        "audio_tracks": [
+          {
+            "asset_ref": "bg_music",
+            "volume": 0.3,
+            "loop": true
+          }
+        ],
+        "effects": [
+          {
+            "plugin_id": "ken_burns",
+            "params": { "direction": "zoom_in", "intensity": 0.05 }
+          }
+        ],
+        "transition_out": {
+          "type": "crossfade",
+          "duration": 0.5
+        }
+      },
+      {
+        "scene_id": "body_01",
+        "narration": {
+          "text": "This scene tests multi-layer composition with video and image overlays."
+        },
+        "layers": [
+          {
+            "layer_id": "body_01_bg",
+            "type": "video",
+            "rect": { "x": 0, "y": 0, "w": 1920, "h": 1080 },
+            "anchor": "top_left",
+            "opacity": 1.0,
+            "rotation_deg": 0.0,
+            "scale": 1.0,
+            "asset_ref": "bg_video",
+            "fit": "cover",
+            "trim": { "in": 20.0, "out": 30.0 }
+          },
+          {
+            "layer_id": "body_01_overlay",
+            "type": "image",
+            "rect": { "x": 1600, "y": 50, "w": 280, "h": 280 },
+            "anchor": "top_left",
+            "opacity": 0.8,
+            "rotation_deg": 15.0,
+            "scale": 0.5,
+            "asset_ref": "overlay_img",
+            "fit": "contain",
+            "align": "center"
+          }
+        ],
+        "audio_tracks": [
+          {
+            "asset_ref": "bg_music",
+            "volume": 0.2,
+            "loop": true
+          }
+        ],
+        "effects": [],
+        "transition_out": {
+          "type": "fade",
+          "duration": 1.0
+        }
+      },
+      {
+        "scene_id": "outro",
+        "duration": 3.0,
+        "narration": {
+          "text": "Thank you for watching."
+        },
+        "layers": [
+          {
+            "layer_id": "outro_text",
+            "type": "text",
+            "rect": { "x": 0, "y": 0, "w": 1920, "h": 1080 },
+            "anchor": "top_left",
+            "opacity": 1.0,
+            "rotation_deg": 0.0,
+            "scale": 1.0,
+            "text": "THE END",
+            "text_align": "center",
+            "valign": "middle",
+            "style": {
+              "font_ref": "font:inter:regular",
+              "size": 96,
+              "color": "#E0E0E0"
+            }
+          }
+        ],
+        "audio_tracks": [],
+        "effects": [],
+        "transition_out": null
+      }
+    ],
+    "output": {
+      "codec": "libx264",
+      "audio_codec": "aac",
+      "bitrate": "6000k",
+      "audio_bitrate": "256k",
+      "preset": "slow",
+      "pix_fmt": "yuv420p"
+    },
+    "publish": {
+      "targets": [
+        {
+          "platform": "youtube",
+          "account_ref": "yt:test-channel",
+          "metadata": {
+            "title": "Golden Test Video",
+            "description": "Automated contract test."
+          },
+          "params": {
+            "privacy": "private"
+          }
+        }
+      ]
+    }
+  },
+  "result": {
+    "type": "kafka",
+    "topic": "video.render.result.v1",
+    "key": "golden-multi-scene-001"
+  },
+  "trace": {
+    "correlation_id": "golden-corr-multi-001"
+  }
+}

@@ -1,15 +1,19 @@
 """Shared enums and value-objects used across models, pipeline, and services.
 
 >>> SINGLE SOURCE OF TRUTH – never duplicate these types elsewhere. <<<
+
+Wire-format types (``PublishTarget``, ``Trace``) are re-exported from the
+canonical ``render_contracts`` package so that existing imports from
+``maker8.models.common`` continue to work.
 """
 
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
 
 from pydantic import BaseModel, Field
 
+from render_contracts.render_spec import PublishTarget, Trace  # noqa: F401
 
 # ── Enums ────────────────────────────────────────────────────────────────────
 
@@ -59,12 +63,6 @@ class ErrorInfo(BaseModel):
     message: str = ""
 
 
-class Trace(BaseModel):
-    """Distributed-tracing context."""
-
-    correlation_id: str = ""
-
-
 class DropboxFileRef(BaseModel):
     """Reference to a file stored in Dropbox."""
 
@@ -97,10 +95,3 @@ class EngineVersions(BaseModel):
     youtube_dlp: str = ""
 
 
-class PublishTarget(BaseModel):
-    """One publishing destination (forwarded to Publisher Worker)."""
-
-    platform: str
-    account_ref: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
-    params: dict[str, Any] = Field(default_factory=dict)
