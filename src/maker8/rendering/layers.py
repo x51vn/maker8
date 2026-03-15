@@ -13,7 +13,6 @@ from moviepy import ImageClip, VideoFileClip
 from maker8.models.spec import Canvas, Layer, TextStyle
 from maker8.rendering.text import render_text_image
 
-
 # ── Public entry point ───────────────────────────────────────────────────────
 
 

@@ -2,6 +2,10 @@
 
 Shared by both the ``NORMALIZE`` and ``RENDER`` stages.  Probes NVENC
 availability once and caches the result for the process lifetime.
+
+All FFmpeg invocations use the binary resolved by
+:func:`~maker8.rendering.ffmpeg_runtime.resolve_ffmpeg_binary` to
+guarantee a single runtime across the entire pipeline.
 """
 
 from __future__ import annotations
@@ -9,6 +13,7 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
 
+from maker8.rendering.ffmpeg_runtime import resolve_ffmpeg_binary
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
@@ -20,9 +25,10 @@ _NVENC_AVAILABLE: bool | None = None
 
 def has_nvenc() -> bool:
     """Return ``True`` if ``h264_nvenc`` is listed in FFmpeg encoders."""
+    ffmpeg = resolve_ffmpeg_binary()
     try:
         result = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-encoders"],
+            [ffmpeg, "-hide_banner", "-encoders"],
             capture_output=True,
             text=True,
             timeout=10,
@@ -37,7 +43,11 @@ def check_nvenc() -> bool:
     global _NVENC_AVAILABLE  # noqa: PLW0603
     if _NVENC_AVAILABLE is None:
         _NVENC_AVAILABLE = has_nvenc()
-        log.info("gpu.nvenc_probe", nvenc_available=_NVENC_AVAILABLE)
+        log.info(
+            "gpu.nvenc_probe",
+            nvenc_available=_NVENC_AVAILABLE,
+            ffmpeg_binary=resolve_ffmpeg_binary(),
+        )
     return _NVENC_AVAILABLE
 
 
@@ -57,9 +67,10 @@ def has_nvidia_smi() -> bool:
 
 def has_cuda_hwaccel() -> bool:
     """Return ``True`` if FFmpeg exposes CUDA hardware acceleration."""
+    ffmpeg = resolve_ffmpeg_binary()
     try:
         result = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-hwaccels"],
+            [ffmpeg, "-hide_banner", "-hwaccels"],
             capture_output=True,
             text=True,
             timeout=10,

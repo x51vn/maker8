@@ -17,7 +17,6 @@ from prometheus_client import (
     Counter,
     Gauge,
     Histogram,
-    start_http_server,
 )
 
 __all__ = [

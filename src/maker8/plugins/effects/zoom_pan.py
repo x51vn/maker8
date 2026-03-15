@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from moviepy import ImageClip, VideoClip
+from moviepy import VideoClip
 from PIL import Image
 
 from maker8.plugins.base import EffectPlugin, PluginManifest

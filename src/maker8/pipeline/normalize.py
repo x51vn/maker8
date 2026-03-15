@@ -12,6 +12,7 @@ from maker8.observability.metrics import SUBPROCESS_DURATION, SUBPROCESS_FAILURE
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.rendering.encoder import check_nvenc
+from maker8.rendering.ffmpeg_runtime import resolve_ffmpeg_binary
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 
@@ -34,10 +35,11 @@ def _is_external_kill(returncode: int) -> bool:
 
 def _has_video_stream(path: Path) -> bool:
     """Return ``True`` if *path* contains at least one video stream."""
+    ffprobe = resolve_ffmpeg_binary().replace("ffmpeg", "ffprobe")
     try:
         result = subprocess.run(
             [
-                "ffprobe", "-v", "error",
+                ffprobe, "-v", "error",
                 "-select_streams", "v",
                 "-show_entries", "stream=codec_type",
                 "-of", "csv=p=0",
@@ -64,10 +66,11 @@ def _is_valid_media(path: Path, *, min_bytes: int = _MIN_VALID_VIDEO_BYTES) -> b
         return False
     if path.stat().st_size < min_bytes:
         return False
+    ffprobe = resolve_ffmpeg_binary().replace("ffmpeg", "ffprobe")
     try:
         result = subprocess.run(
             [
-                "ffprobe", "-v", "error",
+                ffprobe, "-v", "error",
                 "-show_entries", "format=duration",
                 "-of", "csv=p=0",
                 str(path),
@@ -84,9 +87,10 @@ def _is_valid_media(path: Path, *, min_bytes: int = _MIN_VALID_VIDEO_BYTES) -> b
 
 def _build_video_cmd(src: Path, dest: Path, *, use_nvenc: bool) -> list[str]:
     """Build the FFmpeg command for video normalisation."""
+    ffmpeg = resolve_ffmpeg_binary()
     if use_nvenc:
         return [
-            "ffmpeg", "-y",
+            ffmpeg, "-y",
             "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
             "-i", str(src),
             "-c:v", "h264_nvenc", "-preset", "p4", "-cq", "23",
@@ -95,7 +99,7 @@ def _build_video_cmd(src: Path, dest: Path, *, use_nvenc: bool) -> list[str]:
             str(dest),
         ]
     return [
-        "ffmpeg", "-y", "-i", str(src),
+        ffmpeg, "-y", "-i", str(src),
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "aac", "-b:a", "192k",
         "-movflags", "+faststart",
@@ -433,7 +437,7 @@ class NormalizeStage(Stage):
         dest.unlink(missing_ok=True)
 
         cmd = [
-            "ffmpeg", "-y", "-i", str(src),
+            resolve_ffmpeg_binary(), "-y", "-i", str(src),
             "-ac", "1", "-ar", "44100",
             str(dest),
         ]

@@ -7,7 +7,6 @@ for every inbound Kafka message.
 from __future__ import annotations
 
 import shutil
-import time
 from typing import Any
 
 from maker8.config import Settings
@@ -15,17 +14,16 @@ from maker8.kafka.producer import KafkaProducer
 from maker8.models.common import (
     ErrorInfo,
     JobStatus,
-    RenderStage,
 )
-from maker8.models.contracts import DLQPayload, DropboxOutput, RenderRequest, RenderResult
+from maker8.models.contracts import DLQPayload, RenderRequest, RenderResult
 from maker8.observability.helpers import Timer
 from maker8.observability.metrics import (
     DLQ_EMITTED,
     INVALID_PAYLOAD,
-    JOBS_FAILED,
-    JOBS_SUCCEEDED,
     JOB_DURATION,
     JOB_IN_PROGRESS,
+    JOBS_FAILED,
+    JOBS_SUCCEEDED,
     RESULT_EMITTED,
     RETRIES_SCHEDULED,
     STAGE_DURATION,
