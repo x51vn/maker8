@@ -35,6 +35,9 @@ COPY config/ config/
 COPY .env.example .env.example
 
 ENV MAKER8_WORK_DIR=/data/maker8
+# Force MoviePy / imageio-ffmpeg to use the system-installed FFmpeg
+# binary (which has NVENC support) instead of the bundled static build.
+ENV IMAGEIO_FFMPEG_EXE=/usr/bin/ffmpeg
 # Ensure the NVIDIA container runtime exposes GPU devices and capabilities.
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
