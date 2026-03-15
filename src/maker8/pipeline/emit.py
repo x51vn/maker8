@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from maker8.kafka.producer import KafkaProducer
 from maker8.models.common import JobStatus, RenderStage
 from maker8.models.contracts import DropboxOutput, RenderResult
+from maker8.observability.metrics import RESULT_EMITTED
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
-from maker8.kafka.producer import KafkaProducer
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 from maker8.utils.versions import collect_engine_versions
@@ -24,12 +25,26 @@ class EmitResultStage(Stage):
         return RenderStage.EMIT_RESULT
 
     def execute(self, ctx: PipelineContext) -> None:
+        log.info("emit.start", job_id=ctx.job_id, topic=self._topic)
         try:
             result = self._build_result(ctx)
             payload = result.model_dump(mode="json", by_alias=True)
             self._producer.send(self._topic, key=ctx.job_id, value=payload)
-            log.info("emit.ok", topic=self._topic, job_id=ctx.job_id)
+            RESULT_EMITTED.labels(status="DONE").inc()
+            log.info(
+                "emit.success",
+                job_id=ctx.job_id,
+                topic=self._topic,
+                status="DONE",
+            )
         except Exception as exc:
+            log.error(
+                "emit.failure",
+                job_id=ctx.job_id,
+                topic=self._topic,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+            )
             raise StageError(
                 self.name, "EMIT_FAILED",
                 f"Failed to produce render result: {exc}",

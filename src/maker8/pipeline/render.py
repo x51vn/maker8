@@ -7,6 +7,7 @@ This stage bridges ``PipelineContext`` to the rendering engine's
 from __future__ import annotations
 
 from maker8.models.common import RenderStage
+from maker8.observability.helpers import Timer
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.plugins.registry import PluginRegistry
@@ -62,17 +63,37 @@ class RenderStageImpl(Stage):
             effects_map=effects_map,
         )
 
+        log.info(
+            "render.compose.start",
+            job_id=ctx.job_id,
+            scenes=len(ctx.render_spec.scenes),
+            assets=len(asset_paths),
+            tts_scenes=len(tts_audio),
+        )
+
+        timer = Timer().start()
         try:
             video_path, meta = compose_video(ri)
+            timer.stop()
             ctx.rendered_video = video_path
             ctx.output_meta = meta
             log.info(
-                "render.ok",
+                "render.compose.success",
+                job_id=ctx.job_id,
                 path=str(video_path),
                 duration=meta.duration,
                 size=meta.size_bytes,
+                render_sec=timer.elapsed_sec,
             )
         except Exception as exc:
+            timer.stop()
+            log.error(
+                "render.compose.failure",
+                job_id=ctx.job_id,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                render_sec=timer.elapsed_sec,
+            )
             raise StageError(
                 self.name, "RENDER_FAILED",
                 f"Video composition failed: {exc}",

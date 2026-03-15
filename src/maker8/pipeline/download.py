@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from maker8.models.common import RenderStage
+from maker8.observability.metrics import DOWNLOAD_BYTES
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.plugins.registry import PluginRegistry
@@ -28,18 +29,42 @@ class DownloadStage(Stage):
                 continue  # already downloaded (retry-safe)
 
             connector = self._registry.get_source(plan.source_kind)
+            log.info(
+                "download.asset.start",
+                job_id=ctx.job_id,
+                asset_id=asset_id,
+                source_kind=plan.source_kind,
+            )
+
             try:
                 local_path = connector.download(plan, ctx.assets_dir)
                 ctx.downloaded_assets[asset_id] = local_path
+                size_bytes = local_path.stat().st_size if local_path.exists() else 0
                 # Record asset in report for RenderResult
                 ctx.asset_report.append({
                     "asset_id": asset_id,
                     "source_kind": plan.source_kind,
                     "filename": local_path.name,
-                    "size_bytes": local_path.stat().st_size if local_path.exists() else 0,
+                    "size_bytes": size_bytes,
                 })
-                log.info("download.ok", asset_id=asset_id, path=str(local_path))
+                DOWNLOAD_BYTES.labels(source_kind=plan.source_kind).observe(size_bytes)
+                log.info(
+                    "download.asset.success",
+                    job_id=ctx.job_id,
+                    asset_id=asset_id,
+                    source_kind=plan.source_kind,
+                    path=str(local_path),
+                    size_bytes=size_bytes,
+                )
             except Exception as exc:
+                log.error(
+                    "download.asset.failure",
+                    job_id=ctx.job_id,
+                    asset_id=asset_id,
+                    source_kind=plan.source_kind,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                )
                 raise StageError(
                     self.name, "DOWNLOAD_FAILED",
                     f"Failed to download asset {asset_id}: {exc}",

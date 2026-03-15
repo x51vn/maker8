@@ -7,6 +7,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from maker8.observability.helpers import Timer, sanitize_url, truncate_stderr
+from maker8.observability.metrics import SUBPROCESS_DURATION, SUBPROCESS_FAILURES
 from maker8.plugins.base import PluginManifest, ResolvedAssetPlan, SourceConnectorPlugin
 from maker8.utils.logging import get_logger
 
@@ -43,12 +45,56 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
         fmt = options.get("format", _DEFAULT_FORMAT)
         max_dur = options.get("max_duration_sec")
 
-        # Validate with yt-dlp --dump-json (no download)
         cmd = ["yt-dlp", "--dump-json", "--no-download", "-f", fmt, url]
-        log.info("ytdlp.resolve", asset_id=asset_id, url=url)
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True, timeout=120
+        safe_url = sanitize_url(url)
+        log.info(
+            "subprocess.start",
+            asset_id=asset_id,
+            command="yt-dlp",
+            operation="resolve",
+            url=safe_url,
         )
+        timer = Timer().start()
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, check=True, timeout=120
+            )
+            timer.stop()
+            SUBPROCESS_DURATION.labels(stage="resolve", source_kind="youtube").observe(
+                timer.elapsed_sec
+            )
+            log.info(
+                "subprocess.success",
+                asset_id=asset_id,
+                command="yt-dlp",
+                operation="resolve",
+                duration_ms=timer.elapsed_ms,
+            )
+        except subprocess.CalledProcessError as exc:
+            timer.stop()
+            SUBPROCESS_FAILURES.labels(stage="resolve", source_kind="youtube").inc()
+            log.error(
+                "subprocess.failure",
+                asset_id=asset_id,
+                command="yt-dlp",
+                operation="resolve",
+                returncode=exc.returncode,
+                stderr=truncate_stderr(exc.stderr or ""),
+                duration_ms=timer.elapsed_ms,
+            )
+            raise
+        except subprocess.TimeoutExpired:
+            timer.stop()
+            SUBPROCESS_FAILURES.labels(stage="resolve", source_kind="youtube").inc()
+            log.error(
+                "subprocess.timeout",
+                asset_id=asset_id,
+                command="yt-dlp",
+                operation="resolve",
+                timeout_sec=120,
+            )
+            raise
+
         info = json.loads(result.stdout)
 
         duration = info.get("duration")
@@ -84,8 +130,52 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
             "--merge-output-format", "mp4",
             plan.url,
         ]
-        log.info("ytdlp.download", asset_id=plan.asset_id)
-        subprocess.run(cmd, check=True, timeout=600)
+        safe_url = sanitize_url(plan.url)
+        log.info(
+            "subprocess.start",
+            asset_id=plan.asset_id,
+            command="yt-dlp",
+            operation="download",
+            url=safe_url,
+        )
+        timer = Timer().start()
+        try:
+            subprocess.run(cmd, check=True, timeout=600)
+            timer.stop()
+            SUBPROCESS_DURATION.labels(stage="download", source_kind="youtube").observe(
+                timer.elapsed_sec
+            )
+            log.info(
+                "subprocess.success",
+                asset_id=plan.asset_id,
+                command="yt-dlp",
+                operation="download",
+                duration_ms=timer.elapsed_ms,
+            )
+        except subprocess.CalledProcessError as exc:
+            timer.stop()
+            SUBPROCESS_FAILURES.labels(stage="download", source_kind="youtube").inc()
+            log.error(
+                "subprocess.failure",
+                asset_id=plan.asset_id,
+                command="yt-dlp",
+                operation="download",
+                returncode=exc.returncode,
+                stderr=truncate_stderr(getattr(exc, 'stderr', None) or ""),
+                duration_ms=timer.elapsed_ms,
+            )
+            raise
+        except subprocess.TimeoutExpired:
+            timer.stop()
+            SUBPROCESS_FAILURES.labels(stage="download", source_kind="youtube").inc()
+            log.error(
+                "subprocess.timeout",
+                asset_id=plan.asset_id,
+                command="yt-dlp",
+                operation="download",
+                timeout_sec=600,
+            )
+            raise
 
         # yt-dlp may produce various extensions; prefer .mp4
         for ext in ("mp4", "mkv", "webm"):
