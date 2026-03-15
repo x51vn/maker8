@@ -51,6 +51,10 @@ class Defaults(BaseModel):
 
 
 class AssetSourceOptions(BaseModel):
+    # Wire-format boundary semantics:
+    #   None / omitted → consumer uses its default (e.g. maker8 _DEFAULT_FORMAT)
+    #   empty string   → invalid, rejected by consumer
+    #   non-empty str  → used as-is
     format: str | None = None
     max_duration_sec: int | None = None
 
