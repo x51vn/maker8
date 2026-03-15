@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 
 import requests
 
+from maker8.observability.helpers import Timer, sanitize_url
+from maker8.observability.metrics import DEPENDENCY_FAILURES, DOWNLOAD_BYTES
 from maker8.plugins.base import PluginManifest, ResolvedAssetPlan, SourceConnectorPlugin
 from maker8.utils.logging import get_logger
 
@@ -59,15 +61,35 @@ class HttpSourceConnector(SourceConnectorPlugin):
 
     def download(self, plan: ResolvedAssetPlan, dest_dir: Path) -> Path:
         dest = dest_dir / plan.filename
-        log.info("http.download", asset_id=plan.asset_id, url=plan.url)
-
-        resp = requests.get(
-            plan.url,
-            stream=True,
-            timeout=(_CONNECT_TIMEOUT, _READ_TIMEOUT),
-            headers={"User-Agent": _USER_AGENT},
+        safe_url = sanitize_url(plan.url)
+        log.info(
+            "http.download.start",
+            asset_id=plan.asset_id,
+            url=safe_url,
+            expected_type=plan.expected_type,
         )
-        resp.raise_for_status()
+
+        timer = Timer().start()
+        try:
+            resp = requests.get(
+                plan.url,
+                stream=True,
+                timeout=(_CONNECT_TIMEOUT, _READ_TIMEOUT),
+                headers={"User-Agent": _USER_AGENT},
+            )
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            timer.stop()
+            DEPENDENCY_FAILURES.labels(dependency="http").inc()
+            log.error(
+                "http.download.failure",
+                asset_id=plan.asset_id,
+                url=safe_url,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                duration_ms=timer.elapsed_ms,
+            )
+            raise
 
         downloaded = 0
         with open(dest, "wb") as fh:
@@ -81,4 +103,14 @@ class HttpSourceConnector(SourceConnectorPlugin):
                     )
                 fh.write(chunk)
 
+        timer.stop()
+        DOWNLOAD_BYTES.labels(source_kind="http").observe(downloaded)
+        log.info(
+            "http.download.success",
+            asset_id=plan.asset_id,
+            url=safe_url,
+            size_bytes=downloaded,
+            content_type=resp.headers.get("content-type"),
+            duration_ms=timer.elapsed_ms,
+        )
         return dest

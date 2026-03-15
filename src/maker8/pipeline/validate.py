@@ -112,4 +112,12 @@ class ValidateStage(Stage):
 
         # ── Canonicalize + job key ───────────────────────────────────
         ctx.job_key = compute_job_key(spec)
-        log.info("validate.ok", job_key=ctx.job_key, scenes=len(spec.scenes))
+        log.info(
+            "validate.success",
+            job_id=ctx.job_id,
+            job_key=ctx.job_key,
+            spec_version=spec.spec_version,
+            scenes=len(spec.scenes),
+            assets=len(spec.assets),
+            canvas=f"{spec.canvas.w}x{spec.canvas.h}@{spec.canvas.fps}",
+        )

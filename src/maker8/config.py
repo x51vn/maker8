@@ -73,6 +73,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
 
+    # ── Metrics ─────────────────────────────────────────────────────
+    metrics_enabled: bool = False
+    metrics_port: int = 9108
+
+    # ── Health files ────────────────────────────────────────────────
+    status_file: str = "/tmp/maker8_status.json"
+
 
 def get_settings() -> Settings:
     """Factory – import once, call where needed."""

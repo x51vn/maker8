@@ -21,6 +21,7 @@ dependencies = [
     "elevenlabs>=1.0,<2.0",
     "requests>=2.31,<3.0",
     "numpy>=1.24",
+    "prometheus-client>=0.20",
 ]
 
 [project.optional-dependencies]

@@ -65,6 +65,8 @@ class DLQPayload(BaseModel):
     job_key: str = ""
     failed_stage: str
     attempts: int
+    max_attempts: int = 0
     last_error: ErrorInfo | None = None
     dropbox: dict[str, Any] = Field(default_factory=dict)
     trace: Trace = Field(default_factory=Trace)
+    debug_context: dict[str, Any] = Field(default_factory=dict)

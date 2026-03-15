@@ -12,6 +12,8 @@ from dropbox.exceptions import (
 
 from maker8.models.common import RenderStage
 from maker8.models.manifest import Manifest, ManifestDropbox
+from maker8.observability.helpers import Timer
+from maker8.observability.metrics import DEPENDENCY_FAILURES
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.retry import StageError
@@ -37,12 +39,15 @@ class UploadDropboxStage(Stage):
                 retryable=False,
             )
 
+        video_size = ctx.rendered_video.stat().st_size
         log.info(
-            "upload.execute.start",
+            "upload.start",
             job_id=ctx.job_id,
             video_path=str(ctx.rendered_video),
+            video_bytes=video_size,
         )
 
+        timer = Timer().start()
         try:
             # ── Upload video ─────────────────────────────────────────
             video_remote = DropboxClient.build_remote_path(
@@ -51,7 +56,7 @@ class UploadDropboxStage(Stage):
             ctx.dropbox_video_ref = self._dbx.upload(
                 ctx.rendered_video, video_remote, mime="video/mp4"
             )
-            log.info("upload.video.ok", path=video_remote)
+            log.info("upload.video.success", job_id=ctx.job_id, path=video_remote)
 
             # ── Build & upload manifest ──────────────────────────────
             manifest = self._build_manifest(ctx)
@@ -67,10 +72,17 @@ class UploadDropboxStage(Stage):
             ctx.dropbox_manifest_ref = self._dbx.upload(
                 manifest_path, manifest_remote, mime="application/json"
             )
-            log.info("upload.manifest.ok", path=manifest_remote)
+            timer.stop()
+            log.info(
+                "upload.success",
+                job_id=ctx.job_id,
+                video_path=video_remote,
+                manifest_path=manifest_remote,
+                upload_sec=timer.elapsed_sec,
+            )
 
         except AuthError as exc:
-            # Auth errors should NOT be retried - credentials are wrong
+            DEPENDENCY_FAILURES.labels(dependency="dropbox").inc()
             log.error(
                 "upload.auth_error",
                 job_id=ctx.job_id,
@@ -85,7 +97,7 @@ class UploadDropboxStage(Stage):
             ) from exc
 
         except BadInputError as exc:
-            # Bad input (invalid grant, wrong config) should NOT be retried
+            DEPENDENCY_FAILURES.labels(dependency="dropbox").inc()
             log.error(
                 "upload.bad_input_error",
                 job_id=ctx.job_id,
@@ -99,7 +111,7 @@ class UploadDropboxStage(Stage):
             ) from exc
 
         except RateLimitError as exc:
-            # Rate limits should be retried
+            DEPENDENCY_FAILURES.labels(dependency="dropbox").inc()
             backoff = getattr(exc, "backoff", None)
             log.warning(
                 "upload.rate_limited",
@@ -115,7 +127,7 @@ class UploadDropboxStage(Stage):
             ) from exc
 
         except InternalServerError as exc:
-            # Server errors (500+) can be retried
+            DEPENDENCY_FAILURES.labels(dependency="dropbox").inc()
             log.warning(
                 "upload.server_error",
                 job_id=ctx.job_id,
@@ -130,7 +142,7 @@ class UploadDropboxStage(Stage):
             ) from exc
 
         except ApiError as exc:
-            # Generic API errors - may be retryable depending on error
+            DEPENDENCY_FAILURES.labels(dependency="dropbox").inc()
             error_tag = getattr(exc.error, "_tag", None)
             log.error(
                 "upload.api_error",
@@ -149,7 +161,7 @@ class UploadDropboxStage(Stage):
             raise
 
         except Exception as exc:
-            # Catch-all for unexpected errors
+            DEPENDENCY_FAILURES.labels(dependency="dropbox").inc()
             log.exception(
                 "upload.unexpected_error",
                 job_id=ctx.job_id,
