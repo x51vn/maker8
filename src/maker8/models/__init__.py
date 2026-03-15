@@ -1,4 +1,9 @@
-"""Pydantic v2 models – public re-exports."""
+"""Pydantic v2 models – public re-exports.
+
+Wire-format types originate from ``render_contracts`` and are re-exported
+through ``maker8.models.spec`` and ``maker8.models.common`` for backward
+compatibility with existing import paths.
+"""
 
 from __future__ import annotations
 
