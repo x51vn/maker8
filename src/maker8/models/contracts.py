@@ -1,4 +1,9 @@
-"""Kafka message contracts: request, result, and DLQ payloads."""
+"""Kafka message contracts: request, result, and DLQ payloads.
+
+Wire-format types (``RenderRequest``, ``ResultDestination``) are imported
+from the canonical ``render_contracts`` package.  maker8-specific result
+and DLQ types are defined here.
+"""
 
 from __future__ import annotations
 
@@ -15,29 +20,7 @@ from maker8.models.common import (
     PublishTarget,
     Trace,
 )
-from maker8.models.spec import RenderSpec
-
-
-# ── Render Request ───────────────────────────────────────────────────────────
-
-
-class ResultDestination(BaseModel):
-    """Where to deliver the render result."""
-
-    type: str = "kafka"
-    topic: str = "video.render.result.v1"
-    key: str = ""
-
-
-class RenderRequest(BaseModel):
-    """``video.render.request.v1`` payload."""
-
-    job_id: str
-    spec_version: str = "1.0"
-    render_spec: RenderSpec
-    result: ResultDestination = Field(default_factory=ResultDestination)
-    trace: Trace = Field(default_factory=Trace)
-
+from render_contracts.render_spec import RenderRequest, ResultDestination  # noqa: F401
 
 # ── Render Result ────────────────────────────────────────────────────────────
 
