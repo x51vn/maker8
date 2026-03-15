@@ -12,6 +12,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from maker8.models.common import (
+    AssetWarning,
     DropboxFileRef,
     EngineVersions,
     ErrorInfo,
@@ -50,6 +51,7 @@ class RenderResult(BaseModel):
     output_meta: OutputMeta = Field(default_factory=OutputMeta)
     publish_targets: list[PublishTarget] = Field(default_factory=list)
     asset_report: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[AssetWarning] = Field(default_factory=list)
     engine_versions: EngineVersions = Field(default_factory=EngineVersions)
     trace: Trace = Field(default_factory=Trace)
     error: ErrorInfo | None = None

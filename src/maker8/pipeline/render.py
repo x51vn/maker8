@@ -6,7 +6,8 @@ This stage bridges ``PipelineContext`` to the rendering engine's
 
 from __future__ import annotations
 
-from maker8.models.common import RenderStage
+from maker8.models.common import AssetWarning, RenderStage
+from maker8.models.spec import RenderSpec
 from maker8.observability.helpers import Timer
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
@@ -36,6 +37,51 @@ class RenderStageImpl(Stage):
             if ctx.asset_path(aid) is not None
         }
 
+        # ── Scene-level viability check ──────────────────────────────
+        # A scene is viable if it has at least one layer whose asset_ref
+        # is resolved (in asset_paths) or is a text layer (no asset_ref).
+        viable_scenes = []
+        for scene in ctx.render_spec.scenes:
+            if scene.scene_id in ctx.skipped_scenes:
+                continue
+            has_content = any(
+                layer.type == "text" or (layer.asset_ref and layer.asset_ref in asset_paths)
+                for layer in scene.layers
+            )
+            if has_content:
+                viable_scenes.append(scene)
+            else:
+                ctx.skipped_scenes.add(scene.scene_id)
+                ctx.warnings.append(AssetWarning(
+                    asset_id="",
+                    scene_id=scene.scene_id,
+                    stage="RENDER",
+                    code="SCENE_NO_CONTENT",
+                    message=f"Scene {scene.scene_id} skipped: all layer assets missing",
+                    fallback_used="scene_skipped",
+                ))
+                log.warning(
+                    "render.scene.skipped",
+                    job_id=ctx.job_id,
+                    scene_id=scene.scene_id,
+                    reason="all_layer_assets_missing",
+                )
+
+        if not viable_scenes:
+            raise StageError(
+                self.name, "ALL_SCENES_SKIPPED",
+                "All scenes have no renderable content after degradation",
+                retryable=False,
+            )
+
+        # Build a filtered spec for the composer
+        filtered_spec = RenderSpec(
+            **{
+                **ctx.render_spec.model_dump(mode="python"),
+                "scenes": viable_scenes,
+            },
+        )
+
         # Build TTS map
         tts_audio = {
             sid: (r.audio_path, r.duration_sec)
@@ -44,7 +90,7 @@ class RenderStageImpl(Stage):
 
         # Resolve effect plugins referenced by scenes
         effects_map = {}
-        for scene in ctx.render_spec.scenes:
+        for scene in filtered_spec.scenes:
             for ei in scene.effects:
                 if ei.plugin_id not in effects_map:
                     try:
@@ -55,7 +101,7 @@ class RenderStageImpl(Stage):
                         log.warning("render.effect_not_found", plugin_id=ei.plugin_id)
 
         ri = RenderInput(
-            spec=ctx.render_spec,
+            spec=filtered_spec,
             asset_paths=asset_paths,  # type: ignore[arg-type]
             tts_audio=tts_audio,
             output_dir=ctx.output_dir,
@@ -66,9 +112,11 @@ class RenderStageImpl(Stage):
         log.info(
             "render.start",
             job_id=ctx.job_id,
-            scenes=len(ctx.render_spec.scenes),
+            scenes=len(filtered_spec.scenes),
+            scenes_skipped=len(ctx.skipped_scenes),
             assets=len(asset_paths),
             tts_scenes=len(tts_audio),
+            degraded=ctx.is_degraded,
         )
 
         timer = Timer().start()
@@ -84,6 +132,7 @@ class RenderStageImpl(Stage):
                 duration=meta.duration,
                 size=meta.size_bytes,
                 render_sec=timer.elapsed_sec,
+                degraded=ctx.is_degraded,
             )
         except _RenderTimeout as exc:
             timer.stop()

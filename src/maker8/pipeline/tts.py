@@ -12,12 +12,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from maker8.models.common import RenderStage
+from maker8.models.common import AssetWarning, RenderStage
 from maker8.observability.helpers import Timer
 from maker8.observability.metrics import DEPENDENCY_FAILURES, TTS_DURATION
 from maker8.pipeline.context import PipelineContext, TTSResult
 from maker8.pipeline.stage import Stage
-from maker8.retry import StageError
 from maker8.services.tts_client import TTSService
 from maker8.utils.logging import get_logger
 
@@ -44,6 +43,8 @@ class TTSStage(Stage):
             sid = scene.scene_id
             if sid in ctx.tts_results:
                 continue  # already synthesised (retry-safe)
+            if sid in ctx.skipped_scenes:
+                continue  # scene already marked for skipping
 
             text = scene.narration.text
             lang = scene.narration.lang or defaults.lang
@@ -85,27 +86,21 @@ class TTSStage(Stage):
                     duration_audio=result.duration_sec,
                     synthesis_sec=timer.elapsed_sec,
                 )
-            except TimeoutError as exc:
-                timer.stop()
-                DEPENDENCY_FAILURES.labels(dependency="tts").inc()
-                log.error(
-                    "tts.scene.failure",
-                    job_id=ctx.job_id,
-                    scene_id=sid,
-                    provider=preset,
-                    error_type="TimeoutError",
-                    error_message=str(exc),
-                    synthesis_sec=timer.elapsed_sec,
-                )
-                raise StageError(
-                    self.name, "TTS_TIMEOUT",
-                    f"TTS synthesis timed out for scene {sid}: {exc}",
-                ) from exc
             except Exception as exc:
                 timer.stop()
                 DEPENDENCY_FAILURES.labels(dependency="tts").inc()
-                log.error(
-                    "tts.scene.failure",
+                # Isolate per-scene failure: scene will render without narration.
+                error_code = "TTS_TIMEOUT" if isinstance(exc, TimeoutError) else "TTS_FAILED"
+                ctx.warnings.append(AssetWarning(
+                    asset_id=sid,
+                    scene_id=sid,
+                    stage="TTS",
+                    code=error_code,
+                    message=f"TTS failed for scene {sid}: {exc}",
+                    fallback_used="scene_without_narration",
+                ))
+                log.warning(
+                    "tts.scene.skipped",
                     job_id=ctx.job_id,
                     scene_id=sid,
                     provider=preset,
@@ -113,7 +108,3 @@ class TTSStage(Stage):
                     error_message=str(exc),
                     synthesis_sec=timer.elapsed_sec,
                 )
-                raise StageError(
-                    self.name, "TTS_FAILED",
-                    f"TTS synthesis failed for scene {sid}: {exc}",
-                ) from exc
