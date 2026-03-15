@@ -42,14 +42,19 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
                 f"Asset {asset_id!r} has no 'url' in its source – cannot resolve."
             )
         options = source.get("options", {})
-        fmt = options.get("format", _DEFAULT_FORMAT)
+        raw_fmt = options.get("format")
         max_dur = options.get("max_duration_sec")
 
-        if fmt is None:
+        # Normalize: None/missing → default, empty string → validation error
+        if raw_fmt is None:
+            fmt = _DEFAULT_FORMAT
+        elif not raw_fmt.strip():
             raise ValueError(
-                f"Invalid yt-dlp format spec: None (asset_id={asset_id!r}). "
+                f"Empty yt-dlp format spec for asset {asset_id!r}. "
                 "Provide a valid format string or omit to use the default."
             )
+        else:
+            fmt = raw_fmt
 
         safe_url = sanitize_url(url)
         log.info(

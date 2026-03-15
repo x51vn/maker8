@@ -33,6 +33,7 @@ class ResolveAssetsStage(Stage):
                 raise StageError(
                     self.name, "UNSUPPORTED_SOURCE",
                     f"No connector for source kind={kind!r}",
+                    retryable=False,
                 ) from exc
 
             connector_name = type(connector).__name__
@@ -59,6 +60,28 @@ class ResolveAssetsStage(Stage):
                     filename=plan.filename,
                     expected_type=plan.expected_type,
                 )
+            except ValueError as exc:
+                # Deterministic input/config errors — do not retry
+                log.error(
+                    "resolve.asset.failure",
+                    job_id=ctx.job_id,
+                    asset_id=asset.id,
+                    asset_type=asset_type,
+                    source_kind=kind,
+                    connector=connector_name,
+                    url=source_url,
+                    format_spec=asset.source.options.format,
+                    max_duration_sec=asset.source.options.max_duration_sec,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                    retryable=False,
+                )
+                code = _classify_value_error(str(exc))
+                raise StageError(
+                    self.name, code,
+                    f"Failed to resolve asset {asset.id}: {exc}",
+                    retryable=False,
+                ) from exc
             except Exception as exc:
                 log.error(
                     "resolve.asset.failure",
@@ -77,3 +100,15 @@ class ResolveAssetsStage(Stage):
                     self.name, "RESOLVE_FAILED",
                     f"Failed to resolve asset {asset.id}: {exc}",
                 ) from exc
+
+
+def _classify_value_error(message: str) -> str:
+    """Map deterministic ValueError messages to specific error codes."""
+    msg = message.lower()
+    if "url" in msg:
+        return "INVALID_SOURCE_URL"
+    if "format" in msg:
+        return "INVALID_YTDLP_FORMAT"
+    if "duration" in msg:
+        return "INVALID_SOURCE_OPTIONS"
+    return "INVALID_SOURCE_CONFIG"
