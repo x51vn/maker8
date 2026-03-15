@@ -11,7 +11,7 @@ from maker8.observability.helpers import Timer
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.plugins.registry import PluginRegistry
-from maker8.rendering.composer import RenderInput, compose_video
+from maker8.rendering.composer import RenderInput, _RenderTimeout, compose_video
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 
@@ -85,6 +85,18 @@ class RenderStageImpl(Stage):
                 size=meta.size_bytes,
                 render_sec=timer.elapsed_sec,
             )
+        except _RenderTimeout as exc:
+            timer.stop()
+            log.error(
+                "render.timeout",
+                job_id=ctx.job_id,
+                render_sec=timer.elapsed_sec,
+            )
+            raise StageError(
+                self.name, "RENDER_TIMEOUT",
+                f"Video composition timed out after {timer.elapsed_sec}s",
+                retryable=False,
+            ) from exc
         except Exception as exc:
             timer.stop()
             log.error(
