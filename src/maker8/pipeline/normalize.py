@@ -6,7 +6,7 @@ import signal
 import subprocess
 from pathlib import Path
 
-from maker8.models.common import RenderStage
+from maker8.models.common import AssetWarning, RenderStage
 from maker8.observability.helpers import Timer, truncate_stderr
 from maker8.observability.metrics import SUBPROCESS_DURATION, SUBPROCESS_FAILURES
 from maker8.pipeline.context import PipelineContext
@@ -135,36 +135,65 @@ class NormalizeStage(Stage):
                 continue
             if asset.id in ctx.normalized_assets:
                 continue  # already done (validated above on retry)
+            if asset.id in ctx.failed_assets:
+                continue  # already failed in a previous stage
 
-            if asset.type == "video":
-                if _has_video_stream(src):
-                    normalised = self._normalize_video(
-                        src, ctx.assets_dir, ctx.job_id, asset.id,
-                    )
-                else:
-                    log.warning(
-                        "normalize.no_video_stream",
-                        job_id=ctx.job_id,
-                        asset_id=asset.id,
-                        path=str(src),
-                    )
-                    normalised = self._normalize_audio(
-                        src, ctx.assets_dir, ctx.job_id, asset.id,
-                    )
-            elif asset.type == "audio":
-                normalised = self._normalize_audio(src, ctx.assets_dir, ctx.job_id, asset.id)
-            else:
-                # Images – no normalisation needed
-                normalised = src
+            try:
+                normalised = self._normalize_asset(
+                    asset.id, asset.type, src, ctx.assets_dir, ctx.job_id,
+                )
+                ctx.normalized_assets[asset.id] = normalised
+                log.info(
+                    "normalize.asset.success",
+                    job_id=ctx.job_id,
+                    asset_id=asset.id,
+                    asset_type=asset.type,
+                    path=str(normalised),
+                )
+            except StageError as exc:
+                # Isolate per-asset failure: record warning, mark as failed,
+                # and continue with remaining assets.
+                ctx.failed_assets.add(asset.id)
+                ctx.warnings.append(AssetWarning(
+                    asset_id=asset.id,
+                    stage="NORMALIZE",
+                    code=exc.code,
+                    message=str(exc),
+                    fallback_used="asset_skipped",
+                ))
+                log.warning(
+                    "normalize.asset.skipped",
+                    job_id=ctx.job_id,
+                    asset_id=asset.id,
+                    asset_type=asset.type,
+                    error_code=exc.code,
+                    error_message=str(exc),
+                    retryable=exc.retryable,
+                )
 
-            ctx.normalized_assets[asset.id] = normalised
-            log.info(
-                "normalize.asset.success",
-                job_id=ctx.job_id,
-                asset_id=asset.id,
-                asset_type=asset.type,
-                path=str(normalised),
+    def _normalize_asset(
+        self,
+        asset_id: str,
+        asset_type: str,
+        src: Path,
+        dest_dir: Path,
+        job_id: str,
+    ) -> Path:
+        """Dispatch normalization by asset type."""
+        if asset_type == "video":
+            if _has_video_stream(src):
+                return self._normalize_video(src, dest_dir, job_id, asset_id)
+            log.warning(
+                "normalize.no_video_stream",
+                job_id=job_id,
+                asset_id=asset_id,
+                path=str(src),
             )
+            return self._normalize_audio(src, dest_dir, job_id, asset_id)
+        if asset_type == "audio":
+            return self._normalize_audio(src, dest_dir, job_id, asset_id)
+        # Images – no normalisation needed
+        return src
 
     # ── FFmpeg helpers ───────────────────────────────────────────────
 

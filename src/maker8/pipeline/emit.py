@@ -25,17 +25,24 @@ class EmitResultStage(Stage):
         return RenderStage.EMIT_RESULT
 
     def execute(self, ctx: PipelineContext) -> None:
-        log.info("emit.start", job_id=ctx.job_id, topic=self._topic)
+        status = JobStatus.PARTIAL if ctx.is_degraded else JobStatus.DONE
+        log.info(
+            "emit.start",
+            job_id=ctx.job_id,
+            topic=self._topic,
+            status=status.value,
+            degraded=ctx.is_degraded,
+        )
         try:
             result = self._build_result(ctx)
             payload = result.model_dump(mode="json", by_alias=True)
             self._producer.send(self._topic, key=ctx.job_id, value=payload)
-            RESULT_EMITTED.labels(status="DONE").inc()
+            RESULT_EMITTED.labels(status=status.value).inc()
             log.info(
                 "emit.success",
                 job_id=ctx.job_id,
                 topic=self._topic,
-                status="DONE",
+                status=status.value,
             )
         except Exception as exc:
             log.error(
@@ -60,14 +67,17 @@ class EmitResultStage(Stage):
         if ctx.dropbox_manifest_ref:
             dropbox.manifest = ctx.dropbox_manifest_ref
 
+        status = JobStatus.PARTIAL if ctx.is_degraded else JobStatus.DONE
+
         return RenderResult(
             job_id=ctx.job_id,
-            status=JobStatus.DONE,
+            status=status,
             job_key=ctx.job_key,
             dropbox=dropbox,
             output_meta=ctx.output_meta,
             publish_targets=ctx.render_spec.publish.targets,
             asset_report=ctx.asset_report,
+            warnings=ctx.warnings,
             engine_versions=collect_engine_versions(),
             trace=ctx.trace,
         )
