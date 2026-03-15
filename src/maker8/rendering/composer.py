@@ -25,7 +25,7 @@ from moviepy.video.fx import FadeIn, FadeOut
 from maker8.models.common import OutputMeta
 from maker8.models.spec import AudioTrack, Canvas, Defaults, OutputConfig, RenderSpec, Scene
 from maker8.plugins.base import EffectPlugin
-from maker8.rendering.encoder import EncoderConfig, resolve_encoder
+from maker8.rendering.encoder import EncoderConfig, _cpu_config, resolve_encoder
 from maker8.rendering.layers import build_layer_clip
 from maker8.utils.color import hex_to_rgb
 from maker8.utils.logging import get_logger
@@ -100,7 +100,7 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
                 error=str(exc),
             )
             output_path.unlink(missing_ok=True)
-            cpu_encoder = resolve_encoder("libx264", output_cfg.preset, output_cfg.pix_fmt)
+            cpu_encoder = _cpu_config(output_cfg.preset, output_cfg.pix_fmt)
             _write_final_video(
                 final, output_path, ri.job_id, canvas.fps, output_cfg, cpu_encoder,
             )
