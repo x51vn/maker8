@@ -56,6 +56,8 @@ class ResolveAssetsStage(Stage):
                     job_id=ctx.job_id,
                     asset_id=asset.id,
                     source_kind=kind,
+                    filename=plan.filename,
+                    expected_type=plan.expected_type,
                 )
             except Exception as exc:
                 log.error(
@@ -66,6 +68,8 @@ class ResolveAssetsStage(Stage):
                     source_kind=kind,
                     connector=connector_name,
                     url=source_url,
+                    format_spec=asset.source.options.format,
+                    max_duration_sec=asset.source.options.max_duration_sec,
                     error_type=type(exc).__name__,
                     error_message=str(exc),
                 )

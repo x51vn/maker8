@@ -107,12 +107,12 @@ class Orchestrator:
 
         correlation_id = ctx.trace.correlation_id if ctx.trace else ""
         log.info(
-            "orchestrator.start",
+            "job.start",
             job_id=ctx.job_id,
             job_key=ctx.job_key,
             correlation_id=correlation_id,
-            scenes=len(ctx.render_spec.scenes),
-            assets=len(ctx.render_spec.assets),
+            scene_count=len(ctx.render_spec.scenes),
+            asset_count=len(ctx.render_spec.assets),
         )
 
         JOB_IN_PROGRESS.set(1)
@@ -124,12 +124,18 @@ class Orchestrator:
             self._run_stages(ctx)
             job_timer.stop()
 
+            output_video_path = str(ctx.rendered_video) if ctx.rendered_video else ""
+            output_size_bytes = (
+                ctx.output_meta.size_bytes if ctx.output_meta else 0
+            )
             log.info(
-                "orchestrator.done",
+                "job.success",
                 job_id=ctx.job_id,
                 job_key=ctx.job_key,
                 correlation_id=correlation_id,
-                duration_sec=job_timer.elapsed_sec,
+                duration_ms=job_timer.elapsed_ms,
+                output_video_path=output_video_path,
+                output_size_bytes=output_size_bytes,
             )
             JOBS_SUCCEEDED.inc()
             JOB_DURATION.labels(status="success").observe(job_timer.elapsed_sec)
@@ -248,7 +254,7 @@ class Orchestrator:
                     stage=stage_name,
                     attempt=attempt,
                     max_attempts=policy.max_attempts,
-                    delay_sec=delay,
+                    next_delay_sec=delay,
                     error_code=exc.code,
                     error_message=str(exc),
                 )

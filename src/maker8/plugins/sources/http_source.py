@@ -91,6 +91,17 @@ class HttpSourceConnector(SourceConnectorPlugin):
             )
             raise
 
+        content_type = resp.headers.get("content-type")
+        content_length = resp.headers.get("content-length")
+        log.info(
+            "http.download.response",
+            asset_id=plan.asset_id,
+            url=safe_url,
+            status_code=resp.status_code,
+            content_type=content_type,
+            content_length=content_length,
+        )
+
         downloaded = 0
         with open(dest, "wb") as fh:
             for chunk in resp.iter_content(chunk_size=_CHUNK):

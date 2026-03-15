@@ -97,7 +97,7 @@ class RenderConsumer:
                 partition=partition,
                 offset=offset,
                 key=msg_key,
-                payload_bytes=payload_size,
+                payload_size=payload_size,
             )
             JOBS_RECEIVED.inc()
             if self._state:

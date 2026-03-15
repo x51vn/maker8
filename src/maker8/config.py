@@ -71,7 +71,7 @@ class Settings(BaseSettings):
 
     # ── Logging ──────────────────────────────────────────────────────
     log_level: str = "INFO"
-    log_format: str = "json"
+    log_format: str = "console"
 
     # ── Metrics ─────────────────────────────────────────────────────
     metrics_enabled: bool = False
