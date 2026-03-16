@@ -183,10 +183,13 @@ class UploadDropboxStage(Stage):
         return Manifest(
             job_id=ctx.job_id,
             job_key=ctx.job_key,
+            dry_run=ctx.dry_run,
+            canvas_profile=ctx.canvas_profile,
             dropbox=ManifestDropbox(
                 video=ctx.dropbox_video_ref,
             ),
             output_meta=ctx.output_meta,
+            uploader_metadata=ctx.uploader_metadata,
             publish_targets=ctx.render_spec.publish.targets,
             engine_versions=collect_engine_versions(),
         )

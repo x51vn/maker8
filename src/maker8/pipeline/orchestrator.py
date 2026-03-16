@@ -104,6 +104,9 @@ class Orchestrator:
             render_spec=request.render_spec,
             trace=request.trace,
             base_work_dir=self._settings.work_dir,
+            dry_run=request.dry_run,
+            canvas_profile=request.canvas_profile,
+            uploader_metadata=request.uploader_metadata,
         )
 
         correlation_id = ctx.trace.correlation_id if ctx.trace else ""
@@ -296,7 +299,10 @@ class Orchestrator:
                 job_id=ctx.job_id,
                 status=JobStatus.FAILED,
                 job_key=ctx.job_key,
+                dry_run=ctx.dry_run,
+                canvas_profile=ctx.canvas_profile,
                 output_meta=ctx.output_meta,
+                uploader_metadata=ctx.uploader_metadata,
                 warnings=ctx.warnings,
                 engine_versions=collect_engine_versions(),
                 trace=ctx.trace,
