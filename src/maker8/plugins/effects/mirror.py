@@ -1,6 +1,8 @@
 """Mirror / flip effect plugin.
 
 Flips the clip horizontally, vertically, or both.
+Uses MoviePy native ``MirrorX`` / ``MirrorY`` effects instead of
+per-frame Python callbacks.
 
 Params:
     horizontal: bool – flip left-right (default true)
@@ -11,8 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-from moviepy import VideoClip
+from moviepy.video.fx import MirrorX, MirrorY
 
 from maker8.plugins.base import EffectPlugin, PluginManifest
 
@@ -32,6 +33,9 @@ class MirrorEffect(EffectPlugin):
             },
         }
 
+    def has_ffmpeg_filter(self) -> bool:
+        return True
+
     def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         horizontal = bool(params.get("horizontal", True))
@@ -40,21 +44,10 @@ class MirrorEffect(EffectPlugin):
         if not horizontal and not vertical:
             return ir
 
-        source_clip: VideoClip = ir
-        duration = source_clip.duration or 1.0
+        effects: list[MirrorX | MirrorY] = []
+        if horizontal:
+            effects.append(MirrorX())
+        if vertical:
+            effects.append(MirrorY())
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:
-            frame = source_clip.get_frame(t)
-            if horizontal:
-                frame = np.fliplr(frame)
-            if vertical:
-                frame = np.flipud(frame)
-            return frame.copy()  # type: ignore[no-any-return]  # ensure C-contiguous
-
-        result = VideoClip(_make_frame, duration=duration)
-        result = result.with_fps(source_clip.fps or 30)
-
-        if source_clip.audio is not None:
-            result = result.with_audio(source_clip.audio)
-
-        return result
+        return ir.with_effects(effects)

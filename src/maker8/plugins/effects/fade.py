@@ -29,6 +29,9 @@ class FadeEffect(EffectPlugin):
             },
         }
 
+    def has_ffmpeg_filter(self) -> bool:
+        return True
+
     def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         fade_in = float(params.get("fade_in_duration", 0.5))
