@@ -191,6 +191,29 @@ class PublishConfig(BaseModel):
     targets: list[PublishTarget] = Field(default_factory=list)
 
 
+# ── Uploader metadata ───────────────────────────────────────────────────────
+
+
+class UploaderMetadata(BaseModel):
+    """Normalized common metadata for downstream uploaders.
+
+    This is the canonical layer shared across all platforms.
+    Per-platform overrides live in ``PublishTarget.metadata``.
+    """
+
+    title: str = ""
+    description: str = ""
+    lang: str = ""
+    tags: list[str] = Field(default_factory=list)
+    hashtags: list[str] = Field(default_factory=list)
+    category: str = ""
+    visibility: str = "private"
+    scheduled_publish_at: str | None = None
+    content_rating: str = "general"
+    thumbnail_ref: str = ""
+    credits: list[str] = Field(default_factory=list)
+
+
 # ── Root specs ───────────────────────────────────────────────────────────────
 
 
@@ -220,5 +243,8 @@ class RenderRequest(BaseModel):
     job_id: str
     spec_version: str = "1.0"
     render_spec: RenderSpec
+    dry_run: bool = False
+    canvas_profile: str | None = None
+    uploader_metadata: UploaderMetadata = Field(default_factory=UploaderMetadata)
     result: ResultDestination = Field(default_factory=ResultDestination)
     trace: Trace = Field(default_factory=Trace)
