@@ -106,6 +106,13 @@ def _build_video_cmd(
     When *proxy_max_short_edge* > 0 a scale filter is injected so the
     short edge never exceeds that value (maintains aspect ratio, rounds
     to even dimensions).
+
+    **NVENC + proxy interaction:** ``-hwaccel_output_format cuda`` keeps
+    decoded frames in GPU memory, but the ``scale`` filter is CPU-only.
+    When proxy scaling is required, we omit ``-hwaccel_output_format cuda``
+    so FFmpeg auto-transfers frames to system memory for the scale filter,
+    then NVENC re-uploads for encoding.  Without proxy the full GPU path
+    is used.
     """
     ffmpeg = resolve_ffmpeg_binary()
 
@@ -129,13 +136,18 @@ def _build_video_cmd(
         ]
 
     if use_nvenc:
+        # When proxy scaling is needed we must NOT keep frames in CUDA
+        # memory (hwaccel_output_format cuda) because the software
+        # ``scale`` filter cannot operate on GPU surfaces.
+        hwaccel_args: list[str] = ["-hwaccel", "cuda"]
+        if not vf:
+            # Full GPU path: decode → NVENC encode, no CPU filters.
+            hwaccel_args += ["-hwaccel_output_format", "cuda"]
+
         return [
             ffmpeg,
             "-y",
-            "-hwaccel",
-            "cuda",
-            "-hwaccel_output_format",
-            "cuda",
+            *hwaccel_args,
             "-i",
             str(src),
             *vf,
