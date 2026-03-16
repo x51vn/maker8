@@ -44,6 +44,33 @@ class ZoomPanEffect(EffectPlugin):
     def has_ffmpeg_filter(self) -> bool:
         return True
 
+    def ffmpeg_filter_graph(
+        self,
+        params: dict[str, Any],
+        w: int,
+        h: int,
+        fps: int,
+        duration: float,
+    ) -> str | None:
+        """Return an FFmpeg ``zoompan`` filter for this effect."""
+        start_zoom = float(params.get("start_zoom", 1.0))
+        end_zoom = float(params.get("end_zoom", 1.2))
+        center_x = float(params.get("center_x", 0.5))
+        center_y = float(params.get("center_y", 0.5))
+
+        if start_zoom == end_zoom == 1.0:
+            return None
+
+        total_frames = max(1, int(fps * duration))
+        # zoompan with d=1: each input frame → 1 output frame (video mode)
+        # z: linear interpolation from start_zoom to end_zoom
+        z_expr = f"{start_zoom}+({end_zoom}-{start_zoom})*on/{total_frames}"
+        # x/y: keep focus centred, clamped to valid range
+        x_expr = f"max(0,min(iw-iw/zoom,iw*{center_x}-iw/zoom/2))"
+        y_expr = f"max(0,min(ih-ih/zoom,ih*{center_y}-ih/zoom/2))"
+
+        return f"zoompan=z='{z_expr}':x='{x_expr}':y='{y_expr}':d=1:s={w}x{h}:fps={fps}"
+
     def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         start_zoom = float(params.get("start_zoom", 1.0))
@@ -82,12 +109,12 @@ class ZoomPanEffect(EffectPlugin):
             # Resize back to output size using numpy/cv2-style fast resize
             # Use simple area interpolation via numpy for speed
             if cropped.shape[1] == w and cropped.shape[0] == h:
-                return cropped
+                return cropped  # type: ignore[no-any-return]
 
             # Fall back to PIL resize but use BILINEAR (faster than LANCZOS)
             img = Image.fromarray(cropped)
             img = img.resize((w, h), Image.Resampling.BILINEAR)
-            return np.array(img)
+            return np.asarray(img, dtype=np.uint8)
 
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)
