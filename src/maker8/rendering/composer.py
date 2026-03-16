@@ -155,7 +155,14 @@ def _compose_scene_level(
     try:
         for idx, scene in enumerate(ri.spec.scenes):
             scene_timer = Timer().start()
-            clip = _build_scene(scene, ri, canvas, defaults, allow_python_effects)
+            clip = _build_scene(
+                scene,
+                ri,
+                canvas,
+                defaults,
+                allow_python_effects,
+                use_ffmpeg_postprocess=True,
+            )
             scene_timer.stop()
 
             SCENE_RENDER_DURATION.observe(scene_timer.elapsed_sec)
@@ -195,6 +202,15 @@ def _compose_scene_level(
                 else:
                     raise
             write_timer.stop()
+
+            # Apply FFmpeg-native effects as post-process
+            scene_path = _apply_ffmpeg_effects(
+                scene,
+                ri,
+                scene_path,
+                canvas,
+                clip.duration,
+            )
 
             total_duration += clip.duration
             scene_files.append(scene_path)
@@ -408,6 +424,97 @@ def _ffmpeg_concat(scene_files: list[Path], output_path: Path, job_id: str) -> N
     )
 
 
+# ── FFmpeg effect post-processing ────────────────────────────────────────────
+
+_FFMPEG_EFFECT_TIMEOUT = 300  # 5 min per scene for filter post-process
+
+
+def _apply_ffmpeg_effects(
+    scene: Scene,
+    ri: RenderInput,
+    scene_path: Path,
+    canvas: Canvas,
+    duration: float,
+) -> Path:
+    """Apply FFmpeg-native effects to an already-written scene MP4.
+
+    Returns *scene_path* unchanged if no FFmpeg effects apply, or returns
+    a new path after re-encoding with the filter graph.
+    """
+    filters: list[str] = []
+    for effect_inst in scene.effects:
+        plugin = ri.effects_map.get(effect_inst.plugin_id)
+        if plugin is None:
+            continue
+        vf = plugin.ffmpeg_filter_graph(
+            effect_inst.params,
+            canvas.w,
+            canvas.h,
+            canvas.fps,
+            duration,
+        )
+        if vf:
+            filters.append(vf)
+
+    if not filters:
+        return scene_path
+
+    vf_chain = ",".join(filters)
+    ffmpeg = resolve_ffmpeg_binary()
+    filtered_path = scene_path.with_suffix(".filtered.mp4")
+
+    log.info(
+        "composer.ffmpeg_effects.start",
+        job_id=ri.job_id,
+        scene_id=scene.scene_id,
+        filters=vf_chain,
+    )
+
+    fx_timer = Timer().start()
+    try:
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(scene_path),
+            "-vf",
+            vf_chain,
+            "-c:a",
+            "copy",
+            str(filtered_path),
+        ]
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=_FFMPEG_EFFECT_TIMEOUT,
+        )
+        if result.returncode != 0:
+            log.warning(
+                "composer.ffmpeg_effects.failed",
+                job_id=ri.job_id,
+                scene_id=scene.scene_id,
+                returncode=result.returncode,
+                stderr=result.stderr[:500],
+            )
+            filtered_path.unlink(missing_ok=True)
+            return scene_path  # fall back to un-filtered scene
+    finally:
+        fx_timer.stop()
+
+    log.info(
+        "composer.ffmpeg_effects.done",
+        job_id=ri.job_id,
+        scene_id=scene.scene_id,
+        filter_sec=round(fx_timer.elapsed_sec, 3),
+    )
+
+    # Replace original with filtered version
+    scene_path.unlink(missing_ok=True)
+    filtered_path.rename(scene_path)
+    return scene_path
+
+
 # ── Final video writer ───────────────────────────────────────────────────────
 
 
@@ -475,6 +582,7 @@ def _build_scene(
     canvas: Canvas,
     defaults: Defaults,
     allow_python_effects: bool = True,
+    use_ffmpeg_postprocess: bool = False,
 ) -> VideoClip:
     """Compose layers + audio for a single scene."""
 
@@ -535,6 +643,15 @@ def _build_scene(
                     plugin_id=effect_inst.plugin_id,
                     reason="python_effects_disabled",
                 )
+                continue
+            # Skip effects that will be applied as FFmpeg post-process
+            if use_ffmpeg_postprocess and plugin.ffmpeg_filter_graph(
+                effect_inst.params,
+                canvas.w,
+                canvas.h,
+                canvas.fps,
+                duration,
+            ):
                 continue
             composite = plugin.apply(None, composite, effect_inst.model_dump())
 
