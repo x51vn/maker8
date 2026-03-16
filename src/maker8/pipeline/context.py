@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from maker8.models.common import AssetWarning, DropboxFileRef, OutputMeta, Trace
-from maker8.models.spec import RenderSpec
+from maker8.models.spec import RenderSpec, UploaderMetadata
 
 # ── TTS result (pipeline-internal) ──────────────────────────────────────────
 
@@ -35,6 +35,11 @@ class PipelineContext:
     render_spec: RenderSpec
     job_key: str = ""
     trace: Trace = field(default_factory=Trace)
+
+    # ── Request-level flags ──────────────────────────────────────────
+    dry_run: bool = False
+    canvas_profile: str | None = None
+    uploader_metadata: UploaderMetadata = field(default_factory=UploaderMetadata)
 
     # ── Directories (created per job) ────────────────────────────────
     work_dir: Path = field(default_factory=lambda: Path("/tmp/maker8"))
@@ -75,6 +80,10 @@ class PipelineContext:
         render_spec: RenderSpec,
         trace: Trace,
         base_work_dir: Path,
+        *,
+        dry_run: bool = False,
+        canvas_profile: str | None = None,
+        uploader_metadata: UploaderMetadata | None = None,
     ) -> PipelineContext:
         wd = base_work_dir / job_id
         return cls(
@@ -85,6 +94,9 @@ class PipelineContext:
             assets_dir=wd / "assets",
             tts_dir=wd / "tts",
             output_dir=wd / "output",
+            dry_run=dry_run,
+            canvas_profile=canvas_profile,
+            uploader_metadata=uploader_metadata or UploaderMetadata(),
         )
 
     def ensure_dirs(self) -> None:

@@ -10,6 +10,7 @@ from maker8.models.common import (
     OutputMeta,
     PublishTarget,
 )
+from render_contracts.render_spec import UploaderMetadata
 
 
 class ManifestDropbox(BaseModel):
@@ -21,7 +22,10 @@ class Manifest(BaseModel):
 
     job_id: str
     job_key: str = ""
+    dry_run: bool = False
+    canvas_profile: str | None = None
     dropbox: ManifestDropbox = Field(default_factory=ManifestDropbox)
     output_meta: OutputMeta = Field(default_factory=OutputMeta)
+    uploader_metadata: UploaderMetadata = Field(default_factory=UploaderMetadata)
     publish_targets: list[PublishTarget] = Field(default_factory=list)
     engine_versions: EngineVersions = Field(default_factory=EngineVersions)

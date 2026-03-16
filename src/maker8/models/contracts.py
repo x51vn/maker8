@@ -21,7 +21,11 @@ from maker8.models.common import (
     PublishTarget,
     Trace,
 )
-from render_contracts.render_spec import RenderRequest, ResultDestination  # noqa: F401
+from render_contracts.render_spec import (  # noqa: F401
+    RenderRequest,
+    ResultDestination,
+    UploaderMetadata,
+)
 
 __all__ = [
     "DLQPayload",
@@ -29,6 +33,7 @@ __all__ = [
     "RenderRequest",
     "RenderResult",
     "ResultDestination",
+    "UploaderMetadata",
 ]
 
 # ── Render Result ────────────────────────────────────────────────────────────
@@ -47,8 +52,11 @@ class RenderResult(BaseModel):
     job_id: str
     status: JobStatus
     job_key: str = ""
+    dry_run: bool = False
+    canvas_profile: str | None = None
     dropbox: DropboxOutput = Field(default_factory=DropboxOutput)
     output_meta: OutputMeta = Field(default_factory=OutputMeta)
+    uploader_metadata: UploaderMetadata = Field(default_factory=UploaderMetadata)
     publish_targets: list[PublishTarget] = Field(default_factory=list)
     asset_report: list[dict[str, Any]] = Field(default_factory=list)
     warnings: list[AssetWarning] = Field(default_factory=list)

@@ -31,6 +31,7 @@ from render_contracts.render_spec import (  # noqa: F401
     Trace,
     Transition,
     Trim,
+    UploaderMetadata,
 )
 
 __all__ = [
@@ -57,4 +58,5 @@ __all__ = [
     "Trace",
     "Transition",
     "Trim",
+    "UploaderMetadata",
 ]
