@@ -95,3 +95,19 @@ class EffectPlugin(ABC):
         Effects that return False may be skipped in ``fast`` perf mode.
         """
         return False
+
+    def ffmpeg_filter_graph(
+        self,
+        params: dict[str, Any],
+        w: int,
+        h: int,
+        fps: int,
+        duration: float,
+    ) -> str | None:
+        """Return an FFmpeg ``-vf`` filter string, or *None*.
+
+        When non-None the scene-level render strategy can apply this
+        effect as an FFmpeg post-process on the intermediate MP4
+        instead of per-frame Python processing.
+        """
+        return None
