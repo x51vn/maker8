@@ -13,6 +13,7 @@ from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.plugins.registry import PluginRegistry
 from maker8.rendering.composer import RenderInput, _RenderTimeout, compose_video
+from maker8.rendering.perf_profile import PerfProfile
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 
@@ -20,8 +21,13 @@ log = get_logger(__name__)
 
 
 class RenderStageImpl(Stage):
-    def __init__(self, registry: PluginRegistry) -> None:
+    def __init__(
+        self,
+        registry: PluginRegistry,
+        perf_profile: PerfProfile | None = None,
+    ) -> None:
         self._registry = registry
+        self._perf_profile = perf_profile
 
     @property
     def name(self) -> RenderStage:
@@ -52,14 +58,16 @@ class RenderStageImpl(Stage):
                 viable_scenes.append(scene)
             else:
                 ctx.skipped_scenes.add(scene.scene_id)
-                ctx.warnings.append(AssetWarning(
-                    asset_id="",
-                    scene_id=scene.scene_id,
-                    stage="RENDER",
-                    code="SCENE_NO_CONTENT",
-                    message=f"Scene {scene.scene_id} skipped: all layer assets missing",
-                    fallback_used="scene_skipped",
-                ))
+                ctx.warnings.append(
+                    AssetWarning(
+                        asset_id="",
+                        scene_id=scene.scene_id,
+                        stage="RENDER",
+                        code="SCENE_NO_CONTENT",
+                        message=f"Scene {scene.scene_id} skipped: all layer assets missing",
+                        fallback_used="scene_skipped",
+                    )
+                )
                 log.warning(
                     "render.scene.skipped",
                     job_id=ctx.job_id,
@@ -69,7 +77,8 @@ class RenderStageImpl(Stage):
 
         if not viable_scenes:
             raise StageError(
-                self.name, "ALL_SCENES_SKIPPED",
+                self.name,
+                "ALL_SCENES_SKIPPED",
                 "All scenes have no renderable content after degradation",
                 retryable=False,
             )
@@ -83,10 +92,7 @@ class RenderStageImpl(Stage):
         )
 
         # Build TTS map
-        tts_audio = {
-            sid: (r.audio_path, r.duration_sec)
-            for sid, r in ctx.tts_results.items()
-        }
+        tts_audio = {sid: (r.audio_path, r.duration_sec) for sid, r in ctx.tts_results.items()}
 
         # Resolve effect plugins referenced by scenes
         effects_map = {}
@@ -94,9 +100,7 @@ class RenderStageImpl(Stage):
             for ei in scene.effects:
                 if ei.plugin_id not in effects_map:
                     try:
-                        effects_map[ei.plugin_id] = self._registry.get_effect(
-                            ei.plugin_id
-                        )
+                        effects_map[ei.plugin_id] = self._registry.get_effect(ei.plugin_id)
                     except KeyError:
                         log.warning("render.effect_not_found", plugin_id=ei.plugin_id)
 
@@ -107,6 +111,7 @@ class RenderStageImpl(Stage):
             output_dir=ctx.output_dir,
             job_id=ctx.job_id,
             effects_map=effects_map,
+            perf_profile=self._perf_profile,
         )
 
         log.info(
@@ -142,7 +147,8 @@ class RenderStageImpl(Stage):
                 render_sec=timer.elapsed_sec,
             )
             raise StageError(
-                self.name, "RENDER_TIMEOUT",
+                self.name,
+                "RENDER_TIMEOUT",
                 f"Video composition timed out after {timer.elapsed_sec}s",
                 retryable=False,
             ) from exc
@@ -156,7 +162,8 @@ class RenderStageImpl(Stage):
                 render_sec=timer.elapsed_sec,
             )
             raise StageError(
-                self.name, "RENDER_FAILED",
+                self.name,
+                "RENDER_FAILED",
                 f"Video composition failed: {exc}",
                 retryable=False,
             ) from exc

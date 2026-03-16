@@ -1,7 +1,7 @@
 """Gaussian blur effect plugin.
 
-Applies a Gaussian blur to every frame.  Can be static or animated
-(blur amount interpolated over time).
+Applies a Gaussian blur to every frame.  Static blur uses a pre-built
+PIL filter for consistency; animated blur interpolates the radius.
 
 Params:
     radius:       float – blur radius in pixels (default 5.0)
@@ -43,23 +43,33 @@ class BlurEffect(EffectPlugin):
         source_clip: VideoClip = ir
         duration = source_clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:
-            frame = source_clip.get_frame(t)
+        # Static blur: pre-build the filter object for reuse
+        if end_radius is None:
+            if start_radius <= 0:
+                return ir
+            static_filter = ImageFilter.GaussianBlur(radius=start_radius)
 
-            if end_radius is not None:
+            def _make_frame_static(t: float) -> np.ndarray[Any, Any]:
+                frame = source_clip.get_frame(t)
+                img = Image.fromarray(frame)
+                img = img.filter(static_filter)
+                return np.array(img)
+
+            result = VideoClip(_make_frame_static, duration=duration)
+        else:
+            # Animated blur
+            def _make_frame_animated(t: float) -> np.ndarray[Any, Any]:
+                frame = source_clip.get_frame(t)
                 progress = t / duration if duration > 0 else 0.0
                 r = start_radius + (end_radius - start_radius) * progress
-            else:
-                r = start_radius
+                if r <= 0:
+                    return frame  # type: ignore[no-any-return]
+                img = Image.fromarray(frame)
+                img = img.filter(ImageFilter.GaussianBlur(radius=r))
+                return np.array(img)
 
-            if r <= 0:
-                return frame  # type: ignore[no-any-return]
+            result = VideoClip(_make_frame_animated, duration=duration)
 
-            img = Image.fromarray(frame)
-            img = img.filter(ImageFilter.GaussianBlur(radius=r))
-            return np.array(img)
-
-        result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)
 
         if source_clip.audio is not None:

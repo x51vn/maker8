@@ -1,7 +1,8 @@
 """Brightness / Contrast adjustment effect plugin.
 
-Changes the brightness and contrast of every frame using Pillow's
-``ImageEnhance`` (multiplicative factor, where 1.0 = no change).
+Uses MoviePy native ``LumContrast`` instead of per-frame Pillow
+``ImageEnhance``.  The ``lum`` parameter maps to luminosity offset and
+``contrast`` maps to the contrast multiplier.
 
 Params:
     brightness: float – multiplicative factor (0.0 … 3.0, default 1.0;
@@ -14,9 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-from moviepy import VideoClip
-from PIL import Image, ImageEnhance
+from moviepy.video.fx import LumContrast
 
 from maker8.plugins.base import EffectPlugin, PluginManifest
 
@@ -44,6 +43,9 @@ class BrightnessContrastEffect(EffectPlugin):
             },
         }
 
+    def has_ffmpeg_filter(self) -> bool:
+        return True
+
     def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         brightness = float(params.get("brightness", 1.0))
@@ -53,24 +55,11 @@ class BrightnessContrastEffect(EffectPlugin):
         if brightness == 1.0 and contrast == 1.0:
             return ir
 
-        source_clip: VideoClip = ir
-        duration = source_clip.duration or 1.0
+        # Convert multiplicative brightness (1.0 = no change) to
+        # LumContrast's additive lum offset:  lum = (factor - 1) * 128
+        # and contrast multiplier (1.0 = no change) to additive:
+        # contrast_param = (factor - 1) * 128
+        lum = (brightness - 1.0) * 128.0
+        contrast_val = (contrast - 1.0) * 128.0
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:
-            frame = source_clip.get_frame(t)
-            img = Image.fromarray(frame)
-
-            if brightness != 1.0:
-                img = ImageEnhance.Brightness(img).enhance(brightness)
-            if contrast != 1.0:
-                img = ImageEnhance.Contrast(img).enhance(contrast)
-
-            return np.array(img)
-
-        result = VideoClip(_make_frame, duration=duration)
-        result = result.with_fps(source_clip.fps or 30)
-
-        if source_clip.audio is not None:
-            result = result.with_audio(source_clip.audio)
-
-        return result
+        return ir.with_effects([LumContrast(lum=lum, contrast=contrast_val)])
