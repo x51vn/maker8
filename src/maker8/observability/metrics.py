@@ -33,9 +33,11 @@ __all__ = [
     "KAFKA_CONSUMER_RUNNING",
     "LAST_FAILURE_UNIXTIME",
     "LAST_SUCCESS_UNIXTIME",
+    "RENDER_FPS",
     "RESULT_EMITTED",
     "RETRIES_SCHEDULED",
     "RETRY_SLEEP_SECONDS",
+    "SCENE_RENDER_DURATION",
     "STAGE_DURATION",
     "SUBPROCESS_DURATION",
     "SUBPROCESS_FAILURES",
@@ -134,6 +136,18 @@ DOWNLOAD_BYTES = Histogram(
     "Bytes downloaded per asset.",
     ["source_kind"],
     buckets=(1e4, 1e5, 1e6, 5e6, 1e7, 5e7, 1e8, 5e8, 1e9),
+)
+
+SCENE_RENDER_DURATION = Histogram(
+    "maker8_scene_render_duration_seconds",
+    "Wall-clock duration of rendering a single scene.",
+    buckets=(0.5, 1, 2, 5, 10, 30, 60, 120, 300),
+)
+
+RENDER_FPS = Histogram(
+    "maker8_render_fps",
+    "Effective frames-per-second achieved during final encode.",
+    buckets=(1, 3, 5, 10, 15, 20, 30, 50, 100),
 )
 
 

@@ -3,11 +3,18 @@
 ``compose_video()`` is the single public entry point.  It receives a
 ``RenderInput`` dataclass (no dependency on ``pipeline.context``) and
 returns the output file path together with ``OutputMeta``.
+
+**Scene-level rendering (WS-D):** When no inter-scene transitions are
+defined, each scene is rendered to an intermediate MP4, then FFmpeg's
+``concat`` demuxer joins them.  This isolates scene memory, enables
+per-scene profiling, and avoids a single enormous MoviePy graph.
 """
 
 from __future__ import annotations
 
 import signal
+import subprocess
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -24,9 +31,13 @@ from moviepy.video.fx import FadeIn, FadeOut
 
 from maker8.models.common import OutputMeta
 from maker8.models.spec import AudioTrack, Canvas, Defaults, OutputConfig, RenderSpec, Scene
+from maker8.observability.helpers import Timer
+from maker8.observability.metrics import RENDER_FPS, SCENE_RENDER_DURATION
 from maker8.plugins.base import EffectPlugin
 from maker8.rendering.encoder import EncoderConfig, _cpu_config, resolve_encoder
+from maker8.rendering.ffmpeg_runtime import resolve_ffmpeg_binary
 from maker8.rendering.layers import build_layer_clip
+from maker8.rendering.perf_profile import PerfProfile
 from maker8.utils.color import hex_to_rgb
 from maker8.utils.logging import get_logger
 
@@ -56,6 +67,7 @@ class RenderInput:
     output_dir: Path = Path("/tmp")
     job_id: str = ""
     effects_map: dict[str, EffectPlugin] = field(default_factory=dict)
+    perf_profile: PerfProfile | None = None
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -65,32 +77,218 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
     """Compose all scenes and write the final video file.
 
     Returns ``(output_path, output_meta)``.
+
+    **Strategy selection:**
+
+    * When no inter-scene transitions exist, each scene is rendered to an
+      intermediate MP4 and the results are joined by FFmpeg's ``concat``
+      demuxer (fast, low memory).
+    * When transitions overlap scenes, the legacy MoviePy graph approach
+      is used so that fade/slide overlaps remain correct.
     """
     canvas = ri.spec.canvas
     defaults = ri.spec.defaults
     output_cfg = ri.spec.output
 
+    # Apply perf-profile overrides
+    profile = ri.perf_profile
+    effective_fps = canvas.fps
+    if profile and profile.fps_cap > 0:
+        effective_fps = min(canvas.fps, profile.fps_cap)
+    allow_python_effects = profile.allow_python_effects if profile else True
+
+    output_path = ri.output_dir / f"{ri.job_id}.mp4"
+    encoder = resolve_encoder(output_cfg.codec, output_cfg.preset, output_cfg.pix_fmt)
+
+    # Decide strategy: scene-level render (fast) or single-graph (transition)
+    has_transitions = any(
+        scene.transition_out and scene.transition_out.duration > 0 for scene in ri.spec.scenes
+    )
+
+    if not has_transitions and len(ri.spec.scenes) > 1:
+        return _compose_scene_level(
+            ri,
+            canvas,
+            defaults,
+            output_cfg,
+            encoder,
+            effective_fps,
+            allow_python_effects,
+            output_path,
+        )
+
+    return _compose_single_graph(
+        ri,
+        canvas,
+        defaults,
+        output_cfg,
+        encoder,
+        effective_fps,
+        allow_python_effects,
+        output_path,
+    )
+
+
+# ── Scene-level render strategy (no transitions) ────────────────────────────
+
+
+def _compose_scene_level(
+    ri: RenderInput,
+    canvas: Canvas,
+    defaults: Defaults,
+    output_cfg: OutputConfig,
+    encoder: EncoderConfig,
+    effective_fps: int,
+    allow_python_effects: bool,
+    output_path: Path,
+) -> tuple[Path, OutputMeta]:
+    """Render each scene to an intermediate MP4, then FFmpeg-concat them."""
+    log.info(
+        "composer.strategy.scene_level",
+        job_id=ri.job_id,
+        scene_count=len(ri.spec.scenes),
+    )
+
+    scene_files: list[Path] = []
+    total_duration = 0.0
+
+    try:
+        for idx, scene in enumerate(ri.spec.scenes):
+            scene_timer = Timer().start()
+            clip = _build_scene(scene, ri, canvas, defaults, allow_python_effects)
+            scene_timer.stop()
+
+            SCENE_RENDER_DURATION.observe(scene_timer.elapsed_sec)
+
+            # Write scene to intermediate file
+            scene_path = ri.output_dir / f"{ri.job_id}_scene_{idx:03d}.mp4"
+            write_timer = Timer().start()
+            try:
+                _write_final_video(
+                    clip,
+                    scene_path,
+                    ri.job_id,
+                    effective_fps,
+                    output_cfg,
+                    encoder,
+                )
+            except _RenderTimeout:
+                raise
+            except Exception as exc:
+                if encoder.is_gpu:
+                    log.warning(
+                        "composer.scene.gpu_failed",
+                        job_id=ri.job_id,
+                        scene_index=idx,
+                        error=str(exc),
+                    )
+                    scene_path.unlink(missing_ok=True)
+                    cpu_encoder = _cpu_config(output_cfg.preset, output_cfg.pix_fmt)
+                    _write_final_video(
+                        clip,
+                        scene_path,
+                        ri.job_id,
+                        effective_fps,
+                        output_cfg,
+                        cpu_encoder,
+                    )
+                else:
+                    raise
+            write_timer.stop()
+
+            total_duration += clip.duration
+            scene_files.append(scene_path)
+            clip.close()
+
+            log.info(
+                "composer.scene.rendered",
+                job_id=ri.job_id,
+                scene_id=scene.scene_id,
+                scene_index=idx,
+                layers=len(scene.layers),
+                effects=len(scene.effects),
+                duration_sec=round(clip.duration, 3),
+                build_sec=round(scene_timer.elapsed_sec, 3),
+                write_sec=round(write_timer.elapsed_sec, 3),
+            )
+
+        # Concatenate with FFmpeg
+        _ffmpeg_concat(scene_files, output_path, ri.job_id)
+
+    finally:
+        # Clean up intermediate scene files
+        for sf in scene_files:
+            sf.unlink(missing_ok=True)
+
+    size_bytes = output_path.stat().st_size
+    log.info(
+        "composer.write.returned",
+        job_id=ri.job_id,
+        path=str(output_path),
+        output_size_bytes=size_bytes,
+        duration=total_duration,
+        codec=encoder.codec,
+        is_gpu=encoder.is_gpu,
+        strategy="scene_level",
+    )
+
+    return output_path, OutputMeta(
+        duration=round(total_duration, 3),
+        w=canvas.w,
+        h=canvas.h,
+        fps=effective_fps,
+        size_bytes=size_bytes,
+    )
+
+
+# ── Single-graph strategy (legacy, for transitions) ─────────────────────────
+
+
+def _compose_single_graph(
+    ri: RenderInput,
+    canvas: Canvas,
+    defaults: Defaults,
+    output_cfg: OutputConfig,
+    encoder: EncoderConfig,
+    effective_fps: int,
+    allow_python_effects: bool,
+    output_path: Path,
+) -> tuple[Path, OutputMeta]:
+    """Build a single MoviePy composite graph and encode it."""
+    log.info(
+        "composer.strategy.single_graph",
+        job_id=ri.job_id,
+        scene_count=len(ri.spec.scenes),
+    )
+
     scene_clips: list[VideoClip] = []
     transition_durs: list[float] = []
 
-    for scene in ri.spec.scenes:
-        clip = _build_scene(scene, ri, canvas, defaults)
+    for idx, scene in enumerate(ri.spec.scenes):
+        scene_timer = Timer().start()
+        clip = _build_scene(scene, ri, canvas, defaults, allow_python_effects)
+        scene_timer.stop()
         scene_clips.append(clip)
-        transition_durs.append(
-            scene.transition_out.duration if scene.transition_out else 0.0
+        transition_durs.append(scene.transition_out.duration if scene.transition_out else 0.0)
+
+        SCENE_RENDER_DURATION.observe(scene_timer.elapsed_sec)
+        log.info(
+            "composer.scene.built",
+            job_id=ri.job_id,
+            scene_id=scene.scene_id,
+            scene_index=idx,
+            layers=len(scene.layers),
+            effects=len(scene.effects),
+            duration_sec=round(clip.duration, 3),
+            build_sec=round(scene_timer.elapsed_sec, 3),
         )
 
     final = _concatenate_with_transitions(scene_clips, transition_durs, canvas)
 
-    output_path = ri.output_dir / f"{ri.job_id}.mp4"
-
-    # Resolve encoder: auto → GPU when available, explicit → honoured
-    encoder = resolve_encoder(output_cfg.codec, output_cfg.preset, output_cfg.pix_fmt)
-
     try:
-        _write_final_video(final, output_path, ri.job_id, canvas.fps, output_cfg, encoder)
+        _write_final_video(final, output_path, ri.job_id, effective_fps, output_cfg, encoder)
     except _RenderTimeout:
-        raise  # Never retry on timeout — CPU would also timeout
+        raise
     except Exception as exc:
         if encoder.is_gpu:
             log.warning(
@@ -102,7 +300,12 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
             output_path.unlink(missing_ok=True)
             cpu_encoder = _cpu_config(output_cfg.preset, output_cfg.pix_fmt)
             _write_final_video(
-                final, output_path, ri.job_id, canvas.fps, output_cfg, cpu_encoder,
+                final,
+                output_path,
+                ri.job_id,
+                effective_fps,
+                output_cfg,
+                cpu_encoder,
             )
         else:
             raise
@@ -116,22 +319,93 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
         duration=final.duration,
         codec=encoder.codec,
         is_gpu=encoder.is_gpu,
+        strategy="single_graph",
     )
 
     meta = OutputMeta(
         duration=round(final.duration, 3),
         w=canvas.w,
         h=canvas.h,
-        fps=canvas.fps,
+        fps=effective_fps,
         size_bytes=size_bytes,
     )
 
-    # Clean up
     final.close()
     for c in scene_clips:
         c.close()
 
     return output_path, meta
+
+
+# ── FFmpeg concat demuxer ────────────────────────────────────────────────────
+
+
+def _ffmpeg_concat(scene_files: list[Path], output_path: Path, job_id: str) -> None:
+    """Concatenate intermediate scene MP4s using ``ffmpeg -f concat``.
+
+    This is a stream-copy concat (no re-encode) — very fast since all
+    scenes share the same codec, resolution, and frame rate.
+    """
+    ffmpeg = resolve_ffmpeg_binary()
+
+    # Build the concat list file
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".txt",
+        delete=False,
+        dir=str(output_path.parent),
+    ) as f:
+        for sf in scene_files:
+            # FFmpeg concat format: file 'path'
+            f.write(f"file '{sf}'\n")
+        list_path = Path(f.name)
+
+    log.info(
+        "composer.concat.start",
+        job_id=job_id,
+        scene_count=len(scene_files),
+    )
+
+    concat_timer = Timer().start()
+    try:
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(list_path),
+            "-c",
+            "copy",  # stream copy — no re-encode
+            str(output_path),
+        ]
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if result.returncode != 0:
+            log.error(
+                "composer.concat.failed",
+                job_id=job_id,
+                returncode=result.returncode,
+                stderr=result.stderr[:500],
+            )
+            raise RuntimeError(
+                f"FFmpeg concat failed (rc={result.returncode}): {result.stderr[:200]}"
+            )
+    finally:
+        concat_timer.stop()
+        list_path.unlink(missing_ok=True)
+
+    log.info(
+        "composer.concat.done",
+        job_id=job_id,
+        concat_sec=round(concat_timer.elapsed_sec, 3),
+    )
 
 
 # ── Final video writer ───────────────────────────────────────────────────────
@@ -146,17 +420,20 @@ def _write_final_video(
     encoder: EncoderConfig,
 ) -> None:
     """Write *clip* to *output_path* using *encoder*, with SIGALRM timeout."""
+    total_frames = int((clip.duration or 0) * fps)
     log.info(
         "composer.write.start",
         job_id=job_id,
         path=str(output_path),
         duration=clip.duration,
+        total_frames=total_frames,
         codec=encoder.codec,
         preset=encoder.preset,
         is_gpu=encoder.is_gpu,
         timeout_sec=_RENDER_TIMEOUT,
     )
 
+    write_timer = Timer().start()
     prev_handler = signal.signal(signal.SIGALRM, _timeout_handler)
     signal.alarm(_RENDER_TIMEOUT)
     try:
@@ -174,6 +451,19 @@ def _write_final_video(
     finally:
         signal.alarm(0)
         signal.signal(signal.SIGALRM, prev_handler)
+        write_timer.stop()
+
+    avg_fps = total_frames / write_timer.elapsed_sec if write_timer.elapsed_sec > 0 else 0
+    RENDER_FPS.observe(avg_fps)
+    log.info(
+        "composer.write.done",
+        job_id=job_id,
+        write_sec=round(write_timer.elapsed_sec, 3),
+        total_frames=total_frames,
+        avg_fps=round(avg_fps, 2),
+        codec=encoder.codec,
+        is_gpu=encoder.is_gpu,
+    )
 
 
 # ── Scene builder ────────────────────────────────────────────────────────────
@@ -184,6 +474,7 @@ def _build_scene(
     ri: RenderInput,
     canvas: Canvas,
     defaults: Defaults,
+    allow_python_effects: bool = True,
 ) -> VideoClip:
     """Compose layers + audio for a single scene."""
 
@@ -236,6 +527,15 @@ def _build_scene(
     for effect_inst in scene.effects:
         plugin = ri.effects_map.get(effect_inst.plugin_id)
         if plugin:
+            if not allow_python_effects and not plugin.has_ffmpeg_filter():
+                log.debug(
+                    "composer.effect.skipped",
+                    job_id=ri.job_id,
+                    scene_id=scene.scene_id,
+                    plugin_id=effect_inst.plugin_id,
+                    reason="python_effects_disabled",
+                )
+                continue
             composite = plugin.apply(None, composite, effect_inst.model_dump())
 
     return composite
@@ -303,4 +603,3 @@ def _concatenate_with_transitions(
 
     total_dur = starts[-1] + clips[-1].duration
     return CompositeVideoClip(positioned, size=(canvas.w, canvas.h)).with_duration(total_dur)
-

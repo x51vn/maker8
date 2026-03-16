@@ -87,3 +87,11 @@ class EffectPlugin(ABC):
     def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         """Return the (possibly mutated) *ir*."""
         ...
+
+    def has_ffmpeg_filter(self) -> bool:
+        """Return True if this effect uses an FFmpeg filter instead of per-frame Python.
+
+        Override in subclasses that are implemented as FFmpeg filters.
+        Effects that return False may be skipped in ``fast`` perf mode.
+        """
+        return False
