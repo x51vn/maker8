@@ -41,6 +41,7 @@ from maker8.pipeline.tts import TTSStage
 from maker8.pipeline.upload import UploadDropboxStage
 from maker8.pipeline.validate import ValidateStage
 from maker8.plugins.registry import PluginRegistry
+from maker8.rendering.perf_profile import get_profile
 from maker8.retry import RetryPolicy, StageError
 from maker8.services.dropbox_client import DropboxClient
 from maker8.services.tts_client import TTSService
@@ -71,14 +72,16 @@ class Orchestrator:
             max_delay_sec=settings.render_retry_max_delay_sec,
         )
 
+        profile = get_profile(settings.perf_mode, settings.proxy_max_resolution)
+
         # ── Build stage list (order matters) ─────────────────────────
         self._stages: list[Stage] = [
             ValidateStage(),
             ResolveAssetsStage(registry),
             DownloadStage(registry),
-            NormalizeStage(),
+            NormalizeStage(proxy_max_short_edge=profile.proxy_max_short_edge),
             TTSStage(tts_service),
-            RenderStageImpl(registry),
+            RenderStageImpl(registry, perf_profile=profile),
             UploadDropboxStage(dbx_client),
             EmitResultStage(producer, settings.kafka_render_result_topic),
         ]
@@ -126,9 +129,7 @@ class Orchestrator:
             status = JobStatus.PARTIAL if ctx.is_degraded else JobStatus.DONE
 
             output_video_path = str(ctx.rendered_video) if ctx.rendered_video else ""
-            output_size_bytes = (
-                ctx.output_meta.size_bytes if ctx.output_meta else 0
-            )
+            output_size_bytes = ctx.output_meta.size_bytes if ctx.output_meta else 0
             log.info(
                 "job.success",
                 job_id=ctx.job_id,
@@ -331,9 +332,7 @@ class Orchestrator:
                     retryable=exc.retryable,
                     message=str(exc),
                 ),
-                dropbox={"video_path": ctx.dropbox_video_ref.path}
-                if ctx.dropbox_video_ref
-                else {},
+                dropbox={"video_path": ctx.dropbox_video_ref.path} if ctx.dropbox_video_ref else {},
                 trace=ctx.trace,
                 debug_context={
                     "partial_asset_report": ctx.asset_report[:10],

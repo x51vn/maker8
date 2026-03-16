@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     # ── Work directory ───────────────────────────────────────────────
     work_dir: Path = Path("/tmp/maker8")
 
+    # ── Performance ──────────────────────────────────────────────────
+    # "quality" | "balanced" | "fast" – controls proxy resolution,
+    # fps cap, effect allowance, and encode presets.
+    perf_mode: str = "balanced"
+    # Maximum short-edge resolution for proxy assets.
+    # 0 = auto (derive from canvas size + perf_mode).
+    proxy_max_resolution: int = 0
+
     # ── Retry ────────────────────────────────────────────────────────
     render_max_attempts: int = 5
     render_retry_min_delay_sec: float = 60.0

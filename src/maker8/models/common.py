@@ -22,6 +22,7 @@ __all__ = [
     "ErrorInfo",
     "JobStatus",
     "OutputMeta",
+    "PerformanceMode",
     "PublishStage",
     "PublishStatus",
     "PublishTarget",
@@ -63,6 +64,14 @@ class PublishStatus(str, Enum):
     PUBLISHED = "PUBLISHED"
     FAILED = "FAILED"
     PENDING = "PENDING"
+
+
+class PerformanceMode(str, Enum):
+    """Render quality/speed trade-off."""
+
+    QUALITY = "quality"
+    BALANCED = "balanced"
+    FAST = "fast"
 
 
 # ── Shared value-objects ─────────────────────────────────────────────────────
@@ -124,5 +133,3 @@ class AssetWarning(BaseModel):
     code: str = ""
     message: str = ""
     fallback_used: str = ""
-
-
