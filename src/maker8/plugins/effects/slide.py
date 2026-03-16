@@ -26,7 +26,7 @@ def _ease_out_cubic(t: float) -> float:
 
 def _ease_in_cubic(t: float) -> float:
     """Cubic ease-in for smooth acceleration."""
-    return t ** 3
+    return t**3
 
 
 class SlideEffect(EffectPlugin):
@@ -50,6 +50,9 @@ class SlideEffect(EffectPlugin):
                 "out_duration": {"type": "number", "default": 0.5, "minimum": 0},
             },
         }
+
+    def has_ffmpeg_filter(self) -> bool:
+        return True
 
     def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})

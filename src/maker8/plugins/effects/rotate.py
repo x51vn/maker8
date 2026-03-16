@@ -1,7 +1,8 @@
 """Rotate effect plugin.
 
 Smoothly rotates the clip from ``start_angle`` to ``end_angle`` over its
-duration.  Static rotation is achieved by setting both to the same value.
+duration.  Uses MoviePy native ``Rotate`` effect with a callable angle
+function for animated rotation.  Static rotation uses a constant.
 
 Params:
     start_angle: float – degrees at t=0 (default 0)
@@ -13,9 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-from moviepy import VideoClip
-from PIL import Image
+from moviepy.video.fx import Resize, Rotate
 
 from maker8.plugins.base import EffectPlugin, PluginManifest
 
@@ -36,40 +35,40 @@ class RotateEffect(EffectPlugin):
             },
         }
 
+    def has_ffmpeg_filter(self) -> bool:
+        return True
+
     def apply(self, ctx: Any, ir: Any, instance: dict[str, Any]) -> Any:
         params = instance.get("params", {})
         start_angle = float(params.get("start_angle", 0))
         end_angle = float(params.get("end_angle", 360))
         expand = bool(params.get("expand", False))
 
-        source_clip: VideoClip = ir
-        w, h = source_clip.size
-        duration = source_clip.duration or 1.0
+        clip = ir
+        w, h = clip.size
+        duration = clip.duration or 1.0
 
-        def _make_frame(t: float) -> np.ndarray[Any, Any]:
-            progress = t / duration if duration > 0 else 0.0
-            angle = start_angle + (end_angle - start_angle) * progress
-
-            frame = source_clip.get_frame(t)
-            img = Image.fromarray(frame)
-            rotated = img.rotate(
-                -angle,  # PIL positive = counter-clockwise; negate for intuitive CW
-                resample=Image.Resampling.BICUBIC,
-                expand=expand,
-                fillcolor=(0, 0, 0),
+        # Static rotation: constant angle
+        if start_angle == end_angle:
+            clip = clip.with_effects(
+                [
+                    Rotate(angle=start_angle, expand=expand, bg_color=(0, 0, 0)),
+                ]
             )
+            if expand:
+                clip = clip.with_effects([Resize(new_size=(w, h))])
+            return clip
 
-            if not expand:
-                return np.array(rotated)
+        # Animated rotation: callable angle(t)
+        def _angle(t: float) -> float:
+            progress = t / duration if duration > 0 else 0.0
+            return start_angle + (end_angle - start_angle) * progress
 
-            # Resize back to original dimensions when expand=True
-            rotated = rotated.resize((w, h), Image.Resampling.LANCZOS)
-            return np.array(rotated)
-
-        result = VideoClip(_make_frame, duration=duration)
-        result = result.with_fps(source_clip.fps or 30)
-
-        if source_clip.audio is not None:
-            result = result.with_audio(source_clip.audio)
-
-        return result
+        clip = clip.with_effects(
+            [
+                Rotate(angle=_angle, expand=expand, bg_color=(0, 0, 0)),
+            ]
+        )
+        if expand:
+            clip = clip.with_effects([Resize(new_size=(w, h))])
+        return clip
