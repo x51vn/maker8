@@ -37,8 +37,7 @@ class DropboxClient:
             timeout=300,  # 5 minutes
         )
 
-        # Validate credentials at startup - log error but don't fail
-        # App can continue to work; upload will fail during render with clear error
+        # Validate credentials at startup - fail hard if auth is broken
         try:
             account = self._dbx.users_get_current_account()
             log.info(
@@ -47,12 +46,17 @@ class DropboxClient:
                 email=account.email,
             )
         except Exception as exc:
-            log.warning(
+            log.error(
                 "dropbox.auth_validation_failed",
                 error_type=type(exc).__name__,
                 error=str(exc),
                 note="Dropbox upload will fail during renders. Check MAKER8_DROPBOX_REFRESH_TOKEN",
             )
+            raise RuntimeError(
+                f"Dropbox authentication failed: {exc}. "
+                "Fix MAKER8_DROPBOX_REFRESH_TOKEN / "
+                "MAKER8_DROPBOX_APP_KEY / MAKER8_DROPBOX_APP_SECRET"
+            ) from exc
 
     # ── Public API ───────────────────────────────────────────────────
 

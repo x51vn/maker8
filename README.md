@@ -368,8 +368,8 @@ Supports round-robin key rotation: place `.txt`/`.key` files in `elevenlabs-keys
 
 ```json
 {
-  "tts:vi:default":       { "provider": "gtts", "lang": "vi", "slow": false },
-  "tts:en:default":       { "provider": "gtts", "lang": "en", "slow": false },
+  "tts:vi:default":       { "provider": "google_cloud", "lang": "vi-VN", "voice_name": "vi-VN-Neural2-A", "speaking_rate": 1.0, "pitch": 0.0, "audio_encoding": "MP3" },
+  "tts:en:default":       { "provider": "google_cloud", "lang": "en-US", "voice_name": "en-US-Neural2-J", "speaking_rate": 1.0, "pitch": 0.0, "audio_encoding": "MP3" },
   "tts:vi:google_cloud":  { "provider": "google_cloud", "lang": "vi-VN", "voice_name": "vi-VN-Neural2-A", "speaking_rate": 1.0, "pitch": 0.0, "audio_encoding": "MP3" },
   "tts:en:google_cloud":  { "provider": "google_cloud", "lang": "en-US", "voice_name": "en-US-Neural2-J", "speaking_rate": 1.0, "pitch": 0.0, "audio_encoding": "MP3" },
   "tts:vi:elevenlabs":    { "provider": "elevenlabs", "lang": "vi", "voice_id": "...", "model_id": "eleven_multilingual_v2", "stability": 0.5, "similarity_boost": 0.75 },
@@ -453,11 +453,17 @@ maker8:
 
 ### Health Check
 
-The worker creates `/tmp/maker8_healthy` on startup. Use in Docker:
+The worker uses file-based health probes:
+
+- `/tmp/maker8_live` — liveness: process is running
+- `/tmp/maker8_ready` — readiness: all bootstrap dependencies initialised
+- `/tmp/maker8_status.json` — full runtime snapshot (JSON)
+
+Use in Docker:
 
 ```yaml
 healthcheck:
-  test: ["CMD", "test", "-f", "/tmp/maker8_healthy"]
+  test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/tmp/maker8_live') else 1)"]
   interval: 30s
   timeout: 5s
   retries: 3

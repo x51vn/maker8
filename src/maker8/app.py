@@ -97,7 +97,16 @@ def main() -> None:
     registry.load_defaults()
 
     tts_service = TTSService(settings)
-    dbx_client = DropboxClient(settings)
+
+    try:
+        dbx_client = DropboxClient(settings)
+    except RuntimeError:
+        log.critical(
+            "app.dropbox_auth_failed",
+            msg="Cannot start without valid Dropbox credentials",
+        )
+        health.mark_not_live()
+        os._exit(1)
 
     orchestrator = Orchestrator(
         settings=settings,

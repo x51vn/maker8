@@ -1,0 +1,31 @@
+Findings
+
+Critical: maker8 và editor8 đang có dấu hiệu lộ secret thật. maker8 còn commit cả service-account JSON dù .gitignore nói rõ “never commit real keys” ở .gitignore (line 4), nhưng thư mục gg-tts-keys hiện chứa 15 file service_account thật. editor8 lại có backend/.env.editor8 và frontend/.env.local bị track dù .gitignore (line 36) chặn .env.*. Trước khi go-live phải rotate toàn bộ: Google SA keys, Dropbox app secret/refresh token, Kafka passwords, LLM API key, JWT secret, admin password, Pexels key, rồi purge lịch sử git.
+Critical: tài liệu deploy của editor8 sẽ dựng hệ thống hỏng. README nói rõ worker là bắt buộc ở README.md (line 5) và README.md (line 221), nhưng “Full Deployment Script” trong DEPLOY.md (line 87) chỉ start backend + frontend, không start python -m editor8.worker. Nếu làm theo guide này thì job sẽ kẹt ở RECEIVED.
+High: flow Dropbox OAuth của editor8 đang vừa thiếu an toàn vừa có khả năng không chạy được. Frontend chỉ mở URL OAuth ở dropbox/page.tsx (line 93), còn callback backend ở dropbox_routes.py (line 68) lại yêu cầu get_current_user bearer token và không verify state. Với auth đang nằm trong localStorage, redirect từ Dropbox gần như không có cách hợp lệ để hoàn tất callback này. Cần đổi sang PKCE/state verification + frontend callback handler hoặc server session/cookie.
+High: maker8 vẫn báo ready dù Dropbox auth lỗi. DropboxClient chỉ warning ở dropbox_client.py (line 40), nhưng app vẫn mark_ready() ở app.py (line 114). Kết quả là worker có thể bắt đầu consume Kafka rồi fail hàng loạt ở UPLOAD_DROPBOX trong upload.py (line 34). Readiness production phải fail cứng khi Dropbox/Kafka/LLM/TTS không sẵn sàng.
+High: health/deploy semantics đang drift. README của maker8 vẫn hướng dẫn healthcheck file /tmp/maker8_healthy ở README.md (line 456), nhưng code thật dùng /tmp/maker8_live, /tmp/maker8_ready, /tmp/maker8_status.json ở health.py (line 16). Ngược lại editor8 lại có worker healthcheck giả print('ok') ở docker-compose.yml (line 52). Nếu giữ nguyên, monitoring sẽ cho tín hiệu sai.
+Medium: cấu hình TTS đang lệch docs và chất lượng mặc định còn thấp. Template env quảng bá MAKER8_GOOGLE_APPLICATION_CREDENTIALS ở .env.example (line 31), nhưng code fallback thực tế dùng native GOOGLE_APPLICATION_CREDENTIALS ở tts_client.py (line 235). Đồng thời preset mặc định vẫn là gTTS ở tts_presets.json (line 2), nên dù đang có nhiều Google keys, output voice mặc định vẫn chưa đủ tốt cho public go-live.
+Medium: pipeline chưa fully automatic theo mặc định. review_required seed là true ở app_settings.py (line 17), và auto-publish chỉ xảy ra khi điều kiện ở orchestrator.py (line 334) thỏa. Nếu mục tiêu là “submit xong tự ra video” thì phải quyết định rõ: tắt review hoặc có operator review.
+Đánh Giá Chung
+
+Phần render core của maker8 khá ổn. Mình chạy chọn lọc 70 test và đều pass, đặc biệt các test contract/survivability/render-runtime.
+editor8 cũng ổn ở contract/assembler/validator: 120 test pass, 1 test fail do drift giữa health.py (line 141) và test_bootstrap.py (line 70) sau khi thêm command_queue vào detailed health. Mình chưa chạy live end-to-end vì sẽ đụng Kafka/LLM/TTS/Dropbox thật.
+Với scope hiện tại, hệ thống có thể tạo MP4 + manifest và upload Dropbox. Nó chưa tự publish lên YouTube/TikTok; publish_targets mới chỉ được mang theo trong output ở emit.py (line 72).
+Improvement Để Go-Live Nhanh
+
+P0 ngay: rotate hết secrets, bỏ secrets khỏi repo, purge git history, chuyển sang Docker secrets
+P0 ngay: sửa deploy editor8 để luôn có 3 process backend + worker + frontend; sửa healthcheck thật cho worker; cập nhật doc maker8 theo live/ready/status.json.
+P0 ngay: sửa Dropbox OAuth của editor8 và thêm test cho /api/dropbox/connect + /callback.
+P1 rất nên làm: đổi default TTS sang Google Cloud hoặc ElevenLabs; chỉnh EDITOR8_DEFAULT_TTS_PRESET_REF để video public không dùng gTTS mặc định.
+P1 rất nên làm: truyền output_length_target_seconds vào STORY_ARCHITECT; hiện tại input có field này nhưng blueprint chưa dùng nó để steer generation.
+P1 rất nên làm: làm assembler “đủ hoàn chỉnh” hơn. Hiện assembler.py (line 82) chỉ tạo 1 background layer hoặc text fallback. Nên thêm template tối thiểu: title/subtitle, watermark/logo, outro CTA, optional BGM.
+P2: làm asset search theo canvas_profile; hiện Pexels hardcode orientation=portrait ở pexels_provider.py (line 48) nên horizontal video sẽ bị lệch asset quality.
+Secret/Service Checklist
+
+Trạng thái hiện tại đã kiểm tra theo kiểu set/empty, mình không in raw values: maker8 đang có Kafka + Dropbox, có 15 Google TTS service-account files, không có ElevenLabs; editor8 đang có DB + Kafka + LLM + Pexels + JWT/admin + Dropbox app, còn Unsplash/Pixabay/Brave/SerpAPI để trống.
+Dropbox là bắt buộc nếu muốn maker8 trả video hoàn chỉnh vào storage. Cấu hình MAKER8_DROPBOX_APP_KEY, MAKER8_DROPBOX_APP_SECRET, MAKER8_DROPBOX_REFRESH_TOKEN; nếu dùng UI Dropbox trong editor8 thì thêm EDITOR8_DROPBOX_APP_KEY, EDITOR8_DROPBOX_APP_SECRET, EDITOR8_DROPBOX_REDIRECT_URI. Official docs: https://www.dropbox.com/developers/reference/developer-guide và https://developers.dropbox.com/oauth-guide
+Google Cloud Text-to-Speech là lựa chọn nên dùng cho go-live. Cần tạo project, bật Cloud Text-to-Speech API + billing, tạo service account key, rồi mount read-only vào gg-tts-keys/ hoặc dùng GOOGLE_APPLICATION_CREDENTIALS thật. Official docs: https://docs.cloud.google.com/text-to-speech/docs/get-started và https://docs.cloud.google.com/iam/docs/keys-create-delete
+LiteLLM/OpenAI-compatible gateway là bắt buộc cho editor8. Repo hiện giả định một proxy nội bộ qua EDITOR8_LLM_BASE_URL, EDITOR8_LLM_API_KEY, EDITOR8_LLM_MODEL; phần đăng ký upstream phụ thuộc hệ thống LiteLLM mà team đang vận hành.
+Pexels hiện là stock-media API quan trọng nhất trong repo. Đăng ký app/key rồi set EDITOR8_PEXELS_API_KEY. Official docs: https://www.pexels.com/api/documentation/
+Optional nhưng hữu ích: ElevenLabs MAKER8_ELEVENLABS_API_KEY hoặc file keys (https://elevenlabs.io/docs/api-reference/authentication), Unsplash EDITOR8_UNSPLASH_API_KEY (https://unsplash.com/documentation), Pixabay EDITOR8_PIXABAY_API_KEY (https://pixabay.com/api/docs/), Brave EDITOR8_BRAVE_API_KEY (https://brave.com/search/api/), SerpAPI EDITOR8_SERPAPI_KEY (https://serpapi.com/search-api)
