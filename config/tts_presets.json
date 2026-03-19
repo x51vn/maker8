@@ -1,13 +1,19 @@
 {
   "tts:vi:default": {
-    "provider": "gtts",
-    "lang": "vi",
-    "slow": false
+    "provider": "google_cloud",
+    "lang": "vi-VN",
+    "voice_name": "vi-VN-Neural2-A",
+    "speaking_rate": 1.0,
+    "pitch": 0.0,
+    "audio_encoding": "MP3"
   },
   "tts:en:default": {
-    "provider": "gtts",
-    "lang": "en",
-    "slow": false
+    "provider": "google_cloud",
+    "lang": "en-US",
+    "voice_name": "en-US-Neural2-J",
+    "speaking_rate": 1.0,
+    "pitch": 0.0,
+    "audio_encoding": "MP3"
   },
 
   "tts:vi:google_cloud": {
