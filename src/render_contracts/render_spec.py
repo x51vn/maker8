@@ -214,6 +214,7 @@ class UploaderMetadata(BaseModel):
     Per-platform overrides live in ``PublishTarget.metadata``.
     """
 
+    channel_id: str = ""
     title: str = ""
     short_title: str = ""
     summary: str = ""
