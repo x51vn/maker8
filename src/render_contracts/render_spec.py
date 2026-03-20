@@ -183,6 +183,8 @@ class OutputConfig(BaseModel):
 class PublishTarget(BaseModel):
     platform: str
     account_ref: str
+    variant: str = ""
+    enabled: bool = True
     metadata: dict[str, Any] = Field(default_factory=dict)
     params: dict[str, Any] = Field(default_factory=dict)
 
@@ -194,6 +196,17 @@ class PublishConfig(BaseModel):
 # ── Uploader metadata ───────────────────────────────────────────────────────
 
 
+class SourceAttribution(BaseModel):
+    """Attribution for a single source asset used in the video."""
+
+    asset_ref: str = ""
+    provider: str = ""
+    source_url: str = ""
+    creator: str = ""
+    license: str = ""
+    credit_text: str = ""
+
+
 class UploaderMetadata(BaseModel):
     """Normalized common metadata for downstream uploaders.
 
@@ -202,8 +215,11 @@ class UploaderMetadata(BaseModel):
     """
 
     title: str = ""
+    short_title: str = ""
+    summary: str = ""
     description: str = ""
     lang: str = ""
+    keywords: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     hashtags: list[str] = Field(default_factory=list)
     category: str = ""
@@ -211,7 +227,12 @@ class UploaderMetadata(BaseModel):
     scheduled_publish_at: str | None = None
     content_rating: str = "general"
     thumbnail_ref: str = ""
+    thumbnail_source_url: str = ""
+    thumbnail_strategy: str = "source_asset"
+    source_attributions: list[SourceAttribution] = Field(default_factory=list)
     credits: list[str] = Field(default_factory=list)
+    canonical_url: str = ""
+    cta_url: str = ""
 
 
 # ── Root specs ───────────────────────────────────────────────────────────────
@@ -245,6 +266,7 @@ class RenderRequest(BaseModel):
     render_spec: RenderSpec
     dry_run: bool = False
     canvas_profile: str | None = None
+    publish_intent: str = "render_only"
     uploader_metadata: UploaderMetadata = Field(default_factory=UploaderMetadata)
     result: ResultDestination = Field(default_factory=ResultDestination)
     trace: Trace = Field(default_factory=Trace)
