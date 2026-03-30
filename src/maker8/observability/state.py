@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ class WorkerState:
 
     process_started_at: float = field(default_factory=time.time)
     consumer_running: bool = False
+    _on_change: Callable[[], None] | None = field(default=None, repr=False)
 
     # Current job
     current_job_id: str | None = None
@@ -56,6 +58,17 @@ class WorkerState:
     last_kafka_partition: int | None = None
     last_kafka_offset: int | None = None
 
+    def set_on_change(self, callback: Callable[[], None]) -> None:
+        """Register a callback invoked after every state mutation."""
+        self._on_change = callback
+
+    def _notify(self) -> None:
+        if self._on_change:
+            try:
+                self._on_change()
+            except Exception:
+                pass  # best-effort; never break the pipeline
+
     # ── Lifecycle helpers ────────────────────────────────────────────
 
     def on_message_received(
@@ -66,6 +79,7 @@ class WorkerState:
     ) -> None:
         self.last_kafka_partition = partition
         self.last_kafka_offset = offset
+        self._notify()
 
     def on_job_started(self, job_id: str, job_key: str = "") -> None:
         self.current_job_id = job_id
@@ -76,6 +90,7 @@ class WorkerState:
         self.current_scene_id = None
         self.stage_started_at = None
         self.retry_sleep_until = None
+        self._notify()
 
     def on_stage_enter(self, stage: str, attempt: int = 1) -> None:
         self.current_stage = stage
@@ -83,14 +98,17 @@ class WorkerState:
         self.stage_started_at = time.time()
         self.current_asset_id = None
         self.current_scene_id = None
+        self._notify()
 
     def on_retry_sleep(self, delay_sec: float) -> None:
         self.retry_sleep_until = time.time() + delay_sec
+        self._notify()
 
     def on_job_success(self, job_id: str) -> None:
         self.last_success_at = time.time()
         self.last_success_job_id = job_id
         self._clear_current()
+        self._notify()
 
     def on_job_failure(self, job_id: str, stage: str, code: str) -> None:
         self.last_failure_at = time.time()
@@ -98,6 +116,7 @@ class WorkerState:
         self.last_failure_stage = stage
         self.last_failure_job_id = job_id
         self._clear_current()
+        self._notify()
 
     def _clear_current(self) -> None:
         self.current_job_id = None

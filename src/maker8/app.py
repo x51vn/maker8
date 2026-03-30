@@ -79,6 +79,8 @@ def main() -> None:
     )
     _health = health
     health.mark_live()
+    # Auto-flush status.json on every state change
+    worker_state.set_on_change(health.flush_status)
     WORKER_UP.set(1)
     log.info("app.liveness_ready")
 
@@ -97,6 +99,15 @@ def main() -> None:
     registry.load_defaults()
 
     tts_service = TTSService(settings)
+
+    # ── M5: Validate TTS credentials on startup ──────────────────────
+    if not tts_service.has_provider():
+        log.critical(
+            "app.no_tts_provider",
+            msg="No TTS provider configured – at least one API key is required",
+        )
+        health.mark_not_live()
+        os._exit(1)
 
     try:
         dbx_client = DropboxClient(settings)
@@ -182,7 +193,7 @@ def main() -> None:
             _health.mark_not_ready()
 
         try:
-            producer.close()
+            producer.close(timeout=10.0)
             log.info("app.stopped")
         except Exception as e:
             log.error("producer.close_failed", error=str(e))

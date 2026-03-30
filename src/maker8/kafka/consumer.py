@@ -29,7 +29,7 @@ class RenderConsumer:
     ) -> None:
         self._settings = settings
         self._state = worker_state
-        
+
         # Build Kafka config
         kafka_config = {
             "bootstrap.servers": settings.kafka_bootstrap_servers,
@@ -41,7 +41,7 @@ class RenderConsumer:
             # considers this consumer dead and revokes partition ownership.
             "max.poll.interval.ms": settings.kafka_max_poll_interval_ms,
         }
-        
+
         # Add SASL credentials if provided
         if settings.kafka_security_protocol:
             kafka_config["security.protocol"] = settings.kafka_security_protocol
@@ -51,7 +51,7 @@ class RenderConsumer:
             kafka_config["sasl.username"] = settings.kafka_username
         if settings.kafka_password:
             kafka_config["sasl.password"] = settings.kafka_password
-        
+
         self._consumer = Consumer(kafka_config)
         self._running = False
 
@@ -120,6 +120,14 @@ class RenderConsumer:
                     key=msg_key,
                     result="success",
                 )
+            except json.JSONDecodeError:
+                log.exception(
+                    "consumer.invalid_json",
+                    partition=partition,
+                    offset=offset,
+                    key=msg_key,
+                )
+                # Poison pill: commit to avoid infinite loop, log for operator
             except Exception:
                 log.exception(
                     "consumer.handler_error",
@@ -127,20 +135,26 @@ class RenderConsumer:
                     offset=offset,
                     key=msg_key,
                 )
-            finally:
-                try:
-                    self._consumer.commit(msg)
-                    log.debug(
-                        "consumer.commit_succeeded",
-                        partition=partition,
-                        offset=offset,
-                    )
-                except Exception:
-                    log.exception(
-                        "consumer.commit_failed",
-                        offset=offset,
-                        partition=partition,
-                    )
+                # Handler errors are already handled by Orchestrator
+                # (DLQ sent, result emitted).  Commit to advance offset.
+
+            # Always commit after processing attempt to avoid reprocessing.
+            # The Orchestrator handles DLQ/result emission internally –
+            # the consumer's job is to advance the offset once the handler
+            # has returned (whether successfully or with an error).
+            try:
+                self._consumer.commit(msg)
+                log.debug(
+                    "consumer.commit_succeeded",
+                    partition=partition,
+                    offset=offset,
+                )
+            except Exception:
+                log.exception(
+                    "consumer.commit_failed",
+                    offset=offset,
+                    partition=partition,
+                )
 
     # ── Lifecycle ────────────────────────────────────────────────────
 

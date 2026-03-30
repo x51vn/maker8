@@ -14,6 +14,7 @@ from maker8.kafka.producer import KafkaProducer
 from maker8.models.common import (
     ErrorInfo,
     JobStatus,
+    Trace,
 )
 from maker8.models.contracts import DLQPayload, RenderRequest, RenderResult
 from maker8.observability.helpers import Timer
@@ -94,10 +95,12 @@ class Orchestrator:
 
         try:
             request = RenderRequest.model_validate(payload)
-        except Exception:
+        except Exception as exc:
             log.exception("orchestrator.invalid_payload")
             INVALID_PAYLOAD.inc()
-            return  # cannot DLQ without a valid job_id
+            # Best-effort DLQ with whatever context we can extract
+            self._send_invalid_payload_dlq(payload, exc)
+            return  # cannot proceed without a valid RenderRequest
 
         ctx = PipelineContext.from_request(
             job_id=request.job_id,
@@ -107,6 +110,7 @@ class Orchestrator:
             dry_run=request.dry_run,
             canvas_profile=request.canvas_profile,
             uploader_metadata=request.uploader_metadata,
+            result_destination=request.result,
         )
 
         correlation_id = ctx.trace.correlation_id if ctx.trace else ""
@@ -314,11 +318,17 @@ class Orchestrator:
                 ),
             )
             payload = result.model_dump(mode="json", by_alias=True)
-            self._producer.send(
-                self._settings.kafka_render_result_topic,
-                key=ctx.job_id,
-                value=payload,
+            topic = (
+                ctx.result_destination.topic
+                if ctx.result_destination and ctx.result_destination.topic
+                else self._settings.kafka_render_result_topic
             )
+            key = (
+                ctx.result_destination.key
+                if ctx.result_destination and ctx.result_destination.key
+                else ctx.job_id
+            )
+            self._producer.send(topic, key=key, value=payload)
             RESULT_EMITTED.labels(status="FAILED").inc()
         except Exception:
             log.exception("orchestrator.failed_result_emit_error")
@@ -369,3 +379,45 @@ class Orchestrator:
             shutil.rmtree(wd)
         except Exception:
             log.exception("orchestrator.cleanup_error", work_dir=str(wd))
+
+    def _send_invalid_payload_dlq(
+        self, payload: dict[str, Any], exc: Exception
+    ) -> None:
+        """Best-effort DLQ for messages that failed RenderRequest validation."""
+        try:
+            # Extract whatever job_id we can from the raw payload
+            job_id = str(payload.get("job_id", "unknown"))
+            job_key = str(payload.get("job_key", ""))
+            trace_raw = payload.get("trace", {})
+            trace = Trace.model_validate(trace_raw) if isinstance(trace_raw, dict) else Trace()
+
+            dlq = DLQPayload(
+                job_id=job_id,
+                job_key=job_key,
+                failed_stage="VALIDATE",
+                attempts=0,
+                max_attempts=0,
+                last_error=ErrorInfo(
+                    code="INVALID_PAYLOAD",
+                    stage="VALIDATE",
+                    retryable=False,
+                    message=str(exc)[:2000],
+                ),
+                trace=trace,
+                debug_context={
+                    "raw_payload_keys": list(payload.keys())[:50],
+                },
+            )
+            dlq_payload = dlq.model_dump(mode="json", by_alias=True)
+            self._producer.send(
+                self._settings.kafka_render_dlq_topic,
+                key=job_id,
+                value=dlq_payload,
+            )
+            DLQ_EMITTED.labels(stage="VALIDATE").inc()
+            log.info(
+                "orchestrator.invalid_payload_dlq_sent",
+                job_id=job_id,
+            )
+        except Exception:
+            log.exception("orchestrator.invalid_payload_dlq_error")

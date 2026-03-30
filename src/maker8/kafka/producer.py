@@ -21,7 +21,7 @@ class KafkaProducer:
         kafka_config = {
             "bootstrap.servers": settings.kafka_bootstrap_servers,
         }
-        
+
         # Add SASL credentials if provided
         if settings.kafka_security_protocol:
             kafka_config["security.protocol"] = settings.kafka_security_protocol
@@ -31,7 +31,7 @@ class KafkaProducer:
             kafka_config["sasl.username"] = settings.kafka_username
         if settings.kafka_password:
             kafka_config["sasl.password"] = settings.kafka_password
-        
+
         self._producer = Producer(kafka_config)
 
     def send(self, topic: str, key: str, value: dict[str, Any]) -> None:
@@ -45,8 +45,10 @@ class KafkaProducer:
         )
         self._producer.flush()
 
-    def close(self) -> None:
-        self._producer.flush()
+    def close(self, timeout: float = 10.0) -> None:
+        remaining = self._producer.flush(timeout)
+        if remaining > 0:
+            log.warning("producer.close_timeout", remaining_messages=remaining)
 
     # ── internal ─────────────────────────────────────────────────────
 

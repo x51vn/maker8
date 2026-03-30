@@ -12,7 +12,15 @@ from pathlib import Path
 from typing import Any
 
 from maker8.models.common import AssetWarning, DropboxFileRef, OutputMeta, Trace
+from maker8.models.contracts import ResultDestination
 from maker8.models.spec import RenderSpec, UploaderMetadata
+
+# Pattern for safe job IDs: lowercase alphanumeric, hyphens, underscores
+_SAFE_JOB_ID_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789-_"
+)
 
 # ── TTS result (pipeline-internal) ──────────────────────────────────────────
 
@@ -62,7 +70,8 @@ class PipelineContext:
     # ── Dropbox refs ─────────────────────────────────────────────────
     dropbox_video_ref: DropboxFileRef | None = None
     dropbox_manifest_ref: DropboxFileRef | None = None
-
+    # ── Result destination (per-request routing) ────────────────
+    result_destination: ResultDestination | None = None
     # ── Retry tracking ───────────────────────────────────────────────
     attempt: int = 1
 
@@ -84,7 +93,13 @@ class PipelineContext:
         dry_run: bool = False,
         canvas_profile: str | None = None,
         uploader_metadata: UploaderMetadata | None = None,
+        result_destination: ResultDestination | None = None,
     ) -> PipelineContext:
+        # Validate job_id to prevent path traversal attacks
+        if not job_id or not all(c in _SAFE_JOB_ID_CHARS for c in job_id):
+            raise ValueError(
+                f"Invalid job_id: must contain only [a-zA-Z0-9_-], got {job_id!r}"
+            )
         wd = base_work_dir / job_id
         return cls(
             job_id=job_id,
@@ -97,6 +112,7 @@ class PipelineContext:
             dry_run=dry_run,
             canvas_profile=canvas_profile,
             uploader_metadata=uploader_metadata or UploaderMetadata(),
+            result_destination=result_destination,
         )
 
     def ensure_dirs(self) -> None:

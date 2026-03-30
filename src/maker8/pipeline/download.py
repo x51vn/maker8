@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import shutil
+
 from maker8.models.common import AssetWarning, RenderStage
 from maker8.observability.metrics import DOWNLOAD_BYTES
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.plugins.registry import PluginRegistry
+from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
+
+# Minimum free disk space (bytes) required before downloading assets.
+_MIN_FREE_BYTES = 500 * 1024 * 1024  # 500 MB
 
 
 class DownloadStage(Stage):
@@ -22,6 +28,17 @@ class DownloadStage(Stage):
 
     def execute(self, ctx: PipelineContext) -> None:
         ctx.ensure_dirs()
+
+        # Pre-flight disk space check
+        free = shutil.disk_usage(ctx.work_dir).free
+        if free < _MIN_FREE_BYTES:
+            raise StageError(
+                self.name,
+                "DISK_SPACE_LOW",
+                f"Only {free // (1024 * 1024)}MB free in {ctx.work_dir}; "
+                f"need at least {_MIN_FREE_BYTES // (1024 * 1024)}MB",
+                retryable=True,
+            )
 
         for asset_id, plan in ctx.resolved_plans.items():
             if asset_id in ctx.downloaded_assets:
