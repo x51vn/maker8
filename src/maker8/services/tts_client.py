@@ -409,6 +409,18 @@ class TTSService:
             ),
         )
 
+    def has_provider(self) -> bool:
+        """Return True if at least one TTS provider is available."""
+        if self._default_provider == "gtts":
+            return True  # gTTS uses no API key
+        if self._default_provider == "google_cloud" and self._google_ring:
+            return True
+        if self._default_provider == "elevenlabs" and (
+            self._elevenlabs_ring or self._settings.elevenlabs_api_key
+        ):
+            return True
+        return False
+
     # ── Per-video rotation ───────────────────────────────────────────
 
     def next_google_credentials(self) -> Path | None:
