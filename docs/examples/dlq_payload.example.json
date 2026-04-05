@@ -12,5 +12,7 @@
   "dropbox": {},
   "trace": {
     "correlation_id": "corr-20250115-xyz789"
-  }
+  },
+  "debug_context": {},
+  "max_attempts": 5
 }

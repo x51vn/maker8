@@ -14,6 +14,7 @@ from maker8.kafka.producer import KafkaProducer
 from maker8.models.common import (
     ErrorInfo,
     JobStatus,
+    RenderStage,
     Trace,
 )
 from maker8.models.contracts import DLQPayload, RenderRequest, RenderResult
@@ -188,8 +189,25 @@ class Orchestrator:
 
     # ── Stage runner with per-stage retry ────────────────────────────
 
+    # Stages skipped when dry_run=True (validate + emit only).
+    _DRY_RUN_SKIP = frozenset({
+        RenderStage.RESOLVE_ASSETS,
+        RenderStage.DOWNLOAD,
+        RenderStage.NORMALIZE,
+        RenderStage.TTS,
+        RenderStage.RENDER,
+        RenderStage.UPLOAD_DROPBOX,
+    })
+
     def _run_stages(self, ctx: PipelineContext) -> None:
         for stage in self._stages:
+            if ctx.dry_run and stage.name in self._DRY_RUN_SKIP:
+                log.info(
+                    "stage.skipped_dry_run",
+                    job_id=ctx.job_id,
+                    stage=stage.name.value,
+                )
+                continue
             self._execute_with_retry(stage, ctx)
 
     def _execute_with_retry(self, stage: Stage, ctx: PipelineContext) -> None:

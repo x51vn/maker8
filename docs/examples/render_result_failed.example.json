@@ -2,6 +2,8 @@
   "job_id": "job-2025-01-15-abc123",
   "status": "FAILED",
   "job_key": "sha256:a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
+  "dry_run": false,
+  "canvas_profile": null,
   "dropbox": {
     "video": {},
     "manifest": {}
@@ -13,6 +15,7 @@
     "fps": 0,
     "size_bytes": 0
   },
+  "uploader_metadata": {},
   "publish_targets": [],
   "asset_report": [],
   "engine_versions": {
@@ -23,6 +26,7 @@
   "trace": {
     "correlation_id": "corr-20250115-xyz789"
   },
+  "warnings": [],
   "error": {
     "code": "DOWNLOAD_FAILED",
     "stage": "DOWNLOAD",

@@ -1,0 +1,148 @@
+{
+  "job_id": "golden-editor8-full-001",
+  "spec_version": "1.0",
+  "render_spec": {
+    "spec_version": "1.0",
+    "canvas": {
+      "w": 1080,
+      "h": 1920,
+      "fps": 30,
+      "bg": "#000000"
+    },
+    "defaults": {
+      "narration": {
+        "lang": "vi-VN",
+        "tts_preset_ref": "tts:vi:default"
+      },
+      "scene_timing": {
+        "head_pad_sec": 0.15,
+        "tail_pad_sec": 0.45,
+        "duration_mode": "auto_from_tts"
+      }
+    },
+    "assets": [
+      {
+        "id": "bg-video-1",
+        "type": "video",
+        "source": {
+          "kind": "youtube",
+          "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "options": {
+            "format": "bestvideo[height<=1080]+bestaudio/best",
+            "max_duration_sec": 300
+          }
+        }
+      },
+      {
+        "id": "logo-img",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/assets/logo.png",
+          "options": {}
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "scene-001",
+        "narration": {
+          "text": "Cross-repo contract test: editor8 produces this payload.",
+          "lang": "vi-VN",
+          "tts_preset_ref": "tts:vi:google_cloud"
+        },
+        "layers": [
+          {
+            "layer_id": "bg-layer",
+            "type": "video",
+            "asset_ref": "bg-video-1",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "fit": "cover",
+            "trim": { "in": 0, "out": 15 },
+            "opacity": 1.0,
+            "anchor": "top_left",
+            "rotation_deg": 0.0,
+            "scale": 1.0
+          },
+          {
+            "layer_id": "logo-overlay",
+            "type": "image",
+            "asset_ref": "logo-img",
+            "rect": { "x": 40, "y": 40, "w": 120, "h": 120 },
+            "opacity": 0.9,
+            "anchor": "top_left",
+            "rotation_deg": 0.0,
+            "scale": 1.0
+          }
+        ],
+        "audio_tracks": [],
+        "effects": [],
+        "transition_out": null
+      }
+    ],
+    "output": {
+      "codec": "auto",
+      "audio_codec": "aac",
+      "bitrate": "4000k",
+      "audio_bitrate": "192k",
+      "preset": "medium",
+      "pix_fmt": "yuv420p"
+    },
+    "publish": {
+      "targets": [
+        {
+          "platform": "youtube",
+          "account_ref": "channel:test-channel",
+          "variant": "",
+          "enabled": true,
+          "metadata": {
+            "title": "Test Video"
+          },
+          "params": {}
+        }
+      ]
+    }
+  },
+  "dry_run": false,
+  "canvas_profile": "portrait_1080x1920",
+  "publish_intent": "render_and_publish",
+  "uploader_metadata": {
+    "channel_id": "yt:test-channel",
+    "title": "Test Video Title",
+    "short_title": "Test Video",
+    "summary": "A cross-repo contract test fixture.",
+    "description": "This fixture validates that editor8's output is parseable by maker8.",
+    "lang": "vi",
+    "keywords": ["test", "contract"],
+    "tags": ["test"],
+    "hashtags": ["#test"],
+    "category": "News",
+    "visibility": "private",
+    "scheduled_publish_at": null,
+    "content_rating": "general",
+    "thumbnail_ref": "",
+    "thumbnail_source_url": "",
+    "thumbnail_strategy": "source_asset",
+    "source_attributions": [
+      {
+        "asset_ref": "bg-video-1",
+        "provider": "youtube",
+        "source_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "creator": "",
+        "license": "",
+        "credit_text": ""
+      }
+    ],
+    "credits": [],
+    "canonical_url": "",
+    "cta_url": ""
+  },
+  "result": {
+    "type": "kafka",
+    "topic": "video.render.result.v1",
+    "key": "golden-editor8-full-001"
+  },
+  "trace": {
+    "correlation_id": "golden-corr-editor8-001"
+  }
+}

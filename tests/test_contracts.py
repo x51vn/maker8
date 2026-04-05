@@ -194,3 +194,61 @@ class TestFieldCoverage:
 
         # Multiple scenes
         assert len(spec.scenes) >= 3
+
+
+class TestEditor8CrossRepoContract:
+    """Validate that editor8-produced payloads with all new fields parse correctly.
+
+    This fixture exercises: dry_run, canvas_profile, publish_intent,
+    uploader_metadata (with source_attributions), and result destination routing.
+    """
+
+    def test_editor8_full_payload_parses(self) -> None:
+        payload = _load_fixture("golden_editor8_full_request.json")
+        req = RenderRequest.model_validate(payload)
+        assert req.job_id == "golden-editor8-full-001"
+
+    def test_dry_run_preserved(self) -> None:
+        payload = _load_fixture("golden_editor8_full_request.json")
+        req = RenderRequest.model_validate(payload)
+        assert req.dry_run is False
+
+    def test_canvas_profile_preserved(self) -> None:
+        payload = _load_fixture("golden_editor8_full_request.json")
+        req = RenderRequest.model_validate(payload)
+        assert req.canvas_profile == "portrait_1080x1920"
+
+    def test_publish_intent_preserved(self) -> None:
+        payload = _load_fixture("golden_editor8_full_request.json")
+        req = RenderRequest.model_validate(payload)
+        assert req.publish_intent == "render_and_publish"
+
+    def test_uploader_metadata_fully_parsed(self) -> None:
+        payload = _load_fixture("golden_editor8_full_request.json")
+        req = RenderRequest.model_validate(payload)
+        um = req.uploader_metadata
+        assert um.channel_id == "yt:test-channel"
+        assert um.title == "Test Video Title"
+        assert um.lang == "vi"
+        assert um.visibility == "private"
+        assert len(um.keywords) == 2
+        assert len(um.source_attributions) == 1
+        assert um.source_attributions[0].provider == "youtube"
+
+    def test_result_destination_routing_fields(self) -> None:
+        payload = _load_fixture("golden_editor8_full_request.json")
+        req = RenderRequest.model_validate(payload)
+        assert req.result.topic == "video.render.result.v1"
+        assert req.result.key == "golden-editor8-full-001"
+
+    def test_round_trip_preserves_new_fields(self) -> None:
+        payload = _load_fixture("golden_editor8_full_request.json")
+        req = RenderRequest.model_validate(payload)
+        dumped = req.model_dump(mode="json", by_alias=True)
+        req2 = RenderRequest.model_validate(dumped)
+        assert req2.dry_run == req.dry_run
+        assert req2.canvas_profile == req.canvas_profile
+        assert req2.publish_intent == req.publish_intent
+        assert req2.uploader_metadata == req.uploader_metadata
+        assert req2.result.topic == req.result.topic
+        assert req2.result.key == req.result.key

@@ -194,6 +194,45 @@
       ]
     }
   },
+  "dry_run": false,
+  "canvas_profile": null,
+  "publish_intent": "render_only",
+  "uploader_metadata": {
+    "channel_id": "yt:my-channel-123",
+    "title": "Khám Phá Thế Giới | Tập 1",
+    "short_title": "Khám Phá Tập 1",
+    "summary": "Video khám phá thế giới tuyệt vời",
+    "description": "Cùng khám phá những điều thú vị nhất thế giới trong tập hôm nay.",
+    "lang": "vi",
+    "keywords": ["khám phá", "thế giới", "việt nam"],
+    "tags": ["khám phá", "thế giới"],
+    "hashtags": ["#khampha", "#thegioi"],
+    "category": "Education",
+    "visibility": "public",
+    "scheduled_publish_at": null,
+    "content_rating": "general",
+    "thumbnail_ref": "",
+    "thumbnail_source_url": "",
+    "thumbnail_strategy": "source_asset",
+    "source_attributions": [
+      {
+        "asset_ref": "bg-video-1",
+        "provider": "youtube",
+        "source_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "creator": "",
+        "license": "",
+        "credit_text": ""
+      }
+    ],
+    "credits": [],
+    "canonical_url": "",
+    "cta_url": ""
+  },
+  "result": {
+    "type": "kafka",
+    "topic": "video.render.result.v1",
+    "key": ""
+  },
   "trace": {
     "correlation_id": "corr-20250115-xyz789"
   }

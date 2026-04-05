@@ -56,6 +56,15 @@
     "output": {},
     "publish": { "targets": [] }
   },
+  "dry_run": false,
+  "canvas_profile": null,
+  "publish_intent": "render_only",
+  "uploader_metadata": {},
+  "result": {
+    "type": "kafka",
+    "topic": "video.render.result.v1",
+    "key": ""
+  },
   "trace": {
     "correlation_id": "corr-minimal-001"
   }
