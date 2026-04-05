@@ -432,3 +432,83 @@ class TestEmitResultDegradation:
         result = EmitResultStage._build_result(ctx)
         assert result.status == JobStatus.DONE
         assert result.warnings == []
+
+
+# ── Dry-run stage skipping ───────────────────────────────────────────────────
+
+
+class TestDryRunStageSkipping:
+    """When dry_run=True, orchestrator only runs VALIDATE + EMIT_RESULT."""
+
+    def test_dry_run_skips_heavy_stages(self, tmp_path: Path) -> None:
+        """Verify that heavy stages (download, normalize, etc.) are skipped."""
+        from maker8.models.common import RenderStage
+        from maker8.pipeline.orchestrator import Orchestrator
+
+        executed_stages: list[str] = []
+
+        class SpyStage:
+            def __init__(self, name: RenderStage) -> None:
+                self._name = name
+
+            @property
+            def name(self) -> RenderStage:
+                return self._name
+
+            def execute(self, ctx: PipelineContext) -> None:
+                executed_stages.append(self._name.value)
+
+        # Build an orchestrator with spy stages
+        orch = object.__new__(Orchestrator)
+        orch._stages = [SpyStage(s) for s in RenderStage]
+        orch._retry_policy = MagicMock()
+        orch._retry_policy.max_attempts = 1
+        orch._retry_policy.is_retryable = MagicMock(return_value=False)
+        orch._state = None
+
+        # Build a dry_run context
+        ctx = _make_ctx(tmp_path)
+        ctx.dry_run = True
+
+        orch._run_stages(ctx)
+
+        assert "VALIDATE" in executed_stages
+        assert "EMIT_RESULT" in executed_stages
+        assert "DOWNLOAD" not in executed_stages
+        assert "NORMALIZE" not in executed_stages
+        assert "TTS" not in executed_stages
+        assert "RENDER" not in executed_stages
+        assert "UPLOAD_DROPBOX" not in executed_stages
+        assert "RESOLVE_ASSETS" not in executed_stages
+
+    def test_non_dry_run_runs_all_stages(self, tmp_path: Path) -> None:
+        """Verify that all stages run normally when dry_run=False."""
+        from maker8.models.common import RenderStage
+        from maker8.pipeline.orchestrator import Orchestrator
+
+        executed_stages: list[str] = []
+
+        class SpyStage:
+            def __init__(self, name: RenderStage) -> None:
+                self._name = name
+
+            @property
+            def name(self) -> RenderStage:
+                return self._name
+
+            def execute(self, ctx: PipelineContext) -> None:
+                executed_stages.append(self._name.value)
+
+        orch = object.__new__(Orchestrator)
+        orch._stages = [SpyStage(s) for s in RenderStage]
+        orch._retry_policy = MagicMock()
+        orch._retry_policy.max_attempts = 1
+        orch._retry_policy.is_retryable = MagicMock(return_value=False)
+        orch._state = None
+
+        ctx = _make_ctx(tmp_path)
+        ctx.dry_run = False
+
+        orch._run_stages(ctx)
+
+        assert len(executed_stages) == len(RenderStage)

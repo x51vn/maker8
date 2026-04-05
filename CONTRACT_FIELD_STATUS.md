@@ -21,7 +21,11 @@
 | `job_id` | `str` | **ACTIVE** | Pipeline context key, file naming |
 | `spec_version` | `str` | **ACTIVE** | Validated against supported versions |
 | `render_spec` | `RenderSpec` | **ACTIVE** | Core pipeline input |
-| `result` | `ResultDestination` | **PASS-THROUGH** | Stored in context; individual fields unused (config-driven) |
+| `dry_run` | `bool` | **ACTIVE** | When `true`, pipeline skips DOWNLOAD→UPLOAD (validate + emit only) |
+| `canvas_profile` | `str?` | **ACTIVE** | Forwarded to result and manifest |
+| `publish_intent` | `str` | **PASS-THROUGH** | Not interpreted by maker8; forwarded for downstream use |
+| `uploader_metadata` | `UploaderMetadata` | **ACTIVE** | Forwarded to result, manifest, and Dropbox |
+| `result` | `ResultDestination` | **ACTIVE** | Topic and key used for result/DLQ routing |
 | `trace` | `Trace` | **PASS-THROUGH** | Stored in context for correlation tracing |
 
 ## ResultDestination
@@ -29,8 +33,8 @@
 | Field | Type | Status | Notes |
 |-------|------|--------|-------|
 | `type` | `str` | **RESERVED** | Always "kafka"; hardcoded in pipeline |
-| `topic` | `str` | **RESERVED** | Config-driven via `kafka_render_result_topic` |
-| `key` | `str` | **RESERVED** | `job_id` used as Kafka key instead |
+| `topic` | `str` | **ACTIVE** | Used by `emit.py:_resolve_topic()` and `orchestrator.py:_send_failed_result()` for result routing; falls back to config default |
+| `key` | `str` | **ACTIVE** | Used as Kafka message key in emit and failed-result paths; falls back to `job_id` |
 
 ## Trace
 
@@ -109,13 +113,13 @@
 |-------|------|--------|-------|
 | `kind` | `str` | **ACTIVE** | Plugin dispatch ("youtube", "http") |
 | `url` | `str` | **ACTIVE** | Passed to plugin.resolve() |
-| `options` | `AssetSourceOptions` | **RESERVED** | Object passed but fields never inspected |
+| `options` | `AssetSourceOptions` | **ACTIVE** | Options passed to source-connector plugins |
 
 ## AssetSourceOptions
 
 | Field | Type | Status | Notes |
 |-------|------|--------|-------|
-| `format` | `str?` | **RESERVED** | Future: select download format |
+| `format` | `str?` | **ACTIVE** | Used by YouTube connector to select yt-dlp download format |
 | `max_duration_sec` | `int?` | **RESERVED** | Future: limit download duration |
 
 ---
@@ -234,6 +238,8 @@
 |-------|------|--------|-------|
 | `platform` | `str` | **ACTIVE** | Passed to result, used in canonicalization |
 | `account_ref` | `str` | **ACTIVE** | Passed to result, used in canonicalization |
+| `variant` | `str` | **PASS-THROUGH** | Not consumed by maker8 |
+| `enabled` | `bool` | **PASS-THROUGH** | Not consumed by maker8 |
 | `metadata` | `dict[str, Any]` | **RESERVED** | Future: platform-specific metadata |
 | `params` | `dict[str, Any]` | **RESERVED** | Future: platform-specific params |
 
@@ -249,21 +255,18 @@
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| **ACTIVE** | ~52 | 69% |
-| **PASS-THROUGH** | ~3 | 4% |
-| **RESERVED** | ~20 | 27% |
+| **ACTIVE** | ~59 | 72% |
+| **PASS-THROUGH** | ~6 | 7% |
+| **RESERVED** | ~17 | 21% |
 
 ### Reserved fields (not yet consumed by maker8)
 
 1. `Canvas.safe_area` — future: constrain layer placement
 2. `SceneTiming.duration_mode` — future: support fixed/manual duration modes
-3. `AssetSourceOptions.format` — future: format selection in download
-4. `AssetSourceOptions.max_duration_sec` — future: download duration limits
-5. `Layer.align` — future: alignment within rect (currently handled by anchor/rect)
-6. `Transition.type` — future: support fade, wipe, etc. (currently always crossfade)
-7. `PublishTarget.metadata` — future: platform-specific title/description
-8. `PublishTarget.params` — future: platform-specific upload params
-9. `ResultDestination.type` — future: support non-Kafka result delivery
-10. `ResultDestination.topic` — future: dynamic topic routing
-11. `ResultDestination.key` — future: custom Kafka key (currently job_id)
-12. `SafeArea.*` — all 4 inset fields reserved
+3. `AssetSourceOptions.max_duration_sec` — future: download duration limits
+4. `Layer.align` — future: alignment within rect (currently handled by anchor/rect)
+5. `Transition.type` — future: support fade, wipe, etc. (currently always crossfade)
+6. `PublishTarget.metadata` — future: platform-specific title/description
+7. `PublishTarget.params` — future: platform-specific upload params
+8. `ResultDestination.type` — future: support non-Kafka result delivery
+9. `SafeArea.*` — all 4 inset fields reserved

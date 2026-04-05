@@ -2,6 +2,8 @@
   "job_id": "job-2025-01-15-abc123",
   "status": "DONE",
   "job_key": "sha256:a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
+  "dry_run": false,
+  "canvas_profile": null,
   "dropbox": {
     "video": {
       "path": "/renders/2025/01/15/job-2025-01-15-abc123.mp4",
@@ -28,6 +30,15 @@
     "h": 1920,
     "fps": 30.0,
     "size_bytes": 52428800
+  },
+  "uploader_metadata": {
+    "channel_id": "yt:my-channel-123",
+    "title": "Khám Phá Thế Giới | Tập 1",
+    "description": "Video khám phá thế giới tuyệt vời",
+    "lang": "vi",
+    "keywords": ["khám phá", "thế giới"],
+    "tags": ["khám phá"],
+    "visibility": "public"
   },
   "publish_targets": [
     {
@@ -70,5 +81,6 @@
   "trace": {
     "correlation_id": "corr-20250115-xyz789"
   },
+  "warnings": [],
   "error": null
 }

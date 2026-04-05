@@ -1,5 +1,42 @@
 {
   "$defs": {
+    "AssetWarning": {
+      "description": "Describes one asset/scene-level issue that was tolerated during rendering.\n\nCollected in ``PipelineContext.warnings`` and surfaced in ``RenderResult``.",
+      "properties": {
+        "asset_id": {
+          "default": "",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "scene_id": {
+          "default": "",
+          "title": "Scene Id",
+          "type": "string"
+        },
+        "stage": {
+          "default": "",
+          "title": "Stage",
+          "type": "string"
+        },
+        "code": {
+          "default": "",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "fallback_used": {
+          "default": "",
+          "title": "Fallback Used",
+          "type": "string"
+        }
+      },
+      "title": "AssetWarning",
+      "type": "object"
+    },
     "DropboxFileRef": {
       "description": "Reference to a file stored in Dropbox.",
       "properties": {
@@ -148,7 +185,6 @@
       "type": "object"
     },
     "PublishTarget": {
-      "description": "One publishing destination (forwarded to Publisher Worker).",
       "properties": {
         "platform": {
           "title": "Platform",
@@ -157,6 +193,16 @@
         "account_ref": {
           "title": "Account Ref",
           "type": "string"
+        },
+        "variant": {
+          "default": "",
+          "title": "Variant",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
         },
         "metadata": {
           "additionalProperties": true,
@@ -176,8 +222,44 @@
       "title": "PublishTarget",
       "type": "object"
     },
+    "SourceAttribution": {
+      "description": "Attribution for a single source asset used in the video.",
+      "properties": {
+        "asset_ref": {
+          "default": "",
+          "title": "Asset Ref",
+          "type": "string"
+        },
+        "provider": {
+          "default": "",
+          "title": "Provider",
+          "type": "string"
+        },
+        "source_url": {
+          "default": "",
+          "title": "Source Url",
+          "type": "string"
+        },
+        "creator": {
+          "default": "",
+          "title": "Creator",
+          "type": "string"
+        },
+        "license": {
+          "default": "",
+          "title": "License",
+          "type": "string"
+        },
+        "credit_text": {
+          "default": "",
+          "title": "Credit Text",
+          "type": "string"
+        }
+      },
+      "title": "SourceAttribution",
+      "type": "object"
+    },
     "Trace": {
-      "description": "Distributed-tracing context.",
       "properties": {
         "correlation_id": {
           "default": "",
@@ -186,6 +268,130 @@
         }
       },
       "title": "Trace",
+      "type": "object"
+    },
+    "UploaderMetadata": {
+      "description": "Normalized common metadata for downstream uploaders.\n\nThis is the canonical layer shared across all platforms.\nPer-platform overrides live in ``PublishTarget.metadata``.",
+      "properties": {
+        "channel_id": {
+          "default": "",
+          "title": "Channel Id",
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        },
+        "short_title": {
+          "default": "",
+          "title": "Short Title",
+          "type": "string"
+        },
+        "summary": {
+          "default": "",
+          "title": "Summary",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "lang": {
+          "default": "",
+          "title": "Lang",
+          "type": "string"
+        },
+        "keywords": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Keywords",
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "hashtags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hashtags",
+          "type": "array"
+        },
+        "category": {
+          "default": "",
+          "title": "Category",
+          "type": "string"
+        },
+        "visibility": {
+          "default": "private",
+          "title": "Visibility",
+          "type": "string"
+        },
+        "scheduled_publish_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scheduled Publish At"
+        },
+        "content_rating": {
+          "default": "general",
+          "title": "Content Rating",
+          "type": "string"
+        },
+        "thumbnail_ref": {
+          "default": "",
+          "title": "Thumbnail Ref",
+          "type": "string"
+        },
+        "thumbnail_source_url": {
+          "default": "",
+          "title": "Thumbnail Source Url",
+          "type": "string"
+        },
+        "thumbnail_strategy": {
+          "default": "source_asset",
+          "title": "Thumbnail Strategy",
+          "type": "string"
+        },
+        "source_attributions": {
+          "items": {
+            "$ref": "#/$defs/SourceAttribution"
+          },
+          "title": "Source Attributions",
+          "type": "array"
+        },
+        "credits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Credits",
+          "type": "array"
+        },
+        "canonical_url": {
+          "default": "",
+          "title": "Canonical Url",
+          "type": "string"
+        },
+        "cta_url": {
+          "default": "",
+          "title": "Cta Url",
+          "type": "string"
+        }
+      },
+      "title": "UploaderMetadata",
       "type": "object"
     }
   },
@@ -203,11 +409,31 @@
       "title": "Job Key",
       "type": "string"
     },
+    "dry_run": {
+      "default": false,
+      "title": "Dry Run",
+      "type": "boolean"
+    },
+    "canvas_profile": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Canvas Profile"
+    },
     "dropbox": {
       "$ref": "#/$defs/DropboxOutput"
     },
     "output_meta": {
       "$ref": "#/$defs/OutputMeta"
+    },
+    "uploader_metadata": {
+      "$ref": "#/$defs/UploaderMetadata"
     },
     "publish_targets": {
       "items": {
@@ -222,6 +448,13 @@
         "type": "object"
       },
       "title": "Asset Report",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/AssetWarning"
+      },
+      "title": "Warnings",
       "type": "array"
     },
     "engine_versions": {

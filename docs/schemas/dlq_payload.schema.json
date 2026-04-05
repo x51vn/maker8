@@ -30,7 +30,6 @@
       "type": "object"
     },
     "Trace": {
-      "description": "Distributed-tracing context.",
       "properties": {
         "correlation_id": {
           "default": "",
@@ -61,6 +60,11 @@
       "title": "Attempts",
       "type": "integer"
     },
+    "max_attempts": {
+      "default": 0,
+      "title": "Max Attempts",
+      "type": "integer"
+    },
     "last_error": {
       "anyOf": [
         {
@@ -79,6 +83,11 @@
     },
     "trace": {
       "$ref": "#/$defs/Trace"
+    },
+    "debug_context": {
+      "additionalProperties": true,
+      "title": "Debug Context",
+      "type": "object"
     }
   },
   "required": [
