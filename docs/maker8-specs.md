@@ -367,7 +367,7 @@ duration = head_pad + tts_duration + tail_pad
   "text_align": "left|center|right",
   "valign": "top|center|bottom",
   "style": {
-    "font_ref": "font:inter:bold",
+    "font_ref": "font:roboto:bold",
     "size": 56,
     "color": "#FFFFFF",
     "stroke_color": "#000000",

@@ -89,7 +89,7 @@ class Trim(BaseModel):
 
 
 class TextStyle(BaseModel):
-    font_ref: str = "font:inter:regular"
+    font_ref: str = "font:roboto:regular"
     size: int = 48
     color: str = "#FFFFFF"
     stroke_color: str | None = None

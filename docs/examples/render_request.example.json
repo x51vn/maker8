@@ -78,7 +78,7 @@
             "text_align": "center",
             "valign": "center",
             "style": {
-              "font_ref": "font:inter:bold",
+              "font_ref": "font:roboto:bold",
               "size": 72,
               "color": "#FFFFFF",
               "stroke_color": "#000000",

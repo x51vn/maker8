@@ -29,7 +29,7 @@ from moviepy import (
 from moviepy.audio.fx import AudioLoop, MultiplyVolume
 from moviepy.video.fx import FadeIn, FadeOut
 
-from maker8.models.common import OutputMeta
+from maker8.models.common import AssetWarning, OutputMeta
 from maker8.models.spec import AudioTrack, Canvas, Defaults, OutputConfig, RenderSpec, Scene
 from maker8.observability.helpers import Timer
 from maker8.observability.metrics import RENDER_FPS, SCENE_RENDER_DURATION
@@ -68,6 +68,7 @@ class RenderInput:
     job_id: str = ""
     effects_map: dict[str, EffectPlugin] = field(default_factory=dict)
     perf_profile: PerfProfile | None = None
+    warnings: list[AssetWarning] = field(default_factory=list)
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -610,6 +611,28 @@ def _build_scene(
         lc = build_layer_clip(layer, ri.asset_paths, duration, canvas)
         if lc is not None:
             layer_clips.append(lc)
+        elif layer.type in ("image", "video") and layer.asset_ref:
+            ri.warnings.append(
+                AssetWarning(
+                    asset_id=layer.asset_ref,
+                    scene_id=scene.scene_id,
+                    stage="RENDER",
+                    code="LAYER_ASSET_MISSING",
+                    message=(
+                        f"Layer {layer.layer_id} ({layer.type}) dropped: "
+                        f"asset_ref '{layer.asset_ref}' not in asset_paths"
+                    ),
+                    fallback_used="layer_skipped",
+                )
+            )
+            log.warning(
+                "composer.layer.asset_missing",
+                job_id=ri.job_id,
+                scene_id=scene.scene_id,
+                layer_id=layer.layer_id,
+                layer_type=layer.type,
+                asset_ref=layer.asset_ref,
+            )
 
     composite = CompositeVideoClip(layer_clips, size=(canvas.w, canvas.h))
     composite = composite.with_duration(duration)

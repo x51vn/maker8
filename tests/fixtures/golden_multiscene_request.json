@@ -90,9 +90,9 @@
             "scale": 1.0,
             "text": "Golden Fixture",
             "text_align": "center",
-            "valign": "middle",
+            "valign": "center",
             "style": {
-              "font_ref": "font:inter:bold",
+              "font_ref": "font:roboto:bold",
               "size": 72,
               "color": "#FFFFFF",
               "stroke_color": "#000000",
@@ -181,9 +181,9 @@
             "scale": 1.0,
             "text": "THE END",
             "text_align": "center",
-            "valign": "middle",
+            "valign": "center",
             "style": {
-              "font_ref": "font:inter:regular",
+              "font_ref": "font:roboto:regular",
               "size": 96,
               "color": "#E0E0E0"
             }

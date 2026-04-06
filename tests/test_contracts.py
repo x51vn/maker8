@@ -99,6 +99,30 @@ class TestRoundTrip:
                     assert "in_" not in layer["trim"], "Python field 'in_' leaked to wire"
 
 
+class TestContractDefaults:
+    """Verify canonical defaults match expectations."""
+
+    def test_font_ref_default_is_roboto(self) -> None:
+        from maker8.models.spec import TextStyle
+
+        assert TextStyle().font_ref == "font:roboto:regular"
+
+    def test_golden_fixtures_use_roboto(self, golden_payload: dict) -> None:
+        """No golden fixture should reference the deprecated font:inter:* aliases."""
+        raw = json.dumps(golden_payload)
+        assert "font:inter:" not in raw, "Golden fixture still uses deprecated font:inter alias"
+
+    def test_golden_fixtures_no_valign_middle(self, golden_payload: dict) -> None:
+        """valign should be 'top', 'center', or 'bottom' – never 'middle'."""
+        for scene in golden_payload.get("render_spec", {}).get("scenes", []):
+            for layer in scene.get("layers", []):
+                valign = layer.get("valign")
+                if valign is not None:
+                    assert valign != "middle", (
+                        f"Layer {layer.get('layer_id')} uses deprecated valign='middle'"
+                    )
+
+
 class TestModelIdentity:
     """Verify that maker8 re-exports are the exact same classes as render_contracts."""
 

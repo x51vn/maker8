@@ -686,7 +686,7 @@
     "TextStyle": {
       "properties": {
         "font_ref": {
-          "default": "font:inter:regular",
+          "default": "font:roboto:regular",
           "title": "Font Ref",
           "type": "string"
         },
