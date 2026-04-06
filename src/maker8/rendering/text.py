@@ -7,6 +7,7 @@ text wrapping, stroke drawing, and alignment.  The ``layers`` module calls
 
 from __future__ import annotations
 
+import importlib.resources
 from pathlib import Path
 from typing import Any
 
@@ -15,15 +16,29 @@ from PIL import Image, ImageDraw, ImageFont
 
 from maker8.models.spec import TextStyle
 from maker8.utils.color import hex_to_rgba
+from maker8.utils.logging import get_logger
 
-# ── Font cache ───────────────────────────────────────────────────────────────
+log = get_logger(__name__)
+
+# ── Font registry ────────────────────────────────────────────────────────────
+
+# Resolve the package-bundled Roboto variable font once at import time.
+_fonts_pkg = importlib.resources.files("maker8.assets.fonts.google.roboto")
+_ROBOTO_PATH = str(_fonts_pkg.joinpath("Roboto.ttf"))
+
+# Variation-axis tuples: (weight, width).
+_BUILTIN_FONTS: dict[str, tuple[str, list[float]]] = {
+    "font:roboto:regular": (_ROBOTO_PATH, [400, 100]),
+    "font:roboto:bold": (_ROBOTO_PATH, [700, 100]),
+}
+
+# Backward-compatible aliases – old font:inter:* refs map to Roboto.
+_FONT_ALIASES: dict[str, str] = {
+    "font:inter:regular": "font:roboto:regular",
+    "font:inter:bold": "font:roboto:bold",
+}
 
 _font_cache: dict[tuple[str, int], ImageFont.FreeTypeFont | ImageFont.ImageFont] = {}
-
-_BUILTIN_FONTS: dict[str, str | None] = {
-    "font:inter:regular": None,  # fall back to Pillow default
-    "font:inter:bold": None,
-}
 
 
 def _load_font(ref: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -32,16 +47,27 @@ def _load_font(ref: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageF
     if key in _font_cache:
         return _font_cache[key]
 
-    path = _BUILTIN_FONTS.get(ref)
+    # Resolve legacy aliases.
+    canonical = _FONT_ALIASES.get(ref, ref)
+    if canonical != ref:
+        log.debug("font.alias.resolved", original=ref, canonical=canonical)
+
     font: ImageFont.FreeTypeFont | ImageFont.ImageFont
-    if path and Path(path).exists():
+    builtin = _BUILTIN_FONTS.get(canonical)
+    if builtin:
+        path, axes = builtin
         font = ImageFont.truetype(path, size)
+        font.set_variation_by_axes(axes)
+    elif Path(canonical).exists():
+        # Direct filesystem path.
+        font = ImageFont.truetype(canonical, size)
     else:
-        # Try the reference as a direct filesystem path
-        if Path(ref).exists():
-            font = ImageFont.truetype(ref, size)
-        else:
-            font = ImageFont.load_default(size)
+        log.warning(
+            "font.fallback",
+            font_ref=ref,
+            reason="unresolved font_ref, using Pillow default",
+        )
+        font = ImageFont.load_default(size)
 
     _font_cache[key] = font
     return font
@@ -101,6 +127,10 @@ def render_text_image(
 
     line_h = style.size * style.line_height
     total_h = line_h * len(lines)
+
+    # Normalise legacy "middle" → "center".
+    if valign == "middle":
+        valign = "center"
 
     # Vertical offset
     if valign == "center":

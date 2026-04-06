@@ -128,6 +128,8 @@ class RenderStageImpl(Stage):
         try:
             video_path, meta = compose_video(ri)
             timer.stop()
+            # Propagate layer-level warnings collected during composition.
+            ctx.warnings.extend(ri.warnings)
             ctx.rendered_video = video_path
             ctx.output_meta = meta
             log.info(
