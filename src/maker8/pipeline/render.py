@@ -12,7 +12,7 @@ from maker8.observability.helpers import Timer
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.plugins.registry import PluginRegistry
-from maker8.rendering.composer import RenderInput, _RenderTimeout, compose_video
+from maker8.rendering.composer import RenderInput, _RenderTimeoutError, compose_video
 from maker8.rendering.perf_profile import PerfProfile
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
@@ -141,7 +141,7 @@ class RenderStageImpl(Stage):
                 render_sec=timer.elapsed_sec,
                 degraded=ctx.is_degraded,
             )
-        except _RenderTimeout as exc:
+        except _RenderTimeoutError as exc:
             timer.stop()
             log.error(
                 "render.timeout",

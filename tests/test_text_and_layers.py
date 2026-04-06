@@ -107,19 +107,13 @@ class TestValignNormalisation:
 
     def test_middle_normalised_to_center(self) -> None:
         style = TextStyle(font_ref="font:roboto:regular", size=48)
-        arr_center = render_text_image(
-            "Test", width=400, height=200, style=style, valign="center"
-        )
-        arr_middle = render_text_image(
-            "Test", width=400, height=200, style=style, valign="middle"
-        )
+        arr_center = render_text_image("Test", width=400, height=200, style=style, valign="center")
+        arr_middle = render_text_image("Test", width=400, height=200, style=style, valign="middle")
         np.testing.assert_array_equal(arr_center, arr_middle)
 
     def test_top_is_default(self) -> None:
         style = TextStyle(font_ref="font:roboto:regular", size=48)
-        arr_top = render_text_image(
-            "Test", width=400, height=200, style=style, valign="top"
-        )
+        arr_top = render_text_image("Test", width=400, height=200, style=style, valign="top")
         arr_default = render_text_image(
             "Test", width=400, height=200, style=style, valign="unknown_value"
         )

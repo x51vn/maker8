@@ -120,20 +120,14 @@ def _apply_fit(clip: VideoFileClip | ImageClip, layer: Layer) -> VideoFileClip |
     fit = layer.fit or "cover"
 
     if fit == "cover":
-        if clip_ratio > target_ratio:
-            clip = clip.resized(height=rh)
-        else:
-            clip = clip.resized(width=rw)
+        clip = clip.resized(height=rh) if clip_ratio > target_ratio else clip.resized(width=rw)
         # Centre-crop to rect
         cw2, ch2 = clip.size
         x1 = (cw2 - rw) // 2
         y1 = (ch2 - rh) // 2
         clip = clip.cropped(x1=x1, y1=y1, x2=x1 + rw, y2=y1 + rh)
     else:  # contain
-        if clip_ratio > target_ratio:
-            clip = clip.resized(width=rw)
-        else:
-            clip = clip.resized(height=rh)
+        clip = clip.resized(width=rw) if clip_ratio > target_ratio else clip.resized(height=rh)
 
     return clip
 

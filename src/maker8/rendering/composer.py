@@ -46,12 +46,12 @@ log = get_logger(__name__)
 _RENDER_TIMEOUT = 1800  # 30 minutes hard limit for write_videofile
 
 
-class _RenderTimeout(Exception):
+class _RenderTimeoutError(Exception):
     """Raised when write_videofile exceeds the hard timeout."""
 
 
 def _timeout_handler(signum: int, frame: object) -> None:
-    raise _RenderTimeout(f"write_videofile exceeded {_RENDER_TIMEOUT}s timeout")
+    raise _RenderTimeoutError(f"write_videofile exceeded {_RENDER_TIMEOUT}s timeout")
 
 
 # ── Bridge dataclass (rendering ↔ pipeline) ─────────────────────────────────
@@ -180,7 +180,7 @@ def _compose_scene_level(
                     output_cfg,
                     encoder,
                 )
-            except _RenderTimeout:
+            except _RenderTimeoutError:
                 raise
             except Exception as exc:
                 if encoder.is_gpu:
@@ -304,7 +304,7 @@ def _compose_single_graph(
 
     try:
         _write_final_video(final, output_path, ri.job_id, effective_fps, output_cfg, encoder)
-    except _RenderTimeout:
+    except _RenderTimeoutError:
         raise
     except Exception as exc:
         if encoder.is_gpu:
