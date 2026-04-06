@@ -73,7 +73,6 @@ def _load_font(ref: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageF
     return font
 
 
-
 # ── Text wrapping ────────────────────────────────────────────────────────────
 
 
@@ -120,10 +119,7 @@ def render_text_image(
     stroke_fill = hex_to_rgba(style.stroke_color) if style.stroke_color else None
 
     # Wrap
-    if style.wrap:
-        lines = _wrap_text(text, font, width, draw)
-    else:
-        lines = [text]
+    lines = _wrap_text(text, font, width, draw) if style.wrap else [text]
 
     line_h = style.size * style.line_height
     total_h = line_h * len(lines)
