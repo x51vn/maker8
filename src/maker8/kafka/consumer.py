@@ -9,26 +9,40 @@ from typing import Any
 from confluent_kafka import Consumer, KafkaError, KafkaException, Message
 
 from maker8.config import Settings
-from maker8.observability.metrics import JOBS_RECEIVED, KAFKA_CONSUMER_RUNNING
+from maker8.models.common import ErrorInfo
+from maker8.models.contracts import DLQPayload
+from maker8.observability.metrics import INVALID_PAYLOAD, JOBS_RECEIVED, KAFKA_CONSUMER_RUNNING
 from maker8.observability.state import WorkerState
 from maker8.utils.logging import get_logger
 
 log = get_logger(__name__)
+
+_MAX_RAW_PAYLOAD_BYTES = 4096  # truncate oversized raw payloads in DLQ
 
 
 class RenderConsumer:
     """Subscribe to render-request topic and dispatch each message to *handler*.
 
     One message at a time – manual commit after successful handling.
+
+    Args:
+        settings: Application settings.
+        worker_state: Optional worker state for observability.
+        dlq_producer: Optional callable ``(topic, key, payload) -> None`` used
+            to emit DLQ messages for invalid-JSON poison pills.  When provided,
+            every message whose bytes fail JSON parsing is routed to the DLQ
+            before committing the offset, so no message is silently discarded.
     """
 
     def __init__(
         self,
         settings: Settings,
         worker_state: WorkerState | None = None,
+        dlq_producer: Callable[[str, str, dict[str, Any]], None] | None = None,
     ) -> None:
         self._settings = settings
         self._state = worker_state
+        self._dlq_producer = dlq_producer
 
         # Build Kafka config
         kafka_config = {
@@ -120,14 +134,15 @@ class RenderConsumer:
                     key=msg_key,
                     result="success",
                 )
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as exc:
                 log.exception(
                     "consumer.invalid_json",
                     partition=partition,
                     offset=offset,
                     key=msg_key,
                 )
-                # Poison pill: commit to avoid infinite loop, log for operator
+                # Poison pill: emit DLQ (if producer wired) then commit
+                self._emit_invalid_json_dlq(msg, msg_key, exc, partition, offset)
             except Exception:
                 log.exception(
                     "consumer.handler_error",
@@ -155,6 +170,55 @@ class RenderConsumer:
                     offset=offset,
                     partition=partition,
                 )
+
+    # ── DLQ helpers ──────────────────────────────────────────────────
+
+    def _emit_invalid_json_dlq(
+        self,
+        msg: Message,
+        msg_key: str,
+        exc: json.JSONDecodeError,
+        partition: int,
+        offset: int,
+    ) -> None:
+        """Best-effort DLQ emission for messages that fail JSON parsing."""
+        if self._dlq_producer is None:
+            return
+        try:
+            raw = msg.value() or b""
+            raw_snippet = raw[:_MAX_RAW_PAYLOAD_BYTES].decode("utf-8", errors="replace")
+            job_id = msg_key or "unknown"
+            dlq = DLQPayload(
+                job_id=job_id,
+                failed_stage="CONSUMER",
+                attempts=0,
+                max_attempts=0,
+                last_error=ErrorInfo(
+                    code="INVALID_JSON",
+                    stage="CONSUMER",
+                    retryable=False,
+                    message=str(exc)[:2000],
+                ),
+                debug_context={
+                    "raw_payload_snippet": raw_snippet,
+                    "partition": partition,
+                    "offset": offset,
+                },
+            )
+            self._dlq_producer(
+                self._settings.kafka_render_dlq_topic,
+                job_id,
+                dlq.model_dump(mode="json", by_alias=True),
+            )
+            INVALID_PAYLOAD.inc()
+            log.info(
+                "consumer.invalid_json_dlq_sent",
+                partition=partition,
+                offset=offset,
+                key=msg_key,
+            )
+        except Exception:
+            log.exception("consumer.invalid_json_dlq_error", partition=partition, offset=offset)
 
     # ── Lifecycle ────────────────────────────────────────────────────
 

@@ -12,7 +12,7 @@ from maker8.observability.metrics import SUBPROCESS_DURATION, SUBPROCESS_FAILURE
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.rendering.encoder import check_nvenc
-from maker8.rendering.ffmpeg_runtime import resolve_ffmpeg_binary
+from maker8.rendering.ffmpeg_runtime import resolve_ffmpeg_binary, resolve_ffprobe_binary
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 
@@ -33,9 +33,65 @@ def _is_external_kill(returncode: int) -> bool:
     return returncode < 0 and (-returncode) in _EXTERNAL_KILL_SIGNALS
 
 
+def _analyze_ffmpeg_failure_reason(stderr: str) -> str:
+    """Analyze stderr to categorize NVENC failure reason.
+    
+    Returns one of:
+    - "gpu_unavailable" – CUDA/GPU not accessible
+    - "audio_only_input" – no video stream found
+    - "corrupt_input" – cannot decode input
+    - "cuda_decode_failed" – CUDA decoder rejected format
+    - "nvenc_encode_failed" – encoding itself failed
+    - "unknown" – unknown cause
+    """
+    stderr_lower = stderr.lower()
+
+    # GPU/CUDA not available
+    if any(
+        x in stderr_lower
+        for x in [
+            "cannot load libnvidia-encode",
+            "no nvenc capable devices",
+            "cannot init cuda",
+            "cuda is not available",
+            "gpu device not found",
+        ]
+    ):
+        return "gpu_unavailable"
+
+    # Audio-only or no video frame
+    if "video:0kib" in stderr_lower or "no video stream" in stderr_lower:
+        return "audio_only_input"
+
+    # Input corruption or unreadable
+    if any(
+        x in stderr_lower
+        for x in ["unknown format", "invalid data found", "corrupt data", "premature end of file"]
+    ):
+        return "corrupt_input"
+
+    # CUDA decode issues
+    if any(
+        x in stderr_lower
+        for x in [
+            "unsupported pixel format",
+            "decoder not found",
+            "hevc nvdec",
+            "h264 cuvid",
+        ]
+    ):
+        return "cuda_decode_failed"
+
+    # Generic encode fail
+    if "encoding failed" in stderr_lower or "nvenc" in stderr_lower:
+        return "nvenc_encode_failed"
+
+    return "unknown"
+
+
 def _has_video_stream(path: Path) -> bool:
     """Return ``True`` if *path* contains at least one video stream."""
-    ffprobe = resolve_ffmpeg_binary().replace("ffmpeg", "ffprobe")
+    ffprobe = resolve_ffprobe_binary()
     try:
         result = subprocess.run(
             [
@@ -71,7 +127,7 @@ def _is_valid_media(path: Path, *, min_bytes: int = _MIN_VALID_VIDEO_BYTES) -> b
         return False
     if path.stat().st_size < min_bytes:
         return False
-    ffprobe = resolve_ffmpeg_binary().replace("ffmpeg", "ffprobe")
+    ffprobe = resolve_ffprobe_binary()
     try:
         result = subprocess.run(
             [
@@ -99,6 +155,7 @@ def _build_video_cmd(
     dest: Path,
     *,
     use_nvenc: bool,
+    cpu_decode: bool = False,
     proxy_max_short_edge: int = 0,
 ) -> list[str]:
     """Build the FFmpeg command for video normalisation.
@@ -107,12 +164,19 @@ def _build_video_cmd(
     short edge never exceeds that value (maintains aspect ratio, rounds
     to even dimensions).
 
+    When *cpu_decode* is True, FFmpeg will decode using CPU (no CUDA hwaccel)
+    even if NVENC is being used for encoding. This is useful as a fallback
+    when GPU decode fails but GPU encode might still work.
+
     **NVENC + proxy interaction:** ``-hwaccel_output_format cuda`` keeps
     decoded frames in GPU memory, but the ``scale`` filter is CPU-only.
     When proxy scaling is required, we omit ``-hwaccel_output_format cuda``
     so FFmpeg auto-transfers frames to system memory for the scale filter,
     then NVENC re-uploads for encoding.  Without proxy the full GPU path
     is used.
+
+    **NVENC + cpu_decode:** When encoding with NVENC but decoding with CPU,
+    we skip GPU hwaccel flags entirely to avoid GPU memory pressure.
     """
     ffmpeg = resolve_ffmpeg_binary()
 
@@ -136,6 +200,28 @@ def _build_video_cmd(
         ]
 
     if use_nvenc:
+        if cpu_decode:
+            # CPU decode + NVENC encode: no GPU hwaccel
+            return [
+                ffmpeg,
+                "-y",
+                "-i",
+                str(src),
+                *vf,
+                "-c:v",
+                "h264_nvenc",
+                "-preset",
+                "p4",
+                "-cq",
+                "23",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                "-movflags",
+                "+faststart",
+                str(dest),
+            ]
         # When proxy scaling is needed we must NOT keep frames in CUDA
         # memory (hwaccel_output_format cuda) because the software
         # ``scale`` filter cannot operate on GPU surfaces.
@@ -270,6 +356,35 @@ class NormalizeStage(Stage):
         job_id: str,
     ) -> Path:
         """Dispatch normalization by asset type."""
+        # Log stream metadata before processing
+        if asset_type == "video":
+            ffprobe = resolve_ffprobe_binary()
+            try:
+                result = subprocess.run(
+                    [
+                        ffprobe,
+                        "-v",
+                        "error",
+                        "-show_entries",
+                        "stream=index,codec_type,codec_name,width,height,duration",
+                        "-of",
+                        "json",
+                        str(src),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if result.returncode == 0:
+                    log.info(
+                        "normalize.stream_metadata",
+                        job_id=job_id,
+                        asset_id=asset_id,
+                        stream_info=result.stdout[:1000],  # truncate to avoid huge logs
+                    )
+            except Exception:
+                pass  # Metadata logging is optional
+
         if asset_type == "video":
             if _has_video_stream(src):
                 return self._normalize_video(
@@ -366,15 +481,34 @@ class NormalizeStage(Stage):
             )
         except subprocess.CalledProcessError as exc:
             timer.stop()
-            # If NVENC failed, fall back to software encoding
+            # If NVENC failed, attempt intermediate retry: CPU decode + NVENC encode
             if use_nvenc:
+                failure_reason = _analyze_ffmpeg_failure_reason(exc.stderr)
+                
+                # Only retry with CPU decode if the failure was clearly GPU decode-related
+                if failure_reason == "cuda_decode_failed":
+                    log.info(
+                        "normalize.nvenc_retry_cpu_decode",
+                        job_id=job_id,
+                        asset_id=asset_id,
+                        reason=failure_reason,
+                    )
+                    dest.unlink(missing_ok=True)
+                    return NormalizeStage._normalize_video_cpu_decode_nvenc(
+                        src,
+                        dest_dir,
+                        job_id,
+                        asset_id,
+                        proxy_max_short_edge=proxy_max_short_edge,
+                    )
+                
                 log.warning(
                     "normalize.nvenc_fallback",
                     job_id=job_id,
                     asset_id=asset_id,
                     returncode=exc.returncode,
                     fallback_encoder="libx264",
-                    reason="nvenc_encode_failed",
+                    reason=failure_reason,
                     stderr=truncate_stderr(exc.stderr),
                 )
                 dest.unlink(missing_ok=True)
@@ -530,6 +664,111 @@ class NormalizeStage(Stage):
                 f"FFmpeg normalisation failed for {src.name} (rc={exc.returncode}): {stderr}",
                 retryable=killed,
             ) from exc
+        return dest
+
+    @staticmethod
+    def _normalize_video_cpu_decode_nvenc(
+        src: Path,
+        dest_dir: Path,
+        job_id: str,
+        asset_id: str,
+        *,
+        proxy_max_short_edge: int = 0,
+    ) -> Path:
+        """CPU decode + NVENC encode (intermediate retry after GPU decode failed).
+        
+        This is an intermediate fallback between full GPU path and software-only.
+        Used when GPU decode fails but NVENC encoder might still work.
+        """
+        dest = dest_dir / f"{src.stem}_norm.mp4"
+        dest.unlink(missing_ok=True)
+        cmd = _build_video_cmd(
+            src,
+            dest,
+            use_nvenc=True,
+            cpu_decode=True,
+            proxy_max_short_edge=proxy_max_short_edge,
+        )
+
+        timer = Timer().start()
+        log.info(
+            "subprocess.start",
+            job_id=job_id,
+            asset_id=asset_id,
+            executable="ffmpeg",
+            operation="normalize_video",
+            encoder="h264_nvenc",
+            decode_mode="cpu",
+            input=src.name,
+            output=dest.name,
+        )
+        try:
+            subprocess.run(
+                cmd,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=_VIDEO_TIMEOUT,
+            )
+            timer.stop()
+            SUBPROCESS_DURATION.labels(stage="NORMALIZE", source_kind="ffmpeg").observe(
+                timer.elapsed_sec
+            )
+            log.info(
+                "subprocess.success",
+                job_id=job_id,
+                asset_id=asset_id,
+                executable="ffmpeg",
+                operation="normalize_video",
+                encoder="h264_nvenc",
+                decode_mode="cpu",
+                duration_sec=timer.elapsed_sec,
+            )
+        except subprocess.TimeoutExpired as exc:
+            timer.stop()
+            SUBPROCESS_FAILURES.labels(stage="NORMALIZE", source_kind="ffmpeg").inc()
+            log.error(
+                "subprocess.failure",
+                job_id=job_id,
+                asset_id=asset_id,
+                executable="ffmpeg",
+                operation="normalize_video",
+                encoder="h264_nvenc",
+                decode_mode="cpu",
+                reason="timeout",
+                timeout_sec=exc.timeout,
+                duration_sec=timer.elapsed_sec,
+            )
+            dest.unlink(missing_ok=True)
+            raise StageError(
+                RenderStage.NORMALIZE,
+                "FFMPEG_TIMEOUT",
+                f"FFmpeg video normalisation timed out after {exc.timeout}s for {src.name}",
+                retryable=False,
+            ) from exc
+        except subprocess.CalledProcessError as exc:
+            timer.stop()
+            dest.unlink(missing_ok=True)
+            SUBPROCESS_FAILURES.labels(stage="NORMALIZE", source_kind="ffmpeg").inc()
+            stderr = truncate_stderr(exc.stderr)
+            
+            # If CPU decode + NVENC also fails, fall back to software encoding
+            log.warning(
+                "normalize.cpu_decode_nvenc_fallback",
+                job_id=job_id,
+                asset_id=asset_id,
+                returncode=exc.returncode,
+                fallback_encoder="libx264",
+                reason="cpu_decode_nvenc_failed",
+                stderr=stderr,
+            )
+            return NormalizeStage._normalize_video_sw(
+                src,
+                dest_dir,
+                job_id,
+                asset_id,
+                proxy_max_short_edge=proxy_max_short_edge,
+            )
         return dest
 
     @staticmethod

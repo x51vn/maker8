@@ -198,7 +198,7 @@
   "canvas_profile": null,
   "publish_intent": "render_only",
   "uploader_metadata": {
-    "channel_id": "yt:my-channel-123",
+    "channel_id": "channel:my-channel-123",
     "title": "Khám Phá Thế Giới | Tập 1",
     "short_title": "Khám Phá Tập 1",
     "summary": "Video khám phá thế giới tuyệt vời",

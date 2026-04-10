@@ -107,7 +107,7 @@
   "canvas_profile": "portrait_1080x1920",
   "publish_intent": "render_and_publish",
   "uploader_metadata": {
-    "channel_id": "yt:test-channel",
+    "channel_id": "channel:test-channel",
     "title": "Test Video Title",
     "short_title": "Test Video",
     "summary": "A cross-repo contract test fixture.",

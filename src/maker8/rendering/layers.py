@@ -43,7 +43,7 @@ def _build_video(
     if not layer.asset_ref or layer.asset_ref not in asset_paths:
         return None
 
-    clip = VideoFileClip(str(asset_paths[layer.asset_ref]))
+    clip = VideoFileClip(str(asset_paths[layer.asset_ref])).without_audio()
 
     # Trim
     if layer.trim:

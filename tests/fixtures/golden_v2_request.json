@@ -1,0 +1,176 @@
+{
+  "job_id": "golden-v2-001",
+  "spec_version": "2.0",
+  "render_spec": {
+    "spec_version": "2.0",
+    "canvas": {
+      "w": 1080,
+      "h": 1920,
+      "fps": 30,
+      "bg": "#000000"
+    },
+    "defaults": {
+      "narration": {
+        "lang": "vi-VN",
+        "tts_preset_ref": "tts:vi:default"
+      },
+      "scene_timing": {
+        "head_pad_sec": 0.15,
+        "tail_pad_sec": 0.45,
+        "duration_mode": "auto_from_tts"
+      },
+      "subtitles": {
+        "enabled": true,
+        "source": "narration",
+        "max_lines": 2
+      }
+    },
+    "assets": [
+      {
+        "id": "asset_01",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/img1.jpg",
+          "options": {}
+        }
+      },
+      {
+        "id": "asset_02",
+        "type": "video",
+        "source": {
+          "kind": "youtube",
+          "url": "https://youtube.com/watch?v=abc123",
+          "options": { "format": "mp4", "max_duration_sec": 30 }
+        }
+      },
+      {
+        "id": "asset_03",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/img3.jpg",
+          "options": {}
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "scene_01",
+        "narration": {
+          "text": "V2 scene one with primary visual."
+        },
+        "layers": [
+          {
+            "layer_id": "scene_01_bg",
+            "type": "image",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "anchor": "top_left",
+            "opacity": 1.0,
+            "rotation_deg": 0.0,
+            "scale": 1.0,
+            "asset_ref": "asset_01",
+            "role": "primary_visual",
+            "required": true,
+            "missing_asset_policy": "scene_placeholder"
+          },
+          {
+            "layer_id": "scene_01_title",
+            "type": "text",
+            "rect": { "x": 100, "y": 100, "w": 880, "h": 200 },
+            "text": "Scene Title",
+            "role": "title",
+            "required": false,
+            "missing_asset_policy": "drop_layer",
+            "style": {
+              "font_ref": "font:roboto:bold",
+              "size": 48,
+              "color": "#FFFFFF",
+              "stroke_color": "#000000",
+              "stroke_width": 2
+            }
+          }
+        ],
+        "audio_tracks": [],
+        "effects": [],
+        "transition_out": null,
+        "subtitle": null
+      },
+      {
+        "scene_id": "scene_02",
+        "narration": {
+          "text": "V2 scene two with video."
+        },
+        "layers": [
+          {
+            "layer_id": "scene_02_bg",
+            "type": "video",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "asset_ref": "asset_02",
+            "role": "primary_visual",
+            "required": true,
+            "missing_asset_policy": "skip_scene"
+          }
+        ],
+        "audio_tracks": [],
+        "effects": [],
+        "transition_out": null,
+        "subtitle": {
+          "enabled": false,
+          "source": "narration",
+          "text": null
+        }
+      },
+      {
+        "scene_id": "scene_03",
+        "narration": {
+          "text": "V2 scene three with subtitle override."
+        },
+        "layers": [
+          {
+            "layer_id": "scene_03_bg",
+            "type": "image",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "asset_ref": "asset_03",
+            "role": "primary_visual",
+            "required": true,
+            "missing_asset_policy": "fail_request"
+          }
+        ],
+        "audio_tracks": [],
+        "effects": [],
+        "transition_out": null,
+        "subtitle": {
+          "enabled": true,
+          "source": "custom",
+          "text": "Custom subtitle text for scene 3."
+        }
+      }
+    ],
+    "output": {
+      "codec": "libx264",
+      "audio_codec": "aac",
+      "bitrate": "4000k",
+      "audio_bitrate": "192k",
+      "preset": "medium",
+      "pix_fmt": "yuv420p"
+    },
+    "publish": {
+      "targets": []
+    }
+  },
+  "planning": {
+    "target_duration_sec": 45.0,
+    "duration_source": "user_input",
+    "scene_count_policy_version": "v2.0",
+    "planned_scene_count": 3
+  },
+  "result": {
+    "type": "kafka",
+    "topic": "video.render.result.v1",
+    "key": ""
+  },
+  "trace": {
+    "correlation_id": "golden-v2-corr-001"
+  }
+}

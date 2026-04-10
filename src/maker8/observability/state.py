@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from collections.abc import Callable
@@ -37,8 +38,6 @@ class WorkerState:
     current_job_key: str | None = None
     current_stage: str | None = None
     current_attempt: int = 0
-    current_asset_id: str | None = None
-    current_scene_id: str | None = None
     stage_started_at: float | None = None
 
     # Retry
@@ -64,10 +63,8 @@ class WorkerState:
 
     def _notify(self) -> None:
         if self._on_change:
-            try:
+            with contextlib.suppress(Exception):
                 self._on_change()
-            except Exception:
-                pass  # best-effort; never break the pipeline
 
     # ── Lifecycle helpers ────────────────────────────────────────────
 
@@ -86,8 +83,6 @@ class WorkerState:
         self.current_job_key = job_key
         self.current_stage = None
         self.current_attempt = 0
-        self.current_asset_id = None
-        self.current_scene_id = None
         self.stage_started_at = None
         self.retry_sleep_until = None
         self._notify()
@@ -96,8 +91,6 @@ class WorkerState:
         self.current_stage = stage
         self.current_attempt = attempt
         self.stage_started_at = time.time()
-        self.current_asset_id = None
-        self.current_scene_id = None
         self._notify()
 
     def on_retry_sleep(self, delay_sec: float) -> None:
@@ -123,8 +116,6 @@ class WorkerState:
         self.current_job_key = None
         self.current_stage = None
         self.current_attempt = 0
-        self.current_asset_id = None
-        self.current_scene_id = None
         self.stage_started_at = None
         self.retry_sleep_until = None
 
@@ -141,8 +132,6 @@ class WorkerState:
                 "job_key": self.current_job_key,
                 "stage": self.current_stage,
                 "attempt": self.current_attempt,
-                "asset_id": self.current_asset_id,
-                "scene_id": self.current_scene_id,
                 "elapsed_sec": elapsed,
             }
 

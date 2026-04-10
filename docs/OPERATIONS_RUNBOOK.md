@@ -51,7 +51,7 @@ kcat -b <broker> -t video.render.dlq.v1 -C -e -o beginning | jq '.failed_stage, 
 | `VALIDATE` | Malformed input from editor8 | Check editor8 pipeline; input cannot be retried |
 | `RESOLVE_ASSETS` | YouTube URL expired or invalid | Check source URLs; update in editor8 and re-send |
 | `DOWNLOAD` | Network issue, HTTP 5xx, disk full | Check network; check disk space (`df -h`) |
-| `NORMALIZE` | FFmpeg crash, corrupt media | Check FFmpeg logs; verify downloaded asset is valid |
+| `NORMALIZE` | FFmpeg crash, corrupt media | Check FFmpeg logs; verify downloaded asset is valid; see `docs/MAKER8_NVENC_FALLBACK_INVESTIGATION_GUIDE.md` for NVENC fallback triage |
 | `TTS` | All TTS credentials exhausted | See §2.3 — TTS credential issues |
 | `RENDER` | MoviePy error, all scenes skipped | Check if all assets failed; review render_spec |
 | `UPLOAD_DROPBOX` | Auth expired, rate limit | See §2.4 — Dropbox issues |

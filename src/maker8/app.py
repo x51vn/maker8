@@ -23,10 +23,12 @@ from maker8.observability.metrics import WORKER_READY, WORKER_UP
 from maker8.observability.state import WorkerState
 from maker8.pipeline.orchestrator import Orchestrator
 from maker8.plugins.registry import PluginRegistry
+from maker8.plugins.sources.youtube import probe_ytdlp, resolve_ytdlp_path
 from maker8.rendering.encoder import probe_gpu_capabilities
 from maker8.rendering.ffmpeg_runtime import bind_moviepy_ffmpeg, diagnose_runtime
 from maker8.services.dropbox_client import DropboxClient
 from maker8.services.tts_client import TTSService
+from maker8.services.ytdlp_updater import UpdaterConfig, YtdlpUpdater
 from maker8.utils.logging import get_logger, setup_logging
 
 # Global variables for shutdown coordination
@@ -34,11 +36,12 @@ _shutdown_requested = False
 _consumer: RenderConsumer | None = None
 _producer: KafkaProducer | None = None
 _health: HealthManager | None = None
+_updater: YtdlpUpdater | None = None
 _log: object | None = None
 
 
 def main() -> None:
-    global _consumer, _producer, _health, _log, _shutdown_requested
+    global _consumer, _producer, _health, _updater, _log, _shutdown_requested
 
     settings = get_settings()
     setup_logging(level=settings.log_level, fmt=settings.log_format)
@@ -71,6 +74,18 @@ def main() -> None:
         gpu_render_enabled=gpu.gpu_render_enabled,
     )
 
+    # ── yt-dlp startup validation ────────────────────────────────────
+    ytdlp_exe = resolve_ytdlp_path(settings.ytdlp_path, settings.ytdlp_bin_dir)
+    ytdlp_ver = probe_ytdlp(ytdlp_exe)
+    if ytdlp_ver:
+        log.info("app.ytdlp_ready", executable=ytdlp_exe, version=ytdlp_ver)
+    else:
+        log.warning(
+            "app.ytdlp_not_found",
+            executable=ytdlp_exe,
+            msg="yt-dlp is not callable — YouTube assets will fail at resolve",
+        )
+
     # ── Observability bootstrap ──────────────────────────────────────
     worker_state = WorkerState()
     health = HealthManager(
@@ -96,18 +111,26 @@ def main() -> None:
     _producer = producer
 
     registry = PluginRegistry()
-    registry.load_defaults()
+    registry.load_defaults(settings)
 
     tts_service = TTSService(settings)
 
-    # ── M5: Validate TTS credentials on startup ──────────────────────
+    # ── M5: Warn if no TTS credentials detected on startup ──────────
+    # Note: google_cloud is always available via ADC, so has_provider()
+    # only returns False for elevenlabs with no keys/env-var configured.
+    # We log a warning rather than hard-exiting because:
+    #  (a) preset-based selection may route some jobs to gtts even when the
+    #      default provider has no keys, and
+    #  (b) incorrect startup kills obscure the real error at synthesis time.
     if not tts_service.has_provider():
-        log.critical(
-            "app.no_tts_provider",
-            msg="No TTS provider configured – at least one API key is required",
+        log.warning(
+            "app.no_tts_provider_warning",
+            default_provider=tts_service._default_provider,  # noqa: SLF001
+            msg=(
+                "Default TTS provider has no credentials; jobs that require"
+                " it will fail at the TTS stage. Configure keys or switch provider."
+            ),
         )
-        health.mark_not_live()
-        os._exit(1)
 
     try:
         dbx_client = DropboxClient(settings)
@@ -128,8 +151,26 @@ def main() -> None:
         worker_state=worker_state,
     )
 
-    consumer = RenderConsumer(settings, worker_state=worker_state)
+    consumer = RenderConsumer(
+        settings,
+        worker_state=worker_state,
+        dlq_producer=producer.send,
+    )
     _consumer = consumer
+
+    # ── yt-dlp auto-updater ──────────────────────────────────────────
+    updater_cfg = UpdaterConfig(
+        enabled=settings.ytdlp_auto_update_enabled,
+        channel=settings.ytdlp_channel,
+        bin_dir=settings.ytdlp_bin_dir,
+        interval_sec=settings.ytdlp_update_interval_sec,
+        download_timeout=settings.ytdlp_download_timeout,
+        verify_checksum=settings.ytdlp_verify_checksum,
+        min_check_interval_sec=settings.ytdlp_min_check_interval_sec,
+    )
+    updater = YtdlpUpdater(config=updater_cfg, worker_state=worker_state)
+    _updater = updater
+    updater.start()
 
     # Mark ready – all components wired
     health.mark_ready()
@@ -139,6 +180,8 @@ def main() -> None:
     # ── Fast exit handler (fallback for graceful shutdown hang) ───────
     def _atexit() -> None:
         """Run at exit to close resources and log completion."""
+        if _updater is not None:
+            _updater.stop()
         if _health is not None:
             _health.cleanup()
         if _log is not None:

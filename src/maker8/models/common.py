@@ -46,8 +46,8 @@ class RenderStage(str, Enum):
     EMIT_RESULT = "EMIT_RESULT"
 
 
-class PublishStage(str, Enum):
-    """Pipeline stages for the Publisher Worker (future)."""
+class PublishStage(str, Enum):  # RESERVED – publisher worker not yet implemented
+    """Pipeline stages for the Publisher Worker (not yet implemented)."""
 
     DOWNLOAD = "DOWNLOAD"
     PUBLISH = "PUBLISH"
@@ -60,7 +60,7 @@ class JobStatus(str, Enum):
     PARTIAL = "PARTIAL"
 
 
-class PublishStatus(str, Enum):
+class PublishStatus(str, Enum):  # RESERVED – publisher worker not yet implemented
     PUBLISHED = "PUBLISHED"
     FAILED = "FAILED"
     PENDING = "PENDING"

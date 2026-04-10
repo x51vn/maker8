@@ -28,8 +28,10 @@ from maker8.utils.logging import get_logger
 log = get_logger(__name__)
 
 _SYSTEM_FFMPEG = "/usr/bin/ffmpeg"
+_SYSTEM_FFPROBE = "/usr/bin/ffprobe"
 
 _resolved_binary: str | None = None
+_resolved_probe: str | None = None
 
 
 def resolve_ffmpeg_binary() -> str:
@@ -58,6 +60,30 @@ def resolve_ffmpeg_binary() -> str:
     # Should not happen in a correctly built container
     _resolved_binary = "ffmpeg"
     return _resolved_binary
+
+
+def resolve_ffprobe_binary() -> str:
+    """Resolve the ffprobe path that matches the active FFmpeg runtime."""
+    global _resolved_probe  # noqa: PLW0603
+    if _resolved_probe is not None:
+        return _resolved_probe
+
+    sibling = Path(resolve_ffmpeg_binary()).with_name("ffprobe")
+    if sibling.is_file():
+        _resolved_probe = str(sibling)
+        return _resolved_probe
+
+    if Path(_SYSTEM_FFPROBE).is_file():
+        _resolved_probe = _SYSTEM_FFPROBE
+        return _resolved_probe
+
+    which = shutil.which("ffprobe")
+    if which:
+        _resolved_probe = which
+        return _resolved_probe
+
+    _resolved_probe = "ffprobe"
+    return _resolved_probe
 
 
 def bind_moviepy_ffmpeg() -> None:
@@ -149,5 +175,6 @@ def _probe_encoder(binary: str, encoder: str) -> bool:
 
 def _reset_cache() -> None:
     """Reset the resolved binary cache — for testing only."""
-    global _resolved_binary  # noqa: PLW0603
+    global _resolved_binary, _resolved_probe  # noqa: PLW0603
     _resolved_binary = None
+    _resolved_probe = None

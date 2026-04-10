@@ -6,6 +6,8 @@ This stage bridges ``PipelineContext`` to the rendering engine's
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from maker8.models.common import AssetWarning, RenderStage
 from maker8.models.spec import RenderSpec
 from maker8.observability.helpers import Timer
@@ -42,6 +44,9 @@ class RenderStageImpl(Stage):
             for aid in ctx.downloaded_assets
             if ctx.asset_path(aid) is not None
         }
+
+        # ── V2 missing-asset policy enforcement ─────────────────────
+        self._enforce_missing_asset_policies(ctx, asset_paths)
 
         # ── Scene-level viability check ──────────────────────────────
         # A scene is viable if it has at least one layer whose asset_ref
@@ -169,3 +174,64 @@ class RenderStageImpl(Stage):
                 f"Video composition failed: {exc}",
                 retryable=False,
             ) from exc
+
+    # ── V2 missing-asset policy ──────────────────────────────────────
+
+    def _enforce_missing_asset_policies(
+        self,
+        ctx: PipelineContext,
+        asset_paths: Mapping[str, object],
+    ) -> None:
+        """Apply ``missing_asset_policy`` for layers with missing assets.
+
+        Only meaningful for v2 requests where layers declare ``required``
+        and ``missing_asset_policy``. For v1 (role=None, required=False),
+        the existing drop_layer behaviour is preserved.
+        """
+        for scene in ctx.render_spec.scenes:
+            if scene.scene_id in ctx.skipped_scenes:
+                continue
+            for layer in scene.layers:
+                if not layer.asset_ref:
+                    continue
+                if layer.asset_ref in asset_paths:
+                    continue
+                # Asset is missing – apply policy only when required
+                if not layer.required:
+                    continue
+                policy = layer.missing_asset_policy
+                ctx.warnings.append(
+                    AssetWarning(
+                        asset_id=layer.asset_ref,
+                        scene_id=scene.scene_id,
+                        stage="RENDER",
+                        code="MISSING_ASSET_POLICY_APPLIED",
+                        message=(
+                            f"Layer {layer.layer_id} (role={layer.role}) "
+                            f"missing asset '{layer.asset_ref}'; "
+                            f"policy={policy}"
+                        ),
+                        fallback_used=policy,
+                    )
+                )
+                log.warning(
+                    "render.missing_asset_policy",
+                    job_id=ctx.job_id,
+                    scene_id=scene.scene_id,
+                    layer_id=layer.layer_id,
+                    role=layer.role,
+                    asset_ref=layer.asset_ref,
+                    policy=policy,
+                )
+                if policy == "fail_request":
+                    raise StageError(
+                        self.name,
+                        "REQUIRED_ASSET_MISSING",
+                        f"Required layer {layer.layer_id} in scene "
+                        f"{scene.scene_id} missing asset "
+                        f"'{layer.asset_ref}' (policy=fail_request)",
+                        retryable=False,
+                    )
+                if policy == "skip_scene":
+                    ctx.skipped_scenes.add(scene.scene_id)
+                    break  # no need to check remaining layers

@@ -7,8 +7,16 @@ import subprocess
 from maker8.models.common import EngineVersions
 
 
-def collect_engine_versions() -> EngineVersions:
-    """Detect installed versions of MoviePy, FFmpeg, and yt-dlp."""
+def collect_engine_versions(ytdlp_executable: str = "yt-dlp") -> EngineVersions:
+    """Detect installed versions of MoviePy, FFmpeg, and yt-dlp.
+
+    Parameters
+    ----------
+    ytdlp_executable:
+        Path or command name for the yt-dlp binary.  Defaults to ``"yt-dlp"``
+        (resolved via ``$PATH``), but callers should pass the managed path
+        from ``Settings`` when available.
+    """
     versions = EngineVersions()
 
     try:
@@ -32,7 +40,7 @@ def collect_engine_versions() -> EngineVersions:
 
     try:
         out = subprocess.run(
-            ["yt-dlp", "--version"],
+            [ytdlp_executable, "--version"],
             capture_output=True,
             text=True,
             timeout=10,

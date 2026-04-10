@@ -39,12 +39,14 @@ Responsibilities:
 
 ---
 
-### B) Publisher Worker
+### B) Publisher Worker ⚠️ FUTURE – NOT YET IMPLEMENTED
+
+> **Status**: This component is designed but not yet built. Target release: TBD.
 
 * Dockerized
 * Scale độc lập
 
-Responsibilities:
+Responsibilities (planned):
 
 * Consume `video.render.result.v1`
 * Download mp4 từ Dropbox (path + file_id + rev)
@@ -59,9 +61,9 @@ Responsibilities:
 | ------------------------- | --------------- |
 | `video.render.request.v1` | Job đầu vào     |
 | `video.render.result.v1`  | Render handoff  |
-| `video.publish.result.v1` | Publish outcome |
+| `video.publish.result.v1` | Publish outcome ⚠️ Future |
 | `video.render.dlq.v1`     | DLQ render      |
-| `video.publish.dlq.v1`    | DLQ publish     |
+| `video.publish.dlq.v1`    | DLQ publish ⚠️ Future |
 
 ---
 

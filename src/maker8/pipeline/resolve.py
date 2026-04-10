@@ -7,6 +7,7 @@ from maker8.observability.helpers import sanitize_url
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.stage import Stage
 from maker8.plugins.registry import PluginRegistry
+from maker8.plugins.sources.youtube import YtdlpError
 from maker8.retry import StageError
 from maker8.utils.logging import get_logger
 
@@ -31,7 +32,8 @@ class ResolveAssetsStage(Stage):
                 connector = self._registry.get_source(kind)
             except KeyError as exc:
                 raise StageError(
-                    self.name, "UNSUPPORTED_SOURCE",
+                    self.name,
+                    "UNSUPPORTED_SOURCE",
                     f"No connector for source kind={kind!r}",
                     retryable=False,
                 ) from exc
@@ -78,9 +80,32 @@ class ResolveAssetsStage(Stage):
                 )
                 code = _classify_value_error(str(exc))
                 raise StageError(
-                    self.name, code,
+                    self.name,
+                    code,
                     f"Failed to resolve asset {asset.id}: {exc}",
                     retryable=False,
+                ) from exc
+            except YtdlpError as exc:
+                # Structured yt-dlp error with classification already done
+                log.error(
+                    "resolve.asset.failure",
+                    job_id=ctx.job_id,
+                    asset_id=asset.id,
+                    asset_type=asset_type,
+                    source_kind=kind,
+                    connector=connector_name,
+                    url=source_url,
+                    error_type="YtdlpError",
+                    error_code=exc.code,
+                    error_message=str(exc),
+                    stderr_summary=exc.stderr_summary,
+                    retryable=exc.retryable,
+                )
+                raise StageError(
+                    self.name,
+                    exc.code,
+                    str(exc),
+                    retryable=exc.retryable,
                 ) from exc
             except Exception as exc:
                 log.error(
@@ -97,7 +122,8 @@ class ResolveAssetsStage(Stage):
                     error_message=str(exc),
                 )
                 raise StageError(
-                    self.name, "RESOLVE_FAILED",
+                    self.name,
+                    "RESOLVE_FAILED",
                     f"Failed to resolve asset {asset.id}: {exc}",
                 ) from exc
 

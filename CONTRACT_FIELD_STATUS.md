@@ -11,6 +11,7 @@
 | **ACTIVE** | Field is read and acted upon by maker8 rendering pipeline |
 | **PASS-THROUGH** | Field is stored in context / forwarded to result but not interpreted |
 | **RESERVED** | Field exists in schema but is not consumed — reserved for future use |
+| **DEPRECATED** | Field still exists for backward compatibility but should not be relied upon — will be removed |
 
 ---
 
@@ -19,11 +20,12 @@
 | Field | Type | Status | Notes |
 |-------|------|--------|-------|
 | `job_id` | `str` | **ACTIVE** | Pipeline context key, file naming |
-| `spec_version` | `str` | **ACTIVE** | Validated against supported versions |
+| `spec_version` | `str` | **ACTIVE** | Validated against `{"1.0", "2.0"}` |
 | `render_spec` | `RenderSpec` | **ACTIVE** | Core pipeline input |
 | `dry_run` | `bool` | **ACTIVE** | When `true`, pipeline skips DOWNLOAD→UPLOAD (validate + emit only) |
 | `canvas_profile` | `str?` | **ACTIVE** | Forwarded to result and manifest |
-| `publish_intent` | `str` | **PASS-THROUGH** | Not interpreted by maker8; forwarded for downstream use |
+| `publish_intent` | `str` | **RESERVED** | Not interpreted by maker8; passed through to result. Reserved for future publish orchestration |
+| `planning` | `PlanningMetadata?` | **ACTIVE** | V2: scene count validation, forwarded to result |
 | `uploader_metadata` | `UploaderMetadata` | **ACTIVE** | Forwarded to result, manifest, and Dropbox |
 | `result` | `ResultDestination` | **ACTIVE** | Topic and key used for result/DLQ routing |
 | `trace` | `Trace` | **PASS-THROUGH** | Stored in context for correlation tracing |
@@ -33,7 +35,7 @@
 | Field | Type | Status | Notes |
 |-------|------|--------|-------|
 | `type` | `str` | **RESERVED** | Always "kafka"; hardcoded in pipeline |
-| `topic` | `str` | **ACTIVE** | Used by `emit.py:_resolve_topic()` and `orchestrator.py:_send_failed_result()` for result routing; falls back to config default |
+| `topic` | `str` | **ACTIVE** | Used by `emit.py:resolve_result_topic()` and `orchestrator.py:_send_failed_result()` for result routing; falls back to config default |
 | `key` | `str` | **ACTIVE** | Used as Kafka message key in emit and failed-result paths; falls back to `job_id` |
 
 ## Trace
@@ -41,6 +43,15 @@
 | Field | Type | Status | Notes |
 |-------|------|--------|-------|
 | `correlation_id` | `str` | **PASS-THROUGH** | Forwarded to result; not analyzed |
+
+## PlanningMetadata (V2)
+
+| Field | Type | Status | Notes |
+|-------|------|--------|-------|
+| `target_duration_sec` | `float?` | **PASS-THROUGH** | Forwarded; not consumed by render pipeline |
+| `duration_source` | `str` | **PASS-THROUGH** | Forwarded; not consumed by render pipeline |
+| `scene_count_policy_version` | `str` | **PASS-THROUGH** | Forwarded; not consumed by render pipeline |
+| `planned_scene_count` | `int?` | **ACTIVE** | Validated against actual scene count in V2 |
 
 ---
 
@@ -81,6 +92,15 @@
 |-------|------|--------|-------|
 | `narration` | `NarrationDefaults` | **ACTIVE** | Fallback TTS config |
 | `scene_timing` | `SceneTiming` | **ACTIVE** | Duration padding |
+| `subtitles` | `SubtitleDefaults` | **ACTIVE** | V2: global subtitle defaults |
+
+## SubtitleDefaults (V2)
+
+| Field | Type | Status | Notes |
+|-------|------|--------|-------|
+| `enabled` | `bool` | **ACTIVE** | Master subtitle toggle (default: `false`) |
+| `source` | `str` | **ACTIVE** | `"narration"` or `"custom"` |
+| `max_lines` | `int` | **ACTIVE** | Maximum lines for subtitle text rendering |
 
 ## NarrationDefaults
 
@@ -135,6 +155,15 @@
 | `audio_tracks` | `list[AudioTrack]` | **ACTIVE** | Mixed into scene audio |
 | `effects` | `list[EffectInstance]` | **ACTIVE** | Applied via plugin registry |
 | `transition_out` | `Transition?` | **ACTIVE** | Duration used in scene timing |
+| `subtitle` | `SceneSubtitle?` | **ACTIVE** | V2: per-scene subtitle override |
+
+## SceneSubtitle (V2)
+
+| Field | Type | Status | Notes |
+|-------|------|--------|-------|
+| `enabled` | `bool?` | **ACTIVE** | Scene-level override of `defaults.subtitles.enabled` |
+| `source` | `str` | **ACTIVE** | `"narration"` or `"custom"` |
+| `text` | `str?` | **ACTIVE** | Required when `source="custom"` |
 
 ## SceneNarration
 
@@ -164,6 +193,9 @@
 | `opacity` | `float` | **ACTIVE** | `with_opacity()` effect |
 | `rotation_deg` | `float` | **ACTIVE** | `rotated()` effect |
 | `scale` | `float` | **ACTIVE** | Dimension scaling |
+| `role` | `str?` | **ACTIVE** | V2: semantic role (`primary_visual`, `title`, etc.) |
+| `required` | `bool` | **ACTIVE** | V2: whether layer is required for scene viability |
+| `missing_asset_policy` | `str` | **ACTIVE** | V2: `drop_layer` / `skip_scene` / `scene_placeholder` / `fail_request` |
 | `asset_ref` | `str?` | **ACTIVE** | Asset lookup for image/video layers |
 | `fit` | `str?` | **ACTIVE** | "cover" / "contain" fit mode |
 | `align` | `str?` | **RESERVED** | Defined but not consumed; rect handles positioning |
@@ -238,7 +270,7 @@
 |-------|------|--------|-------|
 | `platform` | `str` | **ACTIVE** | Passed to result, used in canonicalization |
 | `account_ref` | `str` | **ACTIVE** | Passed to result, used in canonicalization |
-| `variant` | `str` | **PASS-THROUGH** | Not consumed by maker8 |
+| `variant` | `str` | **RESERVED** | Not consumed by maker8; publisher worker not yet implemented |
 | `enabled` | `bool` | **PASS-THROUGH** | Not consumed by maker8 |
 | `metadata` | `dict[str, Any]` | **RESERVED** | Future: platform-specific metadata |
 | `params` | `dict[str, Any]` | **RESERVED** | Future: platform-specific params |
@@ -249,15 +281,56 @@
 |-------|------|--------|-------|
 | `targets` | `list[PublishTarget]` | **ACTIVE** | Forwarded to render result |
 
+## UploaderMetadata
+
+| Field | Type | Status | Notes |
+|-------|------|--------|-------|
+| `channel_id` | `str` | **DEPRECATED** | Auto-derived from `publish.targets[].account_ref`; do not set independently |
+| `title` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `short_title` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `summary` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `description` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `lang` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `keywords` | `list[str]` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `tags` | `list[str]` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `hashtags` | `list[str]` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `category` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `visibility` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `scheduled_publish_at` | `str?` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `content_rating` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `thumbnail_ref` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `thumbnail_source_url` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `thumbnail_strategy` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `source_attributions` | `list[SourceAttribution]` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `credits` | `list[str]` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `canonical_url` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+| `cta_url` | `str` | **PASS-THROUGH** | Forwarded to result and manifest |
+
+## SourceAttribution
+
+| Field | Type | Status | Notes |
+|-------|------|--------|-------|
+| `asset_ref` | `str` | **PASS-THROUGH** | Forwarded in uploader_metadata |
+| `provider` | `str` | **PASS-THROUGH** | Forwarded in uploader_metadata |
+| `source_url` | `str` | **PASS-THROUGH** | Forwarded in uploader_metadata |
+| `creator` | `str` | **PASS-THROUGH** | Forwarded in uploader_metadata |
+| `license` | `str` | **PASS-THROUGH** | Forwarded in uploader_metadata |
+| `credit_text` | `str` | **PASS-THROUGH** | Forwarded in uploader_metadata |
+
 ---
 
 ## Summary
 
 | Status | Count | Percentage |
 |--------|-------|------------|
-| **ACTIVE** | ~59 | 72% |
-| **PASS-THROUGH** | ~6 | 7% |
-| **RESERVED** | ~17 | 21% |
+| **ACTIVE** | ~70 | 62% |
+| **PASS-THROUGH** | ~28 | 25% |
+| **RESERVED** | ~14 | 12% |
+| **DEPRECATED** | 1 | 1% |
+
+### Deprecated fields
+
+1. `UploaderMetadata.channel_id` — auto-derived from `publish.targets[].account_ref`; will be removed
 
 ### Reserved fields (not yet consumed by maker8)
 
@@ -268,5 +341,7 @@
 5. `Transition.type` — future: support fade, wipe, etc. (currently always crossfade)
 6. `PublishTarget.metadata` — future: platform-specific title/description
 7. `PublishTarget.params` — future: platform-specific upload params
-8. `ResultDestination.type` — future: support non-Kafka result delivery
-9. `SafeArea.*` — all 4 inset fields reserved
+8. `PublishTarget.variant` — future: publisher worker not yet implemented
+9. `ResultDestination.type` — future: support non-Kafka result delivery
+10. `RenderRequest.publish_intent` — future: publish orchestration (not interpreted by maker8)
+11. `SafeArea.*` — all 4 inset fields reserved

@@ -15,6 +15,31 @@ from maker8.utils.versions import collect_engine_versions
 log = get_logger(__name__)
 
 
+# ── Module-level helpers (shared with orchestrator failure path) ──────────────
+
+
+def resolve_result_topic(ctx: PipelineContext, default_topic: str) -> str:
+    """Return the Kafka topic for the result message.
+
+    Uses the per-request ``result_destination.topic`` when present,
+    otherwise falls back to *default_topic*.
+    """
+    rd = ctx.result_destination
+    if rd and rd.topic:
+        return rd.topic
+    return default_topic
+
+
+def resolve_result_key(ctx: PipelineContext) -> str:
+    """Return the Kafka message key for the result message.
+
+    Uses the per-request ``result_destination.key`` when present,
+    otherwise falls back to ``ctx.job_id``.
+    """
+    rd = ctx.result_destination
+    return (rd.key if (rd and rd.key) else ctx.job_id) or ctx.job_id
+
+
 class EmitResultStage(Stage):
     def __init__(self, producer: KafkaProducer, result_topic: str) -> None:
         self._producer = producer
@@ -24,16 +49,9 @@ class EmitResultStage(Stage):
     def name(self) -> RenderStage:
         return RenderStage.EMIT_RESULT
 
-    def _resolve_topic(self, ctx: PipelineContext) -> str:
-        """Use per-request result destination if specified, otherwise default."""
-        rd = ctx.result_destination
-        if rd and rd.topic:
-            return rd.topic
-        return self._default_topic
-
     def execute(self, ctx: PipelineContext) -> None:
         status = JobStatus.PARTIAL if ctx.is_degraded else JobStatus.DONE
-        topic = self._resolve_topic(ctx)
+        topic = resolve_result_topic(ctx, self._default_topic)
         log.info(
             "emit.start",
             job_id=ctx.job_id,
@@ -44,8 +62,7 @@ class EmitResultStage(Stage):
         try:
             result = self._build_result(ctx)
             payload = result.model_dump(mode="json", by_alias=True)
-            rd = ctx.result_destination
-            key = rd.key if (rd and rd.key) else ctx.job_id
+            key = resolve_result_key(ctx)
             self._producer.send(topic, key=key, value=payload)
             RESULT_EMITTED.labels(status=status.value).inc()
             log.info(
@@ -63,7 +80,8 @@ class EmitResultStage(Stage):
                 error_message=str(exc),
             )
             raise StageError(
-                self.name, "EMIT_FAILED",
+                self.name,
+                "EMIT_FAILED",
                 f"Failed to produce render result to {topic}: {exc}",
             ) from exc
 

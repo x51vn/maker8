@@ -22,6 +22,7 @@ from maker8.models.common import (
     Trace,
 )
 from render_contracts.render_spec import (  # noqa: F401
+    PlanningMetadata,
     RenderRequest,
     ResultDestination,
     UploaderMetadata,
@@ -30,6 +31,7 @@ from render_contracts.render_spec import (  # noqa: F401
 __all__ = [
     "DLQPayload",
     "DropboxOutput",
+    "PlanningMetadata",
     "RenderRequest",
     "RenderResult",
     "ResultDestination",
