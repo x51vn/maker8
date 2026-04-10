@@ -251,7 +251,7 @@ class TestEditor8CrossRepoContract:
         payload = _load_fixture("golden_editor8_full_request.json")
         req = RenderRequest.model_validate(payload)
         um = req.uploader_metadata
-        assert um.channel_id == "yt:test-channel"
+        assert um.channel_id == "channel:test-channel"
         assert um.title == "Test Video Title"
         assert um.lang == "vi"
         assert um.visibility == "private"

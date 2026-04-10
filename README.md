@@ -43,7 +43,7 @@ Kafka ──► RenderConsumer ──► Orchestrator ──► [Stage pipeline]
 | 1 | `VALIDATE` | Validate spec structure, enforce rules, compute `job_key` | No |
 | 2 | `RESOLVE_ASSETS` | Map each asset to a download plan via source connectors | Yes |
 | 3 | `DOWNLOAD` | Download all resolved assets to local disk | Yes |
-| 4 | `NORMALIZE` | Normalize media files (codec, resolution) via FFmpeg | No |
+| 4 | `NORMALIZE` | Normalize media files (codec, resolution) via FFmpeg | Yes |
 | 5 | `TTS` | Synthesize narration audio for each scene | Yes |
 | 6 | `RENDER` | Compose scenes into final video via MoviePy/FFmpeg | No |
 | 7 | `UPLOAD_DROPBOX` | Upload `.mp4` + `.manifest.json` to Dropbox | Yes |
@@ -53,13 +53,21 @@ Kafka ──► RenderConsumer ──► Orchestrator ──► [Stage pipeline]
 
 The `VALIDATE` stage enforces:
 
-- `spec_version` must be `"1.0"` (or other supported versions)
+- `spec_version` must be `"1.0"` or `"2.0"`
 - Canvas `w` > 0, `h` > 0, `fps` > 0
 - At least one scene must exist
 - All `scene_id` values must be unique
 - All `asset.id` values must be unique
 - Every scene must have non-empty `narration.text`
 - All `asset_ref` values in layers and audio tracks must reference a declared asset
+
+#### V2-specific validation (`spec_version: "2.0"`)
+
+- `planning.planned_scene_count` (if present) must match actual scene count
+- Layer `role` must be one of: `primary_visual`, `supporting_visual`, `title`, `logo`, `cta`, `decorative_text`
+- Layer `missing_asset_policy` must be one of: `drop_layer`, `skip_scene`, `scene_placeholder`, `fail_request`
+- Scene `subtitle.source` must be `"narration"` or `"custom"`
+- `subtitle.source="custom"` requires non-empty `subtitle.text`
 
 ### Retry Policy
 
@@ -287,7 +295,7 @@ A visual layer within a scene. Type is `"image"`, `"video"`, or `"text"`.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `codec` | string | `"libx264"` | Video codec |
+| `codec` | string | `"auto"` | Video codec (auto-selects h264_nvenc or libx264) |
 | `audio_codec` | string | `"aac"` | Audio codec |
 | `bitrate` | string | `"4000k"` | Video bitrate |
 | `audio_bitrate` | string | `"192k"` | Audio bitrate |

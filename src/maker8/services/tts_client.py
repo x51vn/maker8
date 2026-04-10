@@ -410,16 +410,26 @@ class TTSService:
         )
 
     def has_provider(self) -> bool:
-        """Return True if at least one TTS provider is available."""
+        """Return True if at least one TTS provider is available.
+
+        Notes:
+            - ``gtts``: always available; no credentials required.
+            - ``google_cloud``: always available; key ring gives per-job
+              service-account credentials, but the client falls back to
+              Application Default Credentials (ADC) when no key ring is
+              loaded – ADC is always present in GCE / Cloud Run / Workload
+              Identity environments.
+            - ``elevenlabs``: requires a key ring *or* the single env-var key.
+        """
         if self._default_provider == "gtts":
             return True  # gTTS uses no API key
-        if self._default_provider == "google_cloud" and self._google_ring:
+        if self._default_provider == "google_cloud":
+            # ADC is always available as a fallback when no key ring is loaded,
+            # so google_cloud can always synthesise without explicit credentials.
             return True
-        if self._default_provider == "elevenlabs" and (
+        return self._default_provider == "elevenlabs" and bool(
             self._elevenlabs_ring or self._settings.elevenlabs_api_key
-        ):
-            return True
-        return False
+        )
 
     # ── Per-video rotation ───────────────────────────────────────────
 
@@ -507,8 +517,8 @@ class TTSService:
             )
             try:
                 return _future.result(timeout=timeout_sec)
-            except concurrent.futures.TimeoutError:
+            except concurrent.futures.TimeoutError as exc:
                 raise TimeoutError(
                     f"TTS synthesis timed out after {timeout_sec:.0f}s "
                     f"(provider={provider_name!r}, chars={len(text)})"
-                )
+                ) from exc

@@ -258,7 +258,7 @@ DLQ is emitted when:
 | Field | Status | Evidence |
 |-------|--------|----------|
 | `format` | **ACTIVE** | `plugins/sources/youtube.py` — used by yt-dlp connector |
-| `max_duration_sec` | **RESERVED** | Not consumed by any connector |
+| `max_duration_sec` | **ACTIVE** | `plugins/sources/youtube.py` — filters out videos exceeding this limit (seconds); defaults to 600 |
 
 > ⚠️ `AssetSourceOptions.format` is marked RESERVED in `CONTRACT_FIELD_STATUS.md` but is **ACTIVE** in runtime. This is drift D-004.
 
@@ -586,15 +586,14 @@ maker8's role is **pass-through** for attribution. It does not validate or enric
 
 1. `Canvas.safe_area` — future: constrain layer placement
 2. `SceneTiming.duration_mode` — future: support fixed/manual duration modes
-3. `AssetSourceOptions.max_duration_sec` — future: download duration limits
-4. `Layer.align` — future: alignment within rect (currently handled by anchor/rect)
-5. `Transition.type` — future: support fade, wipe, etc. (currently always crossfade)
-6. `PublishTarget.metadata` — future: platform-specific metadata
-7. `PublishTarget.params` — future: platform-specific upload params
-8. `ResultDestination.type` — always "kafka"; hardcoded
-9. `PublishTarget.variant` — not consumed
-10. `PublishTarget.enabled` — not consumed
-11. `RenderRequest.publish_intent` — not consumed
+3. `Layer.align` — future: alignment within rect (currently handled by anchor/rect)
+4. `Transition.type` — future: support fade, wipe, etc. (currently always crossfade)
+5. `PublishTarget.metadata` — future: platform-specific metadata
+6. `PublishTarget.params` — future: platform-specific upload params
+7. `ResultDestination.type` — always "kafka"; hardcoded
+8. `PublishTarget.variant` — not consumed
+9. `PublishTarget.enabled` — not consumed
+10. `RenderRequest.publish_intent` — not consumed
 
 ### Architectural limitations
 

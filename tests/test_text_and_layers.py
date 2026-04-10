@@ -202,3 +202,135 @@ class TestLayerWarnings:
         clip = _build_scene(scene, ri, canvas, defaults)
         assert clip is not None
         assert len(ri.warnings) == 0
+
+
+# ── Audio stripping regression ───────────────────────────────────────────────
+
+
+class TestVideoLayerAudioStripped:
+    """Regression: video layers must NOT carry source audio into the composition."""
+
+    def test_build_layer_clip_video_has_no_audio(self, tmp_path: Path) -> None:
+        """_build_video must return a clip with audio=None."""
+        from unittest.mock import MagicMock, patch
+
+        mock_clip = MagicMock()
+        mock_clip.duration = 5.0
+        mock_clip.audio = MagicMock(name="source_audio")  # has audio
+
+        silent_clip = MagicMock()
+        silent_clip.duration = 5.0
+        silent_clip.audio = None
+        mock_clip.without_audio.return_value = silent_clip
+        # Chain: after without_audio all subsequent calls return silent_clip
+        silent_clip.subclipped.return_value = silent_clip
+        silent_clip.with_position.return_value = silent_clip
+
+        layer = Layer(
+            layer_id="v1",
+            type="video",
+            rect=Rect(x=0, y=0, w=1920, h=1080),
+            asset_ref="vid1",
+        )
+        canvas = Canvas(w=1920, h=1080, fps=30)
+
+        with (
+            patch("maker8.rendering.layers.VideoFileClip", return_value=mock_clip),
+            patch("maker8.rendering.layers._apply_fit", return_value=silent_clip),
+            patch("maker8.rendering.layers._apply_geometry", return_value=silent_clip),
+        ):
+            from maker8.rendering.layers import build_layer_clip
+
+            result = build_layer_clip(layer, {"vid1": tmp_path / "fake.mp4"}, 5.0, canvas)
+
+        mock_clip.without_audio.assert_called_once()
+        assert result is not None
+        assert result.audio is None
+
+    def test_color_overlay_output_has_no_audio(self) -> None:
+        """ColorOverlayEffect must not re-attach source audio to output."""
+        from unittest.mock import MagicMock
+
+        import numpy as np
+
+        from maker8.plugins.effects.color_overlay import ColorOverlayEffect
+
+        frames = np.zeros((10, 10, 3), dtype=np.uint8)
+        source_clip = MagicMock()
+        source_clip.fps = 30.0
+        source_clip.duration = 2.0
+        source_clip.audio = MagicMock(name="source_audio")
+        source_clip.get_frame.return_value = frames
+
+        instance = {
+            "effect_id": "effect:color_overlay",
+            "params": {"color": "#FF0000", "opacity": 0.3},
+        }
+        effect = ColorOverlayEffect()
+        result = effect.apply(None, source_clip, instance)
+
+        assert result.audio is None
+
+    def test_blur_output_has_no_audio(self) -> None:
+        """BlurEffect must not re-attach source audio to output."""
+        from unittest.mock import MagicMock
+
+        import numpy as np
+
+        from maker8.plugins.effects.blur import BlurEffect
+
+        frames = np.zeros((10, 10, 3), dtype=np.uint8)
+        source_clip = MagicMock()
+        source_clip.fps = 30.0
+        source_clip.duration = 2.0
+        source_clip.audio = MagicMock(name="source_audio")
+        source_clip.get_frame.return_value = frames
+
+        instance = {"effect_id": "effect:blur", "params": {"radius": 5}}
+        effect = BlurEffect()
+        result = effect.apply(None, source_clip, instance)
+
+        assert result.audio is None
+
+    def test_grayscale_output_has_no_audio(self) -> None:
+        """GrayscaleEffect must not re-attach source audio to output."""
+        from unittest.mock import MagicMock
+
+        import numpy as np
+
+        from maker8.plugins.effects.grayscale import GrayscaleEffect
+
+        frames = np.zeros((10, 10, 3), dtype=np.uint8)
+        source_clip = MagicMock()
+        source_clip.fps = 30.0
+        source_clip.duration = 2.0
+        source_clip.audio = MagicMock(name="source_audio")
+        source_clip.get_frame.return_value = frames
+
+        instance = {"effect_id": "effect:grayscale", "params": {"intensity": 0.5}}
+        effect = GrayscaleEffect()
+        result = effect.apply(None, source_clip, instance)
+
+        assert result.audio is None
+
+    def test_zoom_pan_output_has_no_audio(self) -> None:
+        """ZoomPanEffect must not re-attach source audio to output."""
+        from unittest.mock import MagicMock
+
+        import numpy as np
+
+        from maker8.plugins.effects.zoom_pan import ZoomPanEffect
+
+        frames = np.zeros((100, 100, 3), dtype=np.uint8)
+        source_clip = MagicMock()
+        source_clip.fps = 30.0
+        source_clip.duration = 2.0
+        source_clip.size = (100, 100)
+        source_clip.audio = MagicMock(name="source_audio")
+        source_clip.get_frame.return_value = frames
+
+        instance = {"effect_id": "effect:zoom_pan", "params": {"start_zoom": 1.0, "end_zoom": 1.2}}
+        effect = ZoomPanEffect()
+        result = effect.apply(None, source_clip, instance)
+
+        assert result.audio is None

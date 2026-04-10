@@ -3,7 +3,7 @@
 Usage::
 
     registry = PluginRegistry()
-    registry.load_defaults()
+    registry.load_defaults(settings)
 
     connector = registry.get_source("youtube")
     plan = connector.resolve(asset_id, source_dict)
@@ -12,8 +12,13 @@ Usage::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from maker8.plugins.base import EffectPlugin, SourceConnectorPlugin
 from maker8.utils.logging import get_logger
+
+if TYPE_CHECKING:
+    from maker8.config import Settings
 
 log = get_logger(__name__)
 
@@ -49,7 +54,7 @@ class PluginRegistry:
 
     # ── Bootstrap ────────────────────────────────────────────────────
 
-    def load_defaults(self) -> None:
+    def load_defaults(self, settings: Settings | None = None) -> None:
         """Register the built-in source connectors and effects shipped with Maker8."""
         from maker8.plugins.effects.blur import BlurEffect
         from maker8.plugins.effects.brightness_contrast import BrightnessContrastEffect
@@ -62,10 +67,30 @@ class PluginRegistry:
         from maker8.plugins.effects.slide import SlideEffect
         from maker8.plugins.effects.zoom_pan import ZoomPanEffect
         from maker8.plugins.sources.http_source import HttpSourceConnector
-        from maker8.plugins.sources.youtube import YouTubeSourceConnector
+        from maker8.plugins.sources.youtube import (
+            YouTubeRuntimeConfig,
+            YouTubeSourceConnector,
+            resolve_ytdlp_path,
+        )
+
+        # Build YouTube connector config from settings
+        if settings:
+            yt_exe = resolve_ytdlp_path(settings.ytdlp_path, settings.ytdlp_bin_dir)
+            yt_cfg = YouTubeRuntimeConfig(
+                executable=yt_exe,
+                cookies_file=settings.ytdlp_cookies_file,
+                cookies_from_browser=settings.ytdlp_cookies_from_browser,
+                user_agent=settings.ytdlp_user_agent,
+                extractor_args=settings.ytdlp_extractor_args,
+                verbose_on_failure=settings.ytdlp_verbose_on_failure,
+                resolve_timeout_sec=settings.ytdlp_resolve_timeout_sec,
+                download_timeout_sec=settings.ytdlp_download_timeout_sec,
+            )
+        else:
+            yt_cfg = YouTubeRuntimeConfig()
 
         # Sources
-        self.register_source("youtube", YouTubeSourceConnector())
+        self.register_source("youtube", YouTubeSourceConnector(config=yt_cfg))
         self.register_source("http", HttpSourceConnector())
 
         # Effects

@@ -119,7 +119,4 @@ class ZoomPanEffect(EffectPlugin):
         result = VideoClip(_make_frame, duration=duration)
         result = result.with_fps(source_clip.fps or 30)
 
-        if source_clip.audio is not None:
-            result = result.with_audio(source_clip.audio)
-
         return result

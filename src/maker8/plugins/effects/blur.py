@@ -72,7 +72,4 @@ class BlurEffect(EffectPlugin):
 
         result = result.with_fps(source_clip.fps or 30)
 
-        if source_clip.audio is not None:
-            result = result.with_audio(source_clip.audio)
-
         return result

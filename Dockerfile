@@ -30,6 +30,11 @@ COPY --from=builder /dist/*.whl /tmp/
 RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl \
     && yt-dlp --version
 
+# Create managed yt-dlp directory and seed with pip-installed version
+RUN mkdir -p /opt/maker8/bin/yt-dlp \
+    && cp "$(which yt-dlp)" /opt/maker8/bin/yt-dlp/current \
+    && chmod +x /opt/maker8/bin/yt-dlp/current
+
 # Default TTS presets & env template
 COPY config/ config/
 COPY .env.example .env.example

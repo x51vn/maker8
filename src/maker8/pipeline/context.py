@@ -12,15 +12,11 @@ from pathlib import Path
 from typing import Any
 
 from maker8.models.common import AssetWarning, DropboxFileRef, OutputMeta, Trace
-from maker8.models.contracts import ResultDestination
+from maker8.models.contracts import RenderRequest, ResultDestination
 from maker8.models.spec import RenderSpec, UploaderMetadata
 
 # Pattern for safe job IDs: lowercase alphanumeric, hyphens, underscores
-_SAFE_JOB_ID_CHARS = frozenset(
-    "abcdefghijklmnopqrstuvwxyz"
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "0123456789-_"
-)
+_SAFE_JOB_ID_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
 
 # ── TTS result (pipeline-internal) ──────────────────────────────────────────
 
@@ -43,6 +39,9 @@ class PipelineContext:
     render_spec: RenderSpec
     job_key: str = ""
     trace: Trace = field(default_factory=Trace)
+
+    # ── Full request reference (for v2 validations) ──────────────────
+    request: RenderRequest | None = None
 
     # ── Request-level flags ──────────────────────────────────────────
     dry_run: bool = False
@@ -94,17 +93,17 @@ class PipelineContext:
         canvas_profile: str | None = None,
         uploader_metadata: UploaderMetadata | None = None,
         result_destination: ResultDestination | None = None,
+        request: RenderRequest | None = None,
     ) -> PipelineContext:
         # Validate job_id to prevent path traversal attacks
         if not job_id or not all(c in _SAFE_JOB_ID_CHARS for c in job_id):
-            raise ValueError(
-                f"Invalid job_id: must contain only [a-zA-Z0-9_-], got {job_id!r}"
-            )
+            raise ValueError(f"Invalid job_id: must contain only [a-zA-Z0-9_-], got {job_id!r}")
         wd = base_work_dir / job_id
         return cls(
             job_id=job_id,
             render_spec=render_spec,
             trace=trace,
+            request=request,
             work_dir=wd,
             assets_dir=wd / "assets",
             tts_dir=wd / "tts",

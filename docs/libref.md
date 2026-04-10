@@ -1,1 +1,0 @@
-1. Sử dụng moviepy 2 cho việc xử lý video.

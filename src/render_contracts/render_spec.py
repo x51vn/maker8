@@ -39,12 +39,19 @@ class NarrationDefaults(BaseModel):
 class SceneTiming(BaseModel):
     head_pad_sec: float = 0.15
     tail_pad_sec: float = 0.45
-    duration_mode: str = "auto_from_tts"
+    duration_mode: str = "auto_from_tts"  # RESERVED – maker8 always derives duration from TTS
+
+
+class SubtitleDefaults(BaseModel):
+    enabled: bool = False
+    source: str = "narration"
+    max_lines: int = 2
 
 
 class Defaults(BaseModel):
     narration: NarrationDefaults = Field(default_factory=NarrationDefaults)
     scene_timing: SceneTiming = Field(default_factory=SceneTiming)
+    subtitles: SubtitleDefaults = Field(default_factory=SubtitleDefaults)
 
 
 # ── Assets ───────────────────────────────────────────────────────────────────
@@ -107,10 +114,15 @@ class Layer(BaseModel):
     rotation_deg: float = 0.0
     scale: float = 1.0
 
+    # V2 semantic role & visual policy
+    role: str | None = None
+    required: bool = False
+    missing_asset_policy: str = "drop_layer"
+
     # image / video
     asset_ref: str | None = None
     fit: str | None = None
-    align: str | None = None
+    align: str | None = None  # RESERVED – layer alignment not yet implemented in maker8 renderer
     trim: Trim | None = None
 
     # text
@@ -155,6 +167,12 @@ class SceneNarration(BaseModel):
     tts_preset_ref: str | None = None
 
 
+class SceneSubtitle(BaseModel):
+    enabled: bool | None = None
+    source: str = "narration"
+    text: str | None = None
+
+
 class Scene(BaseModel):
     scene_id: str
     duration: float | None = None
@@ -163,6 +181,7 @@ class Scene(BaseModel):
     audio_tracks: list[AudioTrack] = Field(default_factory=list)
     effects: list[EffectInstance] = Field(default_factory=list)
     transition_out: Transition | None = None
+    subtitle: SceneSubtitle | None = None
 
 
 # ── Output ───────────────────────────────────────────────────────────────────
@@ -183,6 +202,7 @@ class OutputConfig(BaseModel):
 class PublishTarget(BaseModel):
     platform: str
     account_ref: str
+    # RESERVED – publisher worker not yet implemented; value is ignored at runtime.
     variant: str = ""
     enabled: bool = True
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -214,6 +234,8 @@ class UploaderMetadata(BaseModel):
     Per-platform overrides live in ``PublishTarget.metadata``.
     """
 
+    # DEPRECATED – auto-derived from publish.targets[].account_ref.
+    # Kept for backward compatibility; will be removed in a future version.
     channel_id: str = ""
     title: str = ""
     short_title: str = ""
@@ -239,6 +261,13 @@ class UploaderMetadata(BaseModel):
 # ── Root specs ───────────────────────────────────────────────────────────────
 
 
+class PlanningMetadata(BaseModel):
+    target_duration_sec: float | None = None
+    duration_source: str = ""
+    scene_count_policy_version: str = ""
+    planned_scene_count: int | None = None
+
+
 class RenderSpec(BaseModel):
     spec_version: str = "1.0"
     canvas: Canvas = Field(default_factory=Canvas)
@@ -254,6 +283,7 @@ class Trace(BaseModel):
 
 
 class ResultDestination(BaseModel):
+    # RESERVED – only kafka is supported; value is ignored at runtime.
     type: str = "kafka"
     topic: str = "video.render.result.v1"
     key: str = ""
@@ -267,7 +297,9 @@ class RenderRequest(BaseModel):
     render_spec: RenderSpec
     dry_run: bool = False
     canvas_profile: str | None = None
+    # RESERVED – not interpreted by maker8; passed through to result for editor8.
     publish_intent: str = "render_only"
+    planning: PlanningMetadata | None = None
     uploader_metadata: UploaderMetadata = Field(default_factory=UploaderMetadata)
     result: ResultDestination = Field(default_factory=ResultDestination)
     trace: Trace = Field(default_factory=Trace)

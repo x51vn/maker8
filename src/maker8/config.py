@@ -88,6 +88,24 @@ class Settings(BaseSettings):
     # ── Health files ────────────────────────────────────────────────
     status_file: str = "/tmp/maker8_status.json"
 
+    # ── yt-dlp ──────────────────────────────────────────────────────
+    ytdlp_path: str = ""  # empty → auto-detect from managed dir or PATH
+    ytdlp_bin_dir: Path = Path("/opt/maker8/bin/yt-dlp")
+    ytdlp_cookies_file: str = ""
+    ytdlp_cookies_from_browser: str = ""
+    ytdlp_user_agent: str = ""
+    ytdlp_extractor_args: str = ""
+    ytdlp_verbose_on_failure: bool = True
+    ytdlp_resolve_timeout_sec: int = 120
+    ytdlp_download_timeout_sec: int = 600
+    # Auto-update
+    ytdlp_auto_update_enabled: bool = False
+    ytdlp_channel: str = "stable"  # "stable" | "nightly"
+    ytdlp_update_interval_sec: int = 21600  # 6 hours
+    ytdlp_download_timeout: int = 120
+    ytdlp_verify_checksum: bool = True
+    ytdlp_min_check_interval_sec: int = 300
+
 
 def get_settings() -> Settings:
     """Factory – import once, call where needed."""

@@ -34,7 +34,7 @@ from maker8.observability.metrics import (
 from maker8.observability.state import WorkerState
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.download import DownloadStage
-from maker8.pipeline.emit import EmitResultStage
+from maker8.pipeline.emit import EmitResultStage, resolve_result_key, resolve_result_topic
 from maker8.pipeline.normalize import NormalizeStage
 from maker8.pipeline.render import RenderStageImpl
 from maker8.pipeline.resolve import ResolveAssetsStage
@@ -112,6 +112,7 @@ class Orchestrator:
             canvas_profile=request.canvas_profile,
             uploader_metadata=request.uploader_metadata,
             result_destination=request.result,
+            request=request,
         )
 
         correlation_id = ctx.trace.correlation_id if ctx.trace else ""
@@ -190,14 +191,16 @@ class Orchestrator:
     # ── Stage runner with per-stage retry ────────────────────────────
 
     # Stages skipped when dry_run=True (validate + emit only).
-    _DRY_RUN_SKIP = frozenset({
-        RenderStage.RESOLVE_ASSETS,
-        RenderStage.DOWNLOAD,
-        RenderStage.NORMALIZE,
-        RenderStage.TTS,
-        RenderStage.RENDER,
-        RenderStage.UPLOAD_DROPBOX,
-    })
+    _DRY_RUN_SKIP = frozenset(
+        {
+            RenderStage.RESOLVE_ASSETS,
+            RenderStage.DOWNLOAD,
+            RenderStage.NORMALIZE,
+            RenderStage.TTS,
+            RenderStage.RENDER,
+            RenderStage.UPLOAD_DROPBOX,
+        }
+    )
 
     def _run_stages(self, ctx: PipelineContext) -> None:
         for stage in self._stages:
@@ -336,16 +339,8 @@ class Orchestrator:
                 ),
             )
             payload = result.model_dump(mode="json", by_alias=True)
-            topic = (
-                ctx.result_destination.topic
-                if ctx.result_destination and ctx.result_destination.topic
-                else self._settings.kafka_render_result_topic
-            )
-            key = (
-                ctx.result_destination.key
-                if ctx.result_destination and ctx.result_destination.key
-                else ctx.job_id
-            )
+            topic = resolve_result_topic(ctx, self._settings.kafka_render_result_topic)
+            key = resolve_result_key(ctx)
             self._producer.send(topic, key=key, value=payload)
             RESULT_EMITTED.labels(status="FAILED").inc()
         except Exception:
@@ -398,9 +393,7 @@ class Orchestrator:
         except Exception:
             log.exception("orchestrator.cleanup_error", work_dir=str(wd))
 
-    def _send_invalid_payload_dlq(
-        self, payload: dict[str, Any], exc: Exception
-    ) -> None:
+    def _send_invalid_payload_dlq(self, payload: dict[str, Any], exc: Exception) -> None:
         """Best-effort DLQ for messages that failed RenderRequest validation."""
         try:
             # Extract whatever job_id we can from the raw payload

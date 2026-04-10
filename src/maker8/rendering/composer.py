@@ -23,6 +23,7 @@ from moviepy import (
     ColorClip,
     CompositeAudioClip,
     CompositeVideoClip,
+    ImageClip,
     VideoClip,
     concatenate_videoclips,
 )
@@ -30,7 +31,15 @@ from moviepy.audio.fx import AudioLoop, MultiplyVolume
 from moviepy.video.fx import FadeIn, FadeOut
 
 from maker8.models.common import AssetWarning, OutputMeta
-from maker8.models.spec import AudioTrack, Canvas, Defaults, OutputConfig, RenderSpec, Scene
+from maker8.models.spec import (
+    AudioTrack,
+    Canvas,
+    Defaults,
+    OutputConfig,
+    RenderSpec,
+    Scene,
+    TextStyle,
+)
 from maker8.observability.helpers import Timer
 from maker8.observability.metrics import RENDER_FPS, SCENE_RENDER_DURATION
 from maker8.plugins.base import EffectPlugin
@@ -38,6 +47,7 @@ from maker8.rendering.encoder import EncoderConfig, _cpu_config, resolve_encoder
 from maker8.rendering.ffmpeg_runtime import resolve_ffmpeg_binary
 from maker8.rendering.layers import build_layer_clip
 from maker8.rendering.perf_profile import PerfProfile
+from maker8.rendering.text import render_text_image
 from maker8.utils.color import hex_to_rgb
 from maker8.utils.logging import get_logger
 
@@ -612,27 +622,49 @@ def _build_scene(
         if lc is not None:
             layer_clips.append(lc)
         elif layer.type in ("image", "video") and layer.asset_ref:
-            ri.warnings.append(
-                AssetWarning(
-                    asset_id=layer.asset_ref,
-                    scene_id=scene.scene_id,
-                    stage="RENDER",
-                    code="LAYER_ASSET_MISSING",
-                    message=(
-                        f"Layer {layer.layer_id} ({layer.type}) dropped: "
-                        f"asset_ref '{layer.asset_ref}' not in asset_paths"
-                    ),
-                    fallback_used="layer_skipped",
+            policy = layer.missing_asset_policy
+            # Only emit a warning here when the render stage has NOT already
+            # applied a missing-asset policy for this layer.  The stage ownes
+            # required=True layers (it emits MISSING_ASSET_POLICY_APPLIED);
+            # the composer owns info-level notices for non-required layers.
+            if not layer.required:
+                ri.warnings.append(
+                    AssetWarning(
+                        asset_id=layer.asset_ref,
+                        scene_id=scene.scene_id,
+                        stage="RENDER",
+                        code="LAYER_ASSET_MISSING",
+                        message=(
+                            f"Layer {layer.layer_id} ({layer.type}) "
+                            f"asset_ref '{layer.asset_ref}' not in asset_paths; "
+                            f"policy={policy}"
+                        ),
+                        fallback_used=policy,
+                    )
                 )
-            )
-            log.warning(
-                "composer.layer.asset_missing",
-                job_id=ri.job_id,
-                scene_id=scene.scene_id,
-                layer_id=layer.layer_id,
-                layer_type=layer.type,
-                asset_ref=layer.asset_ref,
-            )
+                log.warning(
+                    "composer.layer.asset_missing",
+                    job_id=ri.job_id,
+                    scene_id=scene.scene_id,
+                    layer_id=layer.layer_id,
+                    layer_type=layer.type,
+                    asset_ref=layer.asset_ref,
+                    policy=policy,
+                )
+            if policy == "scene_placeholder":
+                # Render a grey placeholder with text indicating missing asset
+                placeholder = ColorClip(
+                    size=(layer.rect.w or canvas.w, layer.rect.h or canvas.h),
+                    color=hex_to_rgb("#333333"),
+                ).with_duration(duration)
+                if layer.rect.x or layer.rect.y:
+                    placeholder = placeholder.with_position((layer.rect.x, layer.rect.y))
+                layer_clips.append(placeholder)
+
+    # ── Subtitle layer (V2) ──────────────────────────────────────────
+    subtitle_clip = _build_subtitle_clip(scene, defaults, canvas, duration)
+    if subtitle_clip is not None:
+        layer_clips.append(subtitle_clip)
 
     composite = CompositeVideoClip(layer_clips, size=(canvas.w, canvas.h))
     composite = composite.with_duration(duration)
@@ -679,6 +711,81 @@ def _build_scene(
             composite = plugin.apply(None, composite, effect_inst.model_dump())
 
     return composite
+
+
+# ── Subtitle helper ──────────────────────────────────────────────────────────
+
+_SUBTITLE_STYLE = TextStyle(
+    font_ref="font:roboto:regular",
+    size=36,
+    color="#FFFFFF",
+    stroke_color="#000000",
+    stroke_width=2,
+    line_height=1.3,
+    wrap=True,
+)
+
+_SUBTITLE_HEIGHT = 160
+_SUBTITLE_BOTTOM_MARGIN = 60
+
+
+def _build_subtitle_clip(
+    scene: Scene,
+    defaults: Defaults,
+    canvas: Canvas,
+    duration: float,
+) -> VideoClip | None:
+    """Build a subtitle overlay clip if subtitles are enabled for this scene."""
+    sub_defaults = defaults.subtitles
+
+    # Resolve effective enabled state
+    scene_sub = scene.subtitle
+    if scene_sub is not None and scene_sub.enabled is not None:
+        enabled = scene_sub.enabled
+    else:
+        enabled = sub_defaults.enabled
+
+    if not enabled:
+        return None
+
+    # Resolve source and text
+    source = scene_sub.source if scene_sub is not None else sub_defaults.source
+    if source == "custom" and scene_sub is not None and scene_sub.text:
+        text = scene_sub.text
+    else:
+        text = scene.narration.text
+
+    if not text or not text.strip():
+        return None
+
+    # Respect max_lines
+    max_lines = sub_defaults.max_lines
+    lines = text.strip().split("\n")
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+    text = "\n".join(lines)
+
+    # Respect safe_area
+    bottom_margin = _SUBTITLE_BOTTOM_MARGIN
+    if canvas.safe_area:
+        bottom_margin = max(bottom_margin, canvas.safe_area.bottom)
+
+    sub_w = canvas.w - 80  # 40px padding each side
+    sub_h = _SUBTITLE_HEIGHT
+    y_pos = canvas.h - sub_h - bottom_margin
+
+    arr = render_text_image(
+        text=text,
+        width=sub_w,
+        height=sub_h,
+        style=_SUBTITLE_STYLE,
+        text_align="center",
+        valign="center",
+    )
+
+    clip = ImageClip(arr, is_mask=False).with_duration(duration)
+    clip = clip.with_position((40, y_pos))
+    return clip
 
 
 # ── Audio track helper ───────────────────────────────────────────────────────

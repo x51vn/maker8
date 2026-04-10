@@ -1,0 +1,247 @@
+{
+  "job_id": "job-2026-04-09-v2-example",
+  "spec_version": "2.0",
+  "render_spec": {
+    "spec_version": "2.0",
+    "canvas": {
+      "w": 1080,
+      "h": 1920,
+      "fps": 30,
+      "bg": "#000000"
+    },
+    "defaults": {
+      "narration": {
+        "lang": "vi-VN",
+        "tts_preset_ref": "tts:vi:default"
+      },
+      "scene_timing": {
+        "head_pad_sec": 0.15,
+        "tail_pad_sec": 0.45,
+        "duration_mode": "auto_from_tts"
+      },
+      "subtitles": {
+        "enabled": false,
+        "source": "narration",
+        "max_lines": 2
+      }
+    },
+    "assets": [
+      {
+        "id": "bg-video-1",
+        "type": "video",
+        "source": {
+          "kind": "youtube",
+          "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "options": {
+            "format": "bestvideo[height<=1080]+bestaudio/best",
+            "max_duration_sec": 300
+          }
+        }
+      },
+      {
+        "id": "bg-img-2",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/assets/scene2-bg.jpg",
+          "options": {}
+        }
+      },
+      {
+        "id": "logo-img",
+        "type": "image",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/assets/logo.png",
+          "options": {}
+        }
+      },
+      {
+        "id": "bgm-audio",
+        "type": "audio",
+        "source": {
+          "kind": "http",
+          "url": "https://example.com/assets/background-music.mp3",
+          "options": {}
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "scene_id": "scene_01",
+        "narration": {
+          "text": "Chào mừng bạn đến với video hôm nay."
+        },
+        "layers": [
+          {
+            "layer_id": "scene_01_bg",
+            "type": "video",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "anchor": "top_left",
+            "opacity": 1.0,
+            "asset_ref": "bg-video-1",
+            "fit": "cover",
+            "trim": { "in": 10.0, "out": 25.0 },
+            "role": "primary_visual",
+            "required": true,
+            "missing_asset_policy": "scene_placeholder"
+          },
+          {
+            "layer_id": "scene_01_title",
+            "type": "text",
+            "rect": { "x": 100, "y": 200, "w": 880, "h": 200 },
+            "text": "Tiêu đề Video",
+            "style": {
+              "font_ref": "font:roboto:bold",
+              "size": 64,
+              "color": "#FFFFFF",
+              "stroke_color": "#000000",
+              "stroke_width": 3
+            },
+            "role": "title",
+            "required": false,
+            "missing_asset_policy": "drop_layer"
+          }
+        ],
+        "audio_tracks": [
+          {
+            "asset_ref": "bgm-audio",
+            "volume": 0.15,
+            "loop": true
+          }
+        ],
+        "effects": [],
+        "transition_out": { "type": "crossfade", "duration": 0.5 },
+        "subtitle": null
+      },
+      {
+        "scene_id": "scene_02",
+        "narration": {
+          "text": "Đây là nội dung chính của video."
+        },
+        "layers": [
+          {
+            "layer_id": "scene_02_bg",
+            "type": "image",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "asset_ref": "bg-img-2",
+            "fit": "cover",
+            "role": "primary_visual",
+            "required": true,
+            "missing_asset_policy": "skip_scene"
+          },
+          {
+            "layer_id": "scene_02_logo",
+            "type": "image",
+            "rect": { "x": 40, "y": 40, "w": 120, "h": 120 },
+            "asset_ref": "logo-img",
+            "role": "logo",
+            "required": false,
+            "missing_asset_policy": "drop_layer"
+          }
+        ],
+        "audio_tracks": [
+          {
+            "asset_ref": "bgm-audio",
+            "volume": 0.15,
+            "loop": true
+          }
+        ],
+        "effects": [],
+        "transition_out": null,
+        "subtitle": {
+          "enabled": true,
+          "source": "narration",
+          "text": null
+        }
+      },
+      {
+        "scene_id": "scene_03",
+        "narration": {
+          "text": "Cảm ơn bạn đã xem video."
+        },
+        "layers": [
+          {
+            "layer_id": "scene_03_bg",
+            "type": "image",
+            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "asset_ref": "bg-img-2",
+            "fit": "cover",
+            "role": "primary_visual",
+            "required": true,
+            "missing_asset_policy": "scene_placeholder"
+          },
+          {
+            "layer_id": "scene_03_cta",
+            "type": "text",
+            "rect": { "x": 200, "y": 1600, "w": 680, "h": 100 },
+            "text": "Đăng ký kênh ngay!",
+            "style": {
+              "font_ref": "font:roboto:bold",
+              "size": 48,
+              "color": "#FF0000",
+              "stroke_color": "#FFFFFF",
+              "stroke_width": 2
+            },
+            "role": "cta",
+            "required": false,
+            "missing_asset_policy": "drop_layer"
+          }
+        ],
+        "audio_tracks": [],
+        "effects": [],
+        "transition_out": null,
+        "subtitle": {
+          "enabled": true,
+          "source": "custom",
+          "text": "Cảm ơn! Hãy đăng ký kênh nhé."
+        }
+      }
+    ],
+    "output": {
+      "codec": "libx264",
+      "audio_codec": "aac",
+      "bitrate": "4000k",
+      "audio_bitrate": "192k",
+      "preset": "medium",
+      "pix_fmt": "yuv420p"
+    },
+    "publish": {
+      "targets": [
+        {
+          "platform": "youtube",
+          "account_ref": "yt-channel-main",
+          "variant": "shorts",
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "dry_run": false,
+  "canvas_profile": "shorts_1080x1920",
+  "publish_intent": "render_only",
+  "planning": {
+    "target_duration_sec": 45.0,
+    "duration_source": "user_input",
+    "scene_count_policy_version": "v2.0",
+    "planned_scene_count": 3
+  },
+  "uploader_metadata": {
+    "channel_id": "yt-channel-main",
+    "title": "V2 Example Video",
+    "description": "Example V2 render request with layer roles and subtitles.",
+    "lang": "vi",
+    "keywords": ["example", "v2"],
+    "tags": ["maker8", "v2"],
+    "category": "Education",
+    "visibility": "private"
+  },
+  "result": {
+    "type": "kafka",
+    "topic": "video.render.result.v1",
+    "key": "job-2026-04-09-v2-example"
+  },
+  "trace": {
+    "correlation_id": "corr-v2-example-001"
+  }
+}

@@ -16,6 +16,7 @@ from maker8.rendering.ffmpeg_runtime import (
     diagnose_runtime,
     get_ffmpeg_version,
     resolve_ffmpeg_binary,
+    resolve_ffprobe_binary,
 )
 
 
@@ -86,6 +87,32 @@ class TestResolveFFmpegBinary:
         first = resolve_ffmpeg_binary()
         second = resolve_ffmpeg_binary()
         assert first == second
+
+
+class TestResolveFFprobeBinary:
+    """Tests for resolve_ffprobe_binary()."""
+
+    def test_prefers_sibling_of_explicit_ffmpeg(self, tmp_path: Path) -> None:
+        bindir = tmp_path / "bin"
+        bindir.mkdir()
+        fake_ffmpeg = bindir / "custom-ffmpeg"
+        fake_ffprobe = bindir / "ffprobe"
+        fake_ffmpeg.write_text("#!/bin/sh\n")
+        fake_ffprobe.write_text("#!/bin/sh\n")
+
+        with patch.dict(os.environ, {"MAKER8_FFMPEG_PATH": str(fake_ffmpeg)}):
+            assert resolve_ffprobe_binary() == str(fake_ffprobe)
+
+    def test_falls_back_to_path_when_no_sibling_exists(self) -> None:
+        with (
+            patch("maker8.rendering.ffmpeg_runtime.resolve_ffmpeg_binary", return_value="/opt/bin/ffmpeg"),
+            patch("maker8.rendering.ffmpeg_runtime.Path") as mock_path_cls,
+            patch.object(shutil, "which", return_value="/usr/local/bin/ffprobe"),
+        ):
+            path_instance = mock_path_cls.return_value
+            path_instance.with_name.return_value.is_file.return_value = False
+            path_instance.is_file.return_value = False
+            assert resolve_ffprobe_binary() == "/usr/local/bin/ffprobe"
 
 
 class TestBindMoviepyFfmpeg:
