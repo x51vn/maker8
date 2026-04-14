@@ -7,6 +7,7 @@ for every inbound Kafka message.
 from __future__ import annotations
 
 import shutil
+import time
 from typing import Any
 
 from maker8.config import Settings
@@ -38,6 +39,7 @@ from maker8.pipeline.emit import EmitResultStage, resolve_result_key, resolve_re
 from maker8.pipeline.normalize import NormalizeStage
 from maker8.pipeline.render import RenderStageImpl
 from maker8.pipeline.resolve import ResolveAssetsStage
+from maker8.pipeline.scene_detect import SceneDetectStage
 from maker8.pipeline.stage import Stage
 from maker8.pipeline.tts import TTSStage
 from maker8.pipeline.upload import UploadDropboxStage
@@ -81,6 +83,7 @@ class Orchestrator:
             ValidateStage(),
             ResolveAssetsStage(registry),
             DownloadStage(registry),
+            SceneDetectStage(),
             NormalizeStage(proxy_max_short_edge=profile.proxy_max_short_edge),
             TTSStage(tts_service),
             RenderStageImpl(registry, perf_profile=profile),
@@ -195,6 +198,7 @@ class Orchestrator:
         {
             RenderStage.RESOLVE_ASSETS,
             RenderStage.DOWNLOAD,
+            RenderStage.SCENE_DETECT,
             RenderStage.NORMALIZE,
             RenderStage.TTS,
             RenderStage.RENDER,
@@ -296,19 +300,21 @@ class Orchestrator:
                 RETRIES_SCHEDULED.labels(stage=stage_name).inc()
                 if self._state:
                     self._state.on_retry_sleep(delay)
-                policy.sleep(attempt)
+                time.sleep(delay)
 
             except Exception as exc:
                 stage_timer.stop()
                 STAGE_DURATION.labels(stage=stage_name, status="failed").observe(
                     stage_timer.elapsed_sec
                 )
-                # Wrap unexpected exceptions as non-retryable StageError
+                # Wrap unexpected exceptions as non-retryable StageError.
+                # OSError subclasses (IOError, etc.) are often transient.
+                retryable = isinstance(exc, OSError)
                 raise StageError(
                     stage.name,
                     "UNEXPECTED_ERROR",
                     f"Unexpected error in {stage_name}: {exc}",
-                    retryable=False,
+                    retryable=retryable,
                 ) from exc
 
         # Should not reach here, but just in case

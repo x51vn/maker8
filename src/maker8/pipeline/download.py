@@ -59,12 +59,14 @@ class DownloadStage(Stage):
                 ctx.downloaded_assets[asset_id] = local_path
                 size_bytes = local_path.stat().st_size if local_path.exists() else 0
                 # Record asset in report for RenderResult
-                ctx.asset_report.append({
-                    "asset_id": asset_id,
-                    "source_kind": plan.source_kind,
-                    "filename": local_path.name,
-                    "size_bytes": size_bytes,
-                })
+                ctx.asset_report.append(
+                    {
+                        "asset_id": asset_id,
+                        "source_kind": plan.source_kind,
+                        "filename": local_path.name,
+                        "size_bytes": size_bytes,
+                    }
+                )
                 DOWNLOAD_BYTES.labels(source_kind=plan.source_kind).observe(size_bytes)
                 log.info(
                     "download.asset.success",
@@ -77,13 +79,15 @@ class DownloadStage(Stage):
             except Exception as exc:
                 # Isolate per-asset failure: mark as failed and continue.
                 ctx.failed_assets.add(asset_id)
-                ctx.warnings.append(AssetWarning(
-                    asset_id=asset_id,
-                    stage="DOWNLOAD",
-                    code="DOWNLOAD_FAILED",
-                    message=f"Failed to download asset {asset_id}: {exc}",
-                    fallback_used="asset_skipped",
-                ))
+                ctx.warnings.append(
+                    AssetWarning(
+                        asset_id=asset_id,
+                        stage="DOWNLOAD",
+                        code="DOWNLOAD_FAILED",
+                        message=f"Failed to download asset {asset_id}: {exc}",
+                        fallback_used="asset_skipped",
+                    )
+                )
                 log.warning(
                     "download.asset.skipped",
                     job_id=ctx.job_id,

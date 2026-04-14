@@ -14,6 +14,8 @@ from typing import Any
 from maker8.models.common import AssetWarning, DropboxFileRef, OutputMeta, Trace
 from maker8.models.contracts import RenderRequest, ResultDestination
 from maker8.models.spec import RenderSpec, UploaderMetadata
+from maker8.plugins.base import ResolvedAssetPlan
+from render_contracts.render_spec import SceneBoundary
 
 # Pattern for safe job IDs: lowercase alphanumeric, hyphens, underscores
 _SAFE_JOB_ID_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
@@ -55,8 +57,10 @@ class PipelineContext:
     output_dir: Path = field(default_factory=lambda: Path("/tmp/maker8/output"))
 
     # ── Stage outputs ────────────────────────────────────────────────
-    resolved_plans: dict[str, Any] = field(default_factory=dict)  # asset_id → ResolvedAssetPlan
+    resolved_plans: dict[str, ResolvedAssetPlan] = field(default_factory=dict)
     downloaded_assets: dict[str, Path] = field(default_factory=dict)
+    scene_candidates: dict[str, list[SceneBoundary]] = field(default_factory=dict)
+    scene_detect_reports: list[dict[str, Any]] = field(default_factory=list)
     normalized_assets: dict[str, Path] = field(default_factory=dict)
     tts_results: dict[str, TTSResult] = field(default_factory=dict)
 
@@ -78,6 +82,13 @@ class PipelineContext:
     warnings: list[AssetWarning] = field(default_factory=list)
     failed_assets: set[str] = field(default_factory=set)
     skipped_scenes: set[str] = field(default_factory=set)
+
+    # ── Validation-time inferred values (kept separate from spec) ───
+    inferred_roles: dict[str, str] = field(default_factory=dict)  # layer_id → role
+    inferred_required: set[str] = field(default_factory=set)  # layer_ids
+
+    # Informational warning codes that do not indicate actual degradation.
+    _INFO_CODES: frozenset[str] = frozenset({"SCENE_DETECT_EMPTY"})
 
     # ── Factory ──────────────────────────────────────────────────────
 
@@ -129,5 +140,9 @@ class PipelineContext:
 
     @property
     def is_degraded(self) -> bool:
-        """``True`` when the job completed with at least one tolerated failure."""
-        return bool(self.warnings)
+        """``True`` when the job completed with at least one tolerated failure.
+
+        Informational warnings (e.g. ``SCENE_DETECT_EMPTY``) do not count
+        as degradation.
+        """
+        return any(w.code not in self._INFO_CODES for w in self.warnings)

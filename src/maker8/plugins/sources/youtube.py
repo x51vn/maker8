@@ -28,6 +28,8 @@ _NON_RETRYABLE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"this video is private", re.I), "YTDLP_VIDEO_UNAVAILABLE"),
     (re.compile(r"this video is unavailable", re.I), "YTDLP_VIDEO_UNAVAILABLE"),
     (re.compile(r"this video has been removed", re.I), "YTDLP_VIDEO_UNAVAILABLE"),
+    (re.compile(r"live stream recording is not available", re.I), "YTDLP_VIDEO_UNAVAILABLE"),
+    (re.compile(r"live event will begin", re.I), "YTDLP_VIDEO_UNAVAILABLE"),
     (re.compile(r"requested format is not available", re.I), "YTDLP_FORMAT_UNAVAILABLE"),
     (re.compile(r"unsupported url", re.I), "YTDLP_UNSUPPORTED_URL"),
     (re.compile(r"sign in to confirm", re.I), "YTDLP_AUTH_REQUIRED"),
@@ -343,7 +345,16 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
                 timer,
             ) from exc
 
-        info = json.loads(result.stdout)
+        try:
+            info = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise YtdlpError(
+                code="YTDLP_INVALID_JSON",
+                message=f"yt-dlp produced non-JSON stdout for asset {asset_id}: {exc}",
+                retryable=False,
+                asset_id=asset_id,
+                stderr_summary=f"JSON parse error: {exc}",
+            ) from exc
 
         duration = info.get("duration")
         if max_dur and duration and duration > max_dur:
@@ -416,10 +427,15 @@ class YouTubeSourceConnector(SourceConnectorPlugin):
                 timer,
             ) from exc
 
-        # yt-dlp may produce various extensions; prefer .mp4
-        for ext in ("mp4", "mkv", "webm"):
+        # yt-dlp may produce various extensions; find the output file.
+        for ext in ("mp4", "mkv", "webm", "flv", "avi", "ts", "m4v", "mov"):
             candidate = dest_dir / f"{plan.asset_id}.{ext}"
             if candidate.exists():
+                return candidate
+
+        # Fallback: glob for any file matching the asset_id prefix.
+        for candidate in dest_dir.glob(f"{plan.asset_id}.*"):
+            if candidate.is_file():
                 return candidate
 
         raise FileNotFoundError(f"yt-dlp did not produce an output file for {plan.asset_id}")

@@ -33,8 +33,9 @@ class Settings(BaseSettings):
     kafka_sasl_mechanism: str = ""  # e.g., "PLAIN"
     # Max time (ms) between two consumer poll() calls before broker considers
     # the consumer dead.  Must exceed the worst-case pipeline duration
-    # (yt-dlp resolve 120 s + download 600 s + TTS + render + upload ≈ 30 min).
-    kafka_max_poll_interval_ms: int = 1_800_000  # 30 minutes
+    # (yt-dlp resolve 120 s + download 600 s + TTS + render + upload ≈ 60–90 min
+    # for long CPU-only jobs on large AV1 assets).
+    kafka_max_poll_interval_ms: int = 7_200_000  # 2 hours
 
     # ── Dropbox ──────────────────────────────────────────────────────
     dropbox_app_key: str = ""
@@ -105,6 +106,13 @@ class Settings(BaseSettings):
     ytdlp_download_timeout: int = 120
     ytdlp_verify_checksum: bool = True
     ytdlp_min_check_interval_sec: int = 300
+
+    # ── Centralized credential management ───────────────────────────
+    # "db"       = read credentials from editor8's PostgreSQL database (default)
+    # "env_file" = legacy fallback (read keys from env-vars / key-directories)
+    credential_source: str = "db"
+    editor8_database_url: str = ""  # required when credential_source == "db"
+    credential_cache_ttl_sec: float = 60.0  # how long to cache DB credentials
 
 
 def get_settings() -> Settings:

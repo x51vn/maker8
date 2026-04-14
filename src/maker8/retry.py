@@ -18,6 +18,7 @@ RENDER_RETRYABLE_STAGES: frozenset[RenderStage] = frozenset(
     {
         RenderStage.RESOLVE_ASSETS,
         RenderStage.DOWNLOAD,
+        RenderStage.SCENE_DETECT,
         RenderStage.NORMALIZE,
         RenderStage.TTS,
         RenderStage.UPLOAD_DROPBOX,
@@ -79,7 +80,5 @@ class StageError(Exception):
     ) -> None:
         self.stage = stage
         self.code = code
-        self.retryable = (
-            retryable if retryable is not None else (stage in RENDER_RETRYABLE_STAGES)
-        )
+        self.retryable = retryable if retryable is not None else (stage in RENDER_RETRYABLE_STAGES)
         super().__init__(message)

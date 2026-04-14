@@ -91,14 +91,16 @@ class TTSStage(Stage):
                 DEPENDENCY_FAILURES.labels(dependency="tts").inc()
                 # Isolate per-scene failure: scene will render without narration.
                 error_code = "TTS_TIMEOUT" if isinstance(exc, TimeoutError) else "TTS_FAILED"
-                ctx.warnings.append(AssetWarning(
-                    asset_id=sid,
-                    scene_id=sid,
-                    stage="TTS",
-                    code=error_code,
-                    message=f"TTS failed for scene {sid}: {exc}",
-                    fallback_used="scene_without_narration",
-                ))
+                ctx.warnings.append(
+                    AssetWarning(
+                        asset_id=sid,
+                        scene_id=sid,
+                        stage="TTS",
+                        code=error_code,
+                        message=f"TTS failed for scene {sid}: {exc}",
+                        fallback_used="scene_without_narration",
+                    )
+                )
                 log.warning(
                     "tts.scene.skipped",
                     job_id=ctx.job_id,

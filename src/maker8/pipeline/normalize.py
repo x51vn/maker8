@@ -35,7 +35,7 @@ def _is_external_kill(returncode: int) -> bool:
 
 def _analyze_ffmpeg_failure_reason(stderr: str) -> str:
     """Analyze stderr to categorize NVENC failure reason.
-    
+
     Returns one of:
     - "gpu_unavailable" – CUDA/GPU not accessible
     - "audio_only_input" – no video stream found
@@ -308,6 +308,7 @@ class NormalizeStage(Stage):
             if asset.id in ctx.failed_assets:
                 continue  # already failed in a previous stage
 
+            # ── Full-file normalize path ───────────────────────────────
             try:
                 normalised = self._normalize_asset(
                     asset.id,
@@ -484,7 +485,7 @@ class NormalizeStage(Stage):
             # If NVENC failed, attempt intermediate retry: CPU decode + NVENC encode
             if use_nvenc:
                 failure_reason = _analyze_ffmpeg_failure_reason(exc.stderr)
-                
+
                 # Only retry with CPU decode if the failure was clearly GPU decode-related
                 if failure_reason == "cuda_decode_failed":
                     log.info(
@@ -501,7 +502,7 @@ class NormalizeStage(Stage):
                         asset_id,
                         proxy_max_short_edge=proxy_max_short_edge,
                     )
-                
+
                 log.warning(
                     "normalize.nvenc_fallback",
                     job_id=job_id,
@@ -676,7 +677,7 @@ class NormalizeStage(Stage):
         proxy_max_short_edge: int = 0,
     ) -> Path:
         """CPU decode + NVENC encode (intermediate retry after GPU decode failed).
-        
+
         This is an intermediate fallback between full GPU path and software-only.
         Used when GPU decode fails but NVENC encoder might still work.
         """
@@ -751,7 +752,7 @@ class NormalizeStage(Stage):
             dest.unlink(missing_ok=True)
             SUBPROCESS_FAILURES.labels(stage="NORMALIZE", source_kind="ffmpeg").inc()
             stderr = truncate_stderr(exc.stderr)
-            
+
             # If CPU decode + NVENC also fails, fall back to software encoding
             log.warning(
                 "normalize.cpu_decode_nvenc_fallback",

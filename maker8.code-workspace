@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../editor8"
+		},
+		{
+			"path": "../xUploader"
 		}
 	],
 	"settings": {}

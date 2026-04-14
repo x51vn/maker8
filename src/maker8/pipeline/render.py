@@ -49,16 +49,24 @@ class RenderStageImpl(Stage):
         self._enforce_missing_asset_policies(ctx, asset_paths)
 
         # ── Scene-level viability check ──────────────────────────────
-        # A scene is viable if it has at least one layer whose asset_ref
-        # is resolved (in asset_paths) or is a text layer (no asset_ref).
+        # V1: text-only or resolved asset is sufficient.
+        # V2: require at least one resolved non-text layer (image/video).
+        is_v2 = ctx.render_spec.spec_version == "2.0"
         viable_scenes = []
         for scene in ctx.render_spec.scenes:
             if scene.scene_id in ctx.skipped_scenes:
                 continue
-            has_content = any(
-                layer.type == "text" or (layer.asset_ref and layer.asset_ref in asset_paths)
-                for layer in scene.layers
-            )
+            if is_v2:
+                has_content = any(
+                    layer.asset_ref and layer.asset_ref in asset_paths
+                    for layer in scene.layers
+                    if layer.type != "text"
+                )
+            else:
+                has_content = any(
+                    layer.type == "text" or (layer.asset_ref and layer.asset_ref in asset_paths)
+                    for layer in scene.layers
+                )
             if has_content:
                 viable_scenes.append(scene)
             else:
@@ -197,7 +205,8 @@ class RenderStageImpl(Stage):
                 if layer.asset_ref in asset_paths:
                     continue
                 # Asset is missing – apply policy only when required
-                if not layer.required:
+                is_required = layer.required or layer.layer_id in ctx.inferred_required
+                if not is_required:
                     continue
                 policy = layer.missing_asset_policy
                 ctx.warnings.append(
@@ -207,9 +216,9 @@ class RenderStageImpl(Stage):
                         stage="RENDER",
                         code="MISSING_ASSET_POLICY_APPLIED",
                         message=(
-                            f"Layer {layer.layer_id} (role={layer.role}) "
-                            f"missing asset '{layer.asset_ref}'; "
-                            f"policy={policy}"
+                            f"Layer {layer.layer_id} "
+                            f"(role={ctx.inferred_roles.get(layer.layer_id, layer.role)}) "
+                            f"missing asset '{layer.asset_ref}'; policy={policy}"
                         ),
                         fallback_used=policy,
                     )
@@ -219,7 +228,7 @@ class RenderStageImpl(Stage):
                     job_id=ctx.job_id,
                     scene_id=scene.scene_id,
                     layer_id=layer.layer_id,
-                    role=layer.role,
+                    role=ctx.inferred_roles.get(layer.layer_id, layer.role),
                     asset_ref=layer.asset_ref,
                     policy=policy,
                 )

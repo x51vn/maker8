@@ -15,25 +15,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from maker8.models.common import AssetWarning, JobStatus, OutputMeta, RenderStage
+from maker8.models.common import AssetWarning, OutputMeta
 from maker8.models.spec import (
-    Asset,
-    Canvas,
-    Defaults,
-    Layer,
-    NarrationDefaults,
-    Rect,
     RenderSpec,
-    Scene,
-    SceneNarration,
-    SceneTiming,
 )
 from maker8.pipeline.context import PipelineContext
 from maker8.pipeline.render import RenderStageImpl
 from maker8.plugins.registry import PluginRegistry
 from maker8.rendering.composer import RenderInput
 from maker8.retry import StageError
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,7 +47,11 @@ def _make_spec_with_layer(
                 },
             },
             "assets": [
-                {"id": asset_id, "type": layer_type, "source": {"kind": "http", "url": "http://x.com/v.mp4"}}
+                {
+                    "id": asset_id,
+                    "type": layer_type,
+                    "source": {"kind": "http", "url": "http://x.com/v.mp4"},
+                }
             ],
             "scenes": [
                 {
@@ -140,14 +134,14 @@ class TestMissingAssetSingleWarning:
         with patch("maker8.pipeline.render.compose_video", _stub_compose_video()):
             stage.execute(ctx)
 
-        policy_warnings = [
-            w for w in ctx.warnings if w.code == "MISSING_ASSET_POLICY_APPLIED"
-        ]
-        duplicate_warnings = [
-            w for w in ctx.warnings if w.code == "LAYER_ASSET_MISSING"
-        ]
-        assert len(policy_warnings) == 1, f"Expected 1 MISSING_ASSET_POLICY_APPLIED, got {policy_warnings}"
-        assert len(duplicate_warnings) == 0, f"Unexpected LAYER_ASSET_MISSING warnings: {duplicate_warnings}"
+        policy_warnings = [w for w in ctx.warnings if w.code == "MISSING_ASSET_POLICY_APPLIED"]
+        duplicate_warnings = [w for w in ctx.warnings if w.code == "LAYER_ASSET_MISSING"]
+        assert len(policy_warnings) == 1, (
+            f"Expected 1 MISSING_ASSET_POLICY_APPLIED, got {policy_warnings}"
+        )
+        assert len(duplicate_warnings) == 0, (
+            f"Unexpected LAYER_ASSET_MISSING warnings: {duplicate_warnings}"
+        )
 
     def test_required_placeholder_single_warning(self, tmp_path: Path) -> None:
         """Required layer with scene_placeholder policy → exactly 1 warning total."""
@@ -162,9 +156,7 @@ class TestMissingAssetSingleWarning:
             stage.execute(ctx)
 
         total_warnings = [w for w in ctx.warnings if w.asset_id == "a1"]
-        assert len(total_warnings) == 1, (
-            f"Expected exactly 1 warning for a1, got {total_warnings}"
-        )
+        assert len(total_warnings) == 1, f"Expected exactly 1 warning for a1, got {total_warnings}"
         assert total_warnings[0].code == "MISSING_ASSET_POLICY_APPLIED"
 
     def test_non_required_layer_warning_from_composer(self, tmp_path: Path) -> None:
@@ -190,14 +182,12 @@ class TestMissingAssetSingleWarning:
         ):
             stage.execute(ctx)
 
-        stage_warnings = [
-            w for w in ctx.warnings if w.code == "MISSING_ASSET_POLICY_APPLIED"
-        ]
-        composer_warnings = [
-            w for w in ctx.warnings if w.code == "LAYER_ASSET_MISSING"
-        ]
+        stage_warnings = [w for w in ctx.warnings if w.code == "MISSING_ASSET_POLICY_APPLIED"]
+        composer_warnings = [w for w in ctx.warnings if w.code == "LAYER_ASSET_MISSING"]
         assert len(stage_warnings) == 0, "Stage should not warn about non-required layers"
-        assert len(composer_warnings) == 1, "Composer should emit one LAYER_ASSET_MISSING for non-required layer"
+        assert len(composer_warnings) == 1, (
+            "Composer should emit one LAYER_ASSET_MISSING for non-required layer"
+        )
 
     def test_fail_request_raises_stage_error(self, tmp_path: Path) -> None:
         """Required layer with fail_request policy → StageError, not a warning."""
@@ -208,13 +198,13 @@ class TestMissingAssetSingleWarning:
         ctx = _make_ctx(tmp_path, spec)
 
         stage = _make_stage()
-        with patch("maker8.pipeline.render.compose_video", _stub_compose_video()):
-            with pytest.raises(StageError) as exc_info:
-                stage.execute(ctx)
+        with (
+            patch("maker8.pipeline.render.compose_video", _stub_compose_video()),
+            pytest.raises(StageError) as exc_info,
+        ):
+            stage.execute(ctx)
 
         assert exc_info.value.code == "REQUIRED_ASSET_MISSING"
         # A MISSING_ASSET_POLICY_APPLIED warning is added before the raise
-        policy_warnings = [
-            w for w in ctx.warnings if w.code == "MISSING_ASSET_POLICY_APPLIED"
-        ]
+        policy_warnings = [w for w in ctx.warnings if w.code == "MISSING_ASSET_POLICY_APPLIED"]
         assert len(policy_warnings) == 1

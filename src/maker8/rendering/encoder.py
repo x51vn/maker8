@@ -45,7 +45,7 @@ def _has_nvenc_encoder() -> bool:
 
 def _nvenc_smoke_test() -> bool:
     """Validate NVENC with a smoke test: encode a minimal test pattern.
-    
+
     Returns ``True`` only if the encoder is listed AND a minimal encode
     succeeds.  This catches cases where FFmpeg lists the encoder but
     the GPU/driver are not actually available.
@@ -55,14 +55,15 @@ def _nvenc_smoke_test() -> bool:
 
     ffmpeg = resolve_ffmpeg_binary()
 
-    # Create a minimal test pattern: 1-frame silent video, 10x10 px
+    # h264_nvenc requires minimum ~256px per dimension on most NVIDIA consumer
+    # GPUs.  Encode directly from a lavfi source (no intermediate file needed).
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_p = Path(tmpdir)
-        src = tmpdir_p / "test_src.mp4"
         dest = tmpdir_p / "test_out.mp4"
 
         try:
-            # Generate 1-frame test source using FFmpeg filter
+            # Encode a 256x256 test pattern directly with NVENC (no hwaccel on
+            # input – lavfi sources are software-generated, not GPU-decoded).
             result = subprocess.run(
                 [
                     ffmpeg,
@@ -70,54 +71,18 @@ def _nvenc_smoke_test() -> bool:
                     "-f",
                     "lavfi",
                     "-i",
-                    "color=black:s=10x10:d=0.1",  # 100ms black frame
-                    "-f",
-                    "lavfi",
-                    "-i",
-                    "anullsrc=r=44100:cl=mono",
-                    "-c:a",
-                    "aac",
-                    "-map",
-                    "0",
-                    "-map",
-                    "1",
-                    "-shortest",
-                    "-t",
-                    "0.1",
-                    str(src),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if result.returncode != 0:
-                log.debug("gpu.nvenc_smoke_test_src_gen_failed", returncode=result.returncode)
-                return False
-
-            # Try to encode with NVENC
-            result = subprocess.run(
-                [
-                    ffmpeg,
-                    "-y",
-                    "-hwaccel",
-                    "cuda",
-                    "-i",
-                    str(src),
+                    "color=black:s=256x256:d=0.1",  # 100ms, 256x256 exceeds min
                     "-c:v",
                     "h264_nvenc",
                     "-preset",
                     "p4",
-                    "-cq",
-                    "28",
-                    "-c:a",
-                    "aac",
                     "-t",
                     "0.1",
                     str(dest),
                 ],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=15,
             )
             if result.returncode != 0:
                 log.debug(
@@ -146,7 +111,7 @@ def _nvenc_smoke_test() -> bool:
 
 def has_nvenc() -> bool:
     """Return ``True`` if NVENC is available and functional.
-    
+
     Performs a smoke test encode to verify not just encoder presence
     but actual GPU/driver capability.
     """

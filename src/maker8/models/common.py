@@ -9,7 +9,7 @@ canonical ``render_contracts`` package so that existing imports from
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -33,12 +33,13 @@ __all__ = [
 # ── Enums ────────────────────────────────────────────────────────────────────
 
 
-class RenderStage(str, Enum):
+class RenderStage(StrEnum):
     """Pipeline stages for the Render Worker."""
 
     VALIDATE = "VALIDATE"
     RESOLVE_ASSETS = "RESOLVE_ASSETS"
     DOWNLOAD = "DOWNLOAD"
+    SCENE_DETECT = "SCENE_DETECT"
     NORMALIZE = "NORMALIZE"
     TTS = "TTS"
     RENDER = "RENDER"
@@ -46,7 +47,7 @@ class RenderStage(str, Enum):
     EMIT_RESULT = "EMIT_RESULT"
 
 
-class PublishStage(str, Enum):  # RESERVED – publisher worker not yet implemented
+class PublishStage(StrEnum):  # RESERVED – publisher worker not yet implemented
     """Pipeline stages for the Publisher Worker (not yet implemented)."""
 
     DOWNLOAD = "DOWNLOAD"
@@ -54,19 +55,19 @@ class PublishStage(str, Enum):  # RESERVED – publisher worker not yet implemen
     EMIT_RESULT = "EMIT_RESULT"
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     DONE = "DONE"
     FAILED = "FAILED"
     PARTIAL = "PARTIAL"
 
 
-class PublishStatus(str, Enum):  # RESERVED – publisher worker not yet implemented
+class PublishStatus(StrEnum):  # RESERVED – publisher worker not yet implemented
     PUBLISHED = "PUBLISHED"
     FAILED = "FAILED"
     PENDING = "PENDING"
 
 
-class PerformanceMode(str, Enum):
+class PerformanceMode(StrEnum):
     """Render quality/speed trade-off."""
 
     QUALITY = "quality"

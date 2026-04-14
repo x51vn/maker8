@@ -291,17 +291,40 @@ class TestV2LayerRoles:
     )
     def test_valid_roles_accepted(self, tmp_path: Path, role: str) -> None:
         req_dict = _v2_request(1, planning_count=1)
-        req_dict["render_spec"]["scenes"][0]["layers"][0]["role"] = role
+        # Keep existing primary_visual; add extra layer with tested role
+        req_dict["render_spec"]["scenes"][0]["layers"].append(
+            {
+                "layer_id": "l_extra",
+                "type": "text",
+                "text": "Extra",
+                "rect": {"x": 0, "y": 0, "w": 200, "h": 100},
+                "role": role,
+            }
+        )
         ctx = _make_ctx(tmp_path, req_dict)
         stage = ValidateStage()
         stage.execute(ctx)
 
-    def test_null_role_accepted(self, tmp_path: Path) -> None:
-        """V1-style layers with no role are accepted in V2."""
+    def test_null_role_inferred_to_primary_visual_in_v2(self, tmp_path: Path) -> None:
+        """V2 legacy layer without role is inferred as primary_visual when unambiguous."""
         req_dict = _v2_request(1, roles=False, planning_count=1)
         ctx = _make_ctx(tmp_path, req_dict)
         stage = ValidateStage()
         stage.execute(ctx)
+        layer = ctx.render_spec.scenes[0].layers[0]
+        # Spec is no longer mutated; inference is stored on context.
+        assert ctx.inferred_roles.get(layer.layer_id) == "primary_visual"
+        assert layer.layer_id in ctx.inferred_required
+
+    def test_supporting_visual_inferred_to_primary_visual(self, tmp_path: Path) -> None:
+        req_dict = _v2_request(1, roles=False, planning_count=1)
+        req_dict["render_spec"]["scenes"][0]["layers"][0]["role"] = "supporting_visual"
+        ctx = _make_ctx(tmp_path, req_dict)
+        stage = ValidateStage()
+        stage.execute(ctx)
+        layer = ctx.render_spec.scenes[0].layers[0]
+        assert ctx.inferred_roles.get(layer.layer_id) == "primary_visual"
+        assert layer.layer_id in ctx.inferred_required
 
     def test_invalid_role_fails(self, tmp_path: Path) -> None:
         req_dict = _v2_request(1, planning_count=1)
@@ -351,9 +374,9 @@ class TestV2PlanningMetadata:
 
 
 class TestV2TextOnlyScene:
-    """A scene with only text layers and no primary_visual is valid in V2."""
+    """V2 scenes without primary_visual are rejected (R-2: required visual asset)."""
 
-    def test_text_only_scene_no_primary_visual(self, tmp_path: Path) -> None:
+    def test_text_only_scene_no_primary_visual_rejected(self, tmp_path: Path) -> None:
         req_dict = _v2_request(1, planning_count=1)
         # Replace primary_visual with a text-only layer
         req_dict["render_spec"]["scenes"][0]["layers"] = [
@@ -369,8 +392,8 @@ class TestV2TextOnlyScene:
         ]
         ctx = _make_ctx(tmp_path, req_dict)
         stage = ValidateStage()
-        stage.execute(ctx)
-        assert ctx.render_spec.scenes[0].layers[0].role == "title"
+        with pytest.raises(StageError, match="no layer with role='primary_visual'"):
+            stage.execute(ctx)
 
 
 # ── Backward compatibility ───────────────────────────────────────────────────

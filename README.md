@@ -308,6 +308,14 @@ A visual layer within a scene. Type is `"image"`, `"video"`, or `"text"`.
 
 All settings via environment variables (prefix: `MAKER8_`).
 
+### Credential Source (Recommended)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MAKER8_CREDENTIAL_SOURCE` | `db` | `db` (editor8 `service_keys`) or `env_file` (legacy) |
+| `MAKER8_EDITOR8_DATABASE_URL` | | PostgreSQL URL of editor8 DB (required in `db` mode) |
+| `MAKER8_CREDENTIAL_CACHE_TTL_SEC` | `60.0` | DB credential cache TTL in seconds |
+
 ### Kafka
 
 | Variable | Default | Description |
@@ -317,8 +325,8 @@ All settings via environment variables (prefix: `MAKER8_`).
 | `MAKER8_KAFKA_RENDER_REQUEST_TOPIC` | `video.render.request.v1` | Input topic |
 | `MAKER8_KAFKA_RENDER_RESULT_TOPIC` | `video.render.result.v1` | Result topic |
 | `MAKER8_KAFKA_RENDER_DLQ_TOPIC` | `video.render.dlq.v1` | DLQ topic |
-| `MAKER8_KAFKA_USERNAME` | | SASL username |
-| `MAKER8_KAFKA_PASSWORD` | | SASL password |
+| `MAKER8_KAFKA_USERNAME` | | SASL username (legacy `env_file` mode) |
+| `MAKER8_KAFKA_PASSWORD` | | SASL password (legacy `env_file` mode) |
 | `MAKER8_KAFKA_SECURITY_PROTOCOL` | | `SASL_PLAINTEXT` or `SASL_SSL` |
 | `MAKER8_KAFKA_SASL_MECHANISM` | | `PLAIN` |
 
@@ -326,20 +334,20 @@ All settings via environment variables (prefix: `MAKER8_`).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MAKER8_DROPBOX_APP_KEY` | | Dropbox OAuth app key |
-| `MAKER8_DROPBOX_APP_SECRET` | | Dropbox OAuth app secret |
-| `MAKER8_DROPBOX_REFRESH_TOKEN` | | Dropbox OAuth refresh token |
+| `MAKER8_DROPBOX_APP_KEY` | | Dropbox OAuth app key (legacy `env_file` mode) |
+| `MAKER8_DROPBOX_APP_SECRET` | | Dropbox OAuth app secret (legacy `env_file` mode) |
+| `MAKER8_DROPBOX_REFRESH_TOKEN` | | Dropbox OAuth refresh token (legacy `env_file` mode) |
 
 ### TTS
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MAKER8_TTS_PROVIDER` | `gtts` | Default TTS provider |
-| `MAKER8_TTS_PRESETS_PATH` | `config/tts_presets.json` | TTS preset mappings file |
+| `MAKER8_TTS_PRESETS_PATH` | `config/tts_presets.json` | TTS preset mappings file (`env_file` mode) |
 | `MAKER8_TTS_TIMEOUT_SEC` | `120.0` | Max seconds per TTS call |
-| `MAKER8_GOOGLE_TTS_KEYS_DIR` | `gg-tts-keys` | Directory with Google Cloud service account JSONs |
-| `MAKER8_ELEVENLABS_API_KEY` | | Single ElevenLabs API key fallback |
-| `MAKER8_ELEVENLABS_KEYS_DIR` | `elevenlabs-keys` | Directory with ElevenLabs key files |
+| `MAKER8_GOOGLE_TTS_KEYS_DIR` | `gg-tts-keys` | Directory with Google SA JSONs (legacy `env_file` mode) |
+| `MAKER8_ELEVENLABS_API_KEY` | | Single ElevenLabs key fallback (legacy `env_file` mode) |
+| `MAKER8_ELEVENLABS_KEYS_DIR` | `elevenlabs-keys` | Directory with ElevenLabs keys (legacy `env_file` mode) |
 
 ### Pipeline
 

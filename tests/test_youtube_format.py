@@ -143,6 +143,8 @@ class TestResolveNonRetryableErrors:
         ctx = MagicMock()
         ctx.job_id = "test-job"
         ctx.resolved_plans = {}
+        ctx.failed_assets = set()
+        ctx.warnings = []
 
         # Build real Asset models
         from render_contracts.render_spec import Asset
@@ -151,7 +153,7 @@ class TestResolveNonRetryableErrors:
         return ctx
 
     def test_empty_url_is_non_retryable(self) -> None:
-        """Missing URL should yield INVALID_SOURCE_URL, non-retryable."""
+        """Missing URL should record INVALID_SOURCE_URL warning, non-retryable."""
         registry = MagicMock()
         connector = YouTubeSourceConnector()
         registry.get_source.return_value = connector
@@ -167,13 +169,13 @@ class TestResolveNonRetryableErrors:
             ]
         )
 
-        with pytest.raises(StageError) as exc_info:
-            stage.execute(ctx)
-        assert exc_info.value.code == "INVALID_SOURCE_URL"
-        assert exc_info.value.retryable is False
+        stage.execute(ctx)
+        assert "yt_bad" in ctx.failed_assets
+        matching = [w for w in ctx.warnings if w.code == "INVALID_SOURCE_URL"]
+        assert len(matching) == 1
 
     def test_empty_format_is_non_retryable(self) -> None:
-        """Empty format string should yield INVALID_YTDLP_FORMAT, non-retryable."""
+        """Empty format string should record INVALID_YTDLP_FORMAT warning, non-retryable."""
         registry = MagicMock()
         connector = YouTubeSourceConnector()
         registry.get_source.return_value = connector
@@ -193,13 +195,13 @@ class TestResolveNonRetryableErrors:
             ]
         )
 
-        with pytest.raises(StageError) as exc_info:
-            stage.execute(ctx)
-        assert exc_info.value.code == "INVALID_YTDLP_FORMAT"
-        assert exc_info.value.retryable is False
+        stage.execute(ctx)
+        assert "yt_bad" in ctx.failed_assets
+        matching = [w for w in ctx.warnings if w.code == "INVALID_YTDLP_FORMAT"]
+        assert len(matching) == 1
 
     def test_unsupported_source_is_non_retryable(self) -> None:
-        """Unknown source kind should be UNSUPPORTED_SOURCE, non-retryable."""
+        """Unknown source kind should record UNSUPPORTED_SOURCE warning, non-retryable."""
         registry = MagicMock()
         registry.get_source.side_effect = KeyError("badkind")
 
@@ -214,10 +216,10 @@ class TestResolveNonRetryableErrors:
             ]
         )
 
-        with pytest.raises(StageError) as exc_info:
-            stage.execute(ctx)
-        assert exc_info.value.code == "UNSUPPORTED_SOURCE"
-        assert exc_info.value.retryable is False
+        stage.execute(ctx)
+        assert "asset_bad" in ctx.failed_assets
+        matching = [w for w in ctx.warnings if w.code == "UNSUPPORTED_SOURCE"]
+        assert len(matching) == 1
 
     @patch("maker8.plugins.sources.youtube.subprocess.run")
     def test_format_null_resolves_successfully(self, mock_run: MagicMock) -> None:
@@ -263,6 +265,16 @@ class TestClassifyYtdlpStderr:
             ("ERROR: This video is private", "YTDLP_VIDEO_UNAVAILABLE", False),
             ("ERROR: This video is unavailable", "YTDLP_VIDEO_UNAVAILABLE", False),
             ("ERROR: This video has been removed", "YTDLP_VIDEO_UNAVAILABLE", False),
+            (
+                "ERROR: [youtube] abc: This live stream recording is not available.",
+                "YTDLP_VIDEO_UNAVAILABLE",
+                False,
+            ),
+            (
+                "ERROR: [youtube] xyz: This live event will begin in",
+                "YTDLP_VIDEO_UNAVAILABLE",
+                False,
+            ),
             ("Requested format is not available", "YTDLP_FORMAT_UNAVAILABLE", False),
             ("ERROR: Unsupported URL: xyz", "YTDLP_UNSUPPORTED_URL", False),
             ("Sign in to confirm you're not a bot", "YTDLP_AUTH_REQUIRED", False),
@@ -425,13 +437,15 @@ class TestResolveYtdlpErrors:
         ctx = MagicMock()
         ctx.job_id = "test-job"
         ctx.resolved_plans = {}
+        ctx.failed_assets = set()
+        ctx.warnings = []
         from render_contracts.render_spec import Asset
 
         ctx.render_spec.assets = [Asset.model_validate(a) for a in assets]
         return ctx
 
     def test_non_retryable_ytdlp_error(self) -> None:
-        """YtdlpError with retryable=False → StageError(retryable=False)."""
+        """YtdlpError with retryable=False → warning recorded, asset skipped."""
         registry = MagicMock()
         connector = MagicMock()
         connector.resolve.side_effect = YtdlpError(
@@ -453,10 +467,10 @@ class TestResolveYtdlpErrors:
             ]
         )
 
-        with pytest.raises(StageError) as exc_info:
-            stage.execute(ctx)
-        assert exc_info.value.code == "YTDLP_VIDEO_UNAVAILABLE"
-        assert exc_info.value.retryable is False
+        stage.execute(ctx)
+        assert "yt_gone" in ctx.failed_assets
+        matching = [w for w in ctx.warnings if w.code == "YTDLP_VIDEO_UNAVAILABLE"]
+        assert len(matching) == 1
 
     def test_retryable_ytdlp_error(self) -> None:
         """YtdlpError with retryable=True → StageError(retryable=True)."""

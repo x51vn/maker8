@@ -41,28 +41,50 @@ def _make_spec(**overrides):  # type: ignore[no-untyped-def]
                 "duration_mode": "auto_from_tts",
             },
         },
-        "assets": overrides.pop("assets", [
-            {"id": "a1", "type": "video", "source": {"kind": "http", "url": "https://x.com/1.mp4"}},
-            {"id": "a2", "type": "video", "source": {"kind": "http", "url": "https://x.com/2.mp4"}},
-        ]),
-        "scenes": overrides.pop("scenes", [
-            {
-                "scene_id": "s1",
-                "narration": {"text": "Scene one."},
-                "layers": [
-                    {"layer_id": "l1", "type": "video", "asset_ref": "a1",
-                     "rect": {"x": 0, "y": 0, "w": 1080, "h": 1920}},
-                ],
-            },
-            {
-                "scene_id": "s2",
-                "narration": {"text": "Scene two."},
-                "layers": [
-                    {"layer_id": "l2", "type": "video", "asset_ref": "a2",
-                     "rect": {"x": 0, "y": 0, "w": 1080, "h": 1920}},
-                ],
-            },
-        ]),
+        "assets": overrides.pop(
+            "assets",
+            [
+                {
+                    "id": "a1",
+                    "type": "video",
+                    "source": {"kind": "http", "url": "https://x.com/1.mp4"},
+                },
+                {
+                    "id": "a2",
+                    "type": "video",
+                    "source": {"kind": "http", "url": "https://x.com/2.mp4"},
+                },
+            ],
+        ),
+        "scenes": overrides.pop(
+            "scenes",
+            [
+                {
+                    "scene_id": "s1",
+                    "narration": {"text": "Scene one."},
+                    "layers": [
+                        {
+                            "layer_id": "l1",
+                            "type": "video",
+                            "asset_ref": "a1",
+                            "rect": {"x": 0, "y": 0, "w": 1080, "h": 1920},
+                        },
+                    ],
+                },
+                {
+                    "scene_id": "s2",
+                    "narration": {"text": "Scene two."},
+                    "layers": [
+                        {
+                            "layer_id": "l2",
+                            "type": "video",
+                            "asset_ref": "a2",
+                            "rect": {"x": 0, "y": 0, "w": 1080, "h": 1920},
+                        },
+                    ],
+                },
+            ],
+        ),
         **overrides,
     }
     return RenderSpec.model_validate(base)
@@ -343,8 +365,8 @@ class TestRenderSceneDegradation:
         assert exc_info.value.code == "ALL_SCENES_SKIPPED"
         assert exc_info.value.retryable is False
 
-    def test_text_only_scene_always_viable(self, tmp_path: Path) -> None:
-        """A scene with only text layers is viable even with no assets."""
+    def test_text_only_scene_viable_in_v1(self, tmp_path: Path) -> None:
+        """V1: a scene with only text layers is viable even with no assets."""
         ctx = _make_ctx(
             tmp_path,
             assets=[],
@@ -353,10 +375,13 @@ class TestRenderSceneDegradation:
                     "scene_id": "s1",
                     "narration": {"text": "Text only scene."},
                     "layers": [
-                        {"layer_id": "l_text", "type": "text",
-                         "rect": {"x": 0, "y": 0, "w": 1080, "h": 200},
-                         "text_content": "Hello world",
-                         "text_style": {"font_size": 48, "color": "#FFFFFF"}},
+                        {
+                            "layer_id": "l_text",
+                            "type": "text",
+                            "rect": {"x": 0, "y": 0, "w": 1080, "h": 200},
+                            "text_content": "Hello world",
+                            "text_style": {"font_size": 48, "color": "#FFFFFF"},
+                        },
                     ],
                 },
             ],
@@ -379,6 +404,36 @@ class TestRenderSceneDegradation:
 
         assert "s1" not in ctx.skipped_scenes
         assert ctx.rendered_video == fake_video
+
+    def test_text_only_scene_not_viable_in_v2(self, tmp_path: Path) -> None:
+        """V2: a scene with only text layers is NOT viable — requires visual asset."""
+        ctx = _make_ctx(
+            tmp_path,
+            spec_version="2.0",
+            assets=[],
+            scenes=[
+                {
+                    "scene_id": "s1",
+                    "narration": {"text": "Text only scene."},
+                    "layers": [
+                        {
+                            "layer_id": "l_text",
+                            "type": "text",
+                            "rect": {"x": 0, "y": 0, "w": 1080, "h": 200},
+                            "text_content": "Hello world",
+                            "text_style": {"font_size": 48, "color": "#FFFFFF"},
+                        },
+                    ],
+                },
+            ],
+        )
+        ctx.ensure_dirs()
+
+        registry = MagicMock(spec=PluginRegistry)
+        stage = RenderStageImpl(registry)
+
+        with pytest.raises(StageError, match="no renderable content"):
+            stage.execute(ctx)
 
 
 # ── RenderResult includes warnings ───────────────────────────────────────────

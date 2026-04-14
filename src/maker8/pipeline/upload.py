@@ -34,7 +34,8 @@ class UploadDropboxStage(Stage):
     def execute(self, ctx: PipelineContext) -> None:
         if ctx.rendered_video is None or not ctx.rendered_video.exists():
             raise StageError(
-                self.name, "NO_VIDEO",
+                self.name,
+                "NO_VIDEO",
                 "No rendered video file to upload",
                 retryable=False,
             )
@@ -50,9 +51,7 @@ class UploadDropboxStage(Stage):
         timer = Timer().start()
         try:
             # ── Upload video ─────────────────────────────────────────
-            video_remote = DropboxClient.build_remote_path(
-                ctx.job_id, f"{ctx.job_id}.mp4"
-            )
+            video_remote = DropboxClient.build_remote_path(f"{ctx.job_id}.mp4")
             ctx.dropbox_video_ref = self._dbx.upload(
                 ctx.rendered_video, video_remote, mime="video/mp4"
             )
@@ -66,9 +65,7 @@ class UploadDropboxStage(Stage):
                 encoding="utf-8",
             )
 
-            manifest_remote = DropboxClient.build_remote_path(
-                ctx.job_id, f"{ctx.job_id}.manifest.json"
-            )
+            manifest_remote = DropboxClient.build_remote_path(f"{ctx.job_id}.manifest.json")
             ctx.dropbox_manifest_ref = self._dbx.upload(
                 manifest_path, manifest_remote, mime="application/json"
             )
@@ -91,7 +88,8 @@ class UploadDropboxStage(Stage):
                 error_summary=getattr(exc.error, "_tag", None),
             )
             raise StageError(
-                self.name, "AUTH_FAILED",
+                self.name,
+                "AUTH_FAILED",
                 f"Dropbox authentication failed: {exc}",
                 retryable=False,
             ) from exc
@@ -105,7 +103,8 @@ class UploadDropboxStage(Stage):
                 error=str(exc),
             )
             raise StageError(
-                self.name, "INVALID_CONFIG",
+                self.name,
+                "INVALID_CONFIG",
                 f"Dropbox configuration error: {exc}",
                 retryable=False,
             ) from exc
@@ -121,7 +120,8 @@ class UploadDropboxStage(Stage):
                 error=str(exc),
             )
             raise StageError(
-                self.name, "RATE_LIMITED",
+                self.name,
+                "RATE_LIMITED",
                 f"Dropbox rate limited (retry after {backoff}s): {exc}",
                 retryable=True,
             ) from exc
@@ -136,7 +136,8 @@ class UploadDropboxStage(Stage):
                 error=str(exc),
             )
             raise StageError(
-                self.name, "SERVER_ERROR",
+                self.name,
+                "SERVER_ERROR",
                 f"Dropbox server error ({exc.status_code}): {exc}",
                 retryable=True,
             ) from exc
@@ -152,7 +153,8 @@ class UploadDropboxStage(Stage):
                 error=str(exc),
             )
             raise StageError(
-                self.name, "API_ERROR",
+                self.name,
+                "API_ERROR",
                 f"Dropbox API error ({error_tag}): {exc}",
                 retryable=True,
             ) from exc
@@ -169,7 +171,8 @@ class UploadDropboxStage(Stage):
                 error=str(exc),
             )
             raise StageError(
-                self.name, "UPLOAD_FAILED",
+                self.name,
+                "UPLOAD_FAILED",
                 f"Unexpected upload error: {exc}",
                 retryable=True,
             ) from exc

@@ -105,7 +105,10 @@ class TestResolveFFprobeBinary:
 
     def test_falls_back_to_path_when_no_sibling_exists(self) -> None:
         with (
-            patch("maker8.rendering.ffmpeg_runtime.resolve_ffmpeg_binary", return_value="/opt/bin/ffmpeg"),
+            patch(
+                "maker8.rendering.ffmpeg_runtime.resolve_ffmpeg_binary",
+                return_value="/opt/bin/ffmpeg",
+            ),
             patch("maker8.rendering.ffmpeg_runtime.Path") as mock_path_cls,
             patch.object(shutil, "which", return_value="/usr/local/bin/ffprobe"),
         ):
