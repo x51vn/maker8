@@ -25,4 +25,4 @@ Thumbs.db
 # ── Work data ─────────────────────────────────────────────────────────────────
 /data/
 /venv/
-/logs/
+/logs/.playwright-mcp/

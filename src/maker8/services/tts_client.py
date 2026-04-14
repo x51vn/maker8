@@ -27,6 +27,7 @@ single credential from ``Settings`` (backward-compatible).
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import json
 import subprocess
 from abc import ABC, abstractmethod
@@ -37,6 +38,13 @@ from typing import Any
 from maker8.config import Settings
 from maker8.services.key_ring import KeyRing
 from maker8.utils.logging import get_logger
+
+# Optional – only imported when credential_source == "db" so psycopg2 is not
+# required for the default env_file mode.
+try:
+    from maker8.services.credential_reader import CredentialReader as _CredentialReader
+except ImportError:  # pragma: no cover
+    _CredentialReader = None  # type: ignore[assignment,misc]
 
 log = get_logger(__name__)
 
@@ -88,9 +96,13 @@ def _get_audio_duration(path: Path) -> float:
     try:
         result = subprocess.run(
             [
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
                 str(path),
             ],
             capture_output=True,
@@ -145,8 +157,9 @@ class GoogleCloudTTSProvider(TTSProvider):
     """Google Cloud Text-to-Speech with round-robin service-account rotation.
 
     Credentials are supplied per-call via the ``credentials_path`` kwarg
-    (a ``Path`` to a service-account JSON file).  If absent the provider
-    falls back to *Application Default Credentials* (ADC).
+    (a ``Path`` to a service-account JSON file).  If absent, the provider
+    uses *Application Default Credentials* (ADC) only when ``allow_adc``
+    is true (default).
 
     Preset kwargs (from ``tts_presets.json``):
         voice_name: str  – e.g. ``"vi-VN-Neural2-A"``
@@ -166,7 +179,8 @@ class GoogleCloudTTSProvider(TTSProvider):
 
         # ── Credential handling ──────────────────────────────────────
         credentials_path = kwargs.pop("credentials_path", None)
-        client = self._build_client(credentials_path)
+        allow_adc = bool(kwargs.pop("allow_adc", True))
+        client = self._build_client(credentials_path, allow_adc=allow_adc)
 
         # ── Timeout ──────────────────────────────────────────────────
         # Injected by TTSService; falls back to a conservative default.
@@ -183,9 +197,7 @@ class GoogleCloudTTSProvider(TTSProvider):
             "LINEAR16": texttospeech.AudioEncoding.LINEAR16,
             "OGG_OPUS": texttospeech.AudioEncoding.OGG_OPUS,
         }
-        audio_encoding = encoding_map.get(
-            encoding_name, texttospeech.AudioEncoding.MP3
-        )
+        audio_encoding = encoding_map.get(encoding_name, texttospeech.AudioEncoding.MP3)
 
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice_params = texttospeech.VoiceSelectionParams(
@@ -213,13 +225,23 @@ class GoogleCloudTTSProvider(TTSProvider):
 
     # ── Internal ─────────────────────────────────────────────────────
 
-    @staticmethod
+    def __init__(self) -> None:
+        self._client_cache: dict[str, object] = {}  # credentials_path → client
+
     def _build_client(
+        self,
         credentials_path: object,
+        *,
+        allow_adc: bool = True,
     ) -> object:  # texttospeech.TextToSpeechClient
-        """Create a TTS client, optionally from a specific service-account."""
+        """Return a cached TTS client, creating one if needed."""
         from google.cloud import texttospeech
         from google.oauth2 import service_account
+
+        cache_key = str(credentials_path) if credentials_path else "__adc__"
+        cached = self._client_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         if credentials_path and Path(str(credentials_path)).is_file():
             creds = service_account.Credentials.from_service_account_file(  # type: ignore[no-untyped-call]
@@ -230,10 +252,20 @@ class GoogleCloudTTSProvider(TTSProvider):
                 "google_cloud_tts.using_key",
                 key=Path(str(credentials_path)).name,
             )
-            return texttospeech.TextToSpeechClient(credentials=creds)
+            client = texttospeech.TextToSpeechClient(credentials=creds)
+            self._client_cache[cache_key] = client
+            return client
+
+        if not allow_adc:
+            raise RuntimeError(
+                "Google Cloud TTS credentials are missing. Add an active "
+                "'google_cloud_service_account' key in editor8 UI."
+            )
 
         # Fallback: ADC (GOOGLE_APPLICATION_CREDENTIALS or metadata server)
-        return texttospeech.TextToSpeechClient()
+        client = texttospeech.TextToSpeechClient()
+        self._client_cache[cache_key] = client
+        return client
 
 
 # ── ElevenLabs provider ─────────────────────────────────────────────────────
@@ -254,6 +286,24 @@ class ElevenLabsProvider(TTSProvider):
         style: float – 0.0–1.0 (default 0.0)
     """
 
+    def __init__(self) -> None:
+        self._client_cache: dict[str, object] = {}  # api_key → ElevenLabs client
+
+    def _get_client(self, api_key: str, timeout_sec: float) -> object:
+        """Return a cached ElevenLabs client, creating one if needed."""
+        from elevenlabs import ElevenLabs
+
+        cache_key = api_key or "__default__"
+        client = self._client_cache.get(cache_key)
+        if client is None:
+            client = (
+                ElevenLabs(api_key=api_key, timeout=timeout_sec)
+                if api_key
+                else ElevenLabs(timeout=timeout_sec)
+            )
+            self._client_cache[cache_key] = client
+        return client
+
     def synthesize(
         self,
         text: str,
@@ -261,7 +311,7 @@ class ElevenLabsProvider(TTSProvider):
         output_path: Path,
         **kwargs: object,
     ) -> SynthesisResult:
-        from elevenlabs import ElevenLabs, VoiceSettings
+        from elevenlabs import VoiceSettings
 
         api_key = str(kwargs.get("api_key", ""))
         voice_id = str(kwargs.get("voice_id", "21m00Tcm4TlvDq8ikWAM"))
@@ -272,11 +322,7 @@ class ElevenLabsProvider(TTSProvider):
         # Injected by TTSService; falls back to a conservative default.
         timeout_sec = float(kwargs.get("timeout", 120.0))  # type: ignore[arg-type]
 
-        client = (
-            ElevenLabs(api_key=api_key, timeout=timeout_sec)
-            if api_key
-            else ElevenLabs(timeout=timeout_sec)
-        )
+        client = self._get_client(api_key, timeout_sec)
 
         audio_gen = client.text_to_speech.convert(
             voice_id=voice_id,
@@ -324,7 +370,75 @@ class PresetStore:
         return self._presets.get(ref, self._DEFAULT_PRESET)
 
 
+class _DbPresetStore:
+    """Preset store backed by the editor8 DB via :class:`CredentialReader`."""
+
+    _DEFAULT_PRESET: dict[str, Any] = {"provider": "gtts", "lang": "vi"}
+
+    def __init__(self, reader: _CredentialReader) -> None:  # type: ignore[valid-type]
+        self._reader = reader
+
+    def get(self, ref: str) -> dict[str, Any]:
+        preset = self._reader.get_tts_preset(ref)
+        return preset if preset is not None else self._DEFAULT_PRESET
+
+
 # ── KeyRing helpers (loading) ────────────────────────────────────────────────
+
+
+def _load_google_key_ring_from_db(
+    reader: _CredentialReader,  # type: ignore[valid-type]
+    creds_dir: Path,
+) -> KeyRing[Path] | None:
+    """Build a ``KeyRing[Path]`` from Google Cloud JSON keys stored in the DB.
+
+    Each ``secret_value`` is the raw JSON content of a service-account file.
+    The content is written to temporary files under *creds_dir* so that
+    :meth:`GoogleCloudTTSProvider._build_client` can load them by path.
+    """
+    keys = reader.get_keys("google_cloud_service_account")
+    if not keys:
+        log.warning(
+            "tts.google_key_ring_db_empty",
+            hint="Add a google_cloud_service_account key via the editor8 UI.",
+        )
+        return None
+
+    creds_dir.mkdir(parents=True, exist_ok=True)
+    # Clean stale credential files from previous runs.
+    for stale in creds_dir.glob("google_sa_*.json"):
+        with contextlib.suppress(OSError):
+            stale.unlink()
+    paths: list[Path] = []
+    labels: list[str] = []
+    for idx, json_content in enumerate(keys):
+        dest = creds_dir / f"google_sa_{idx}.json"
+        dest.write_text(json_content, encoding="utf-8")
+        dest.chmod(0o600)
+        paths.append(dest)
+        try:
+            info = json.loads(json_content)
+            label = info.get("client_email", f"key_{idx}")
+        except (json.JSONDecodeError, KeyError):
+            label = f"key_{idx}"
+        labels.append(label)
+
+    return KeyRing(paths, labels)
+
+
+def _load_elevenlabs_key_ring_from_db(
+    reader: _CredentialReader,  # type: ignore[valid-type]
+) -> KeyRing[str] | None:
+    """Build a ``KeyRing[str]`` from ElevenLabs API keys stored in the DB."""
+    keys = reader.get_keys("elevenlabs_api_key")
+    if not keys:
+        log.warning(
+            "tts.elevenlabs_key_ring_db_empty",
+            hint="Add an elevenlabs_api_key via the editor8 UI.",
+        )
+        return None
+    labels = [f"el_key_{i}" for i in range(len(keys))]
+    return KeyRing(keys, labels)
 
 
 def _load_google_key_ring(settings: Settings) -> KeyRing[Path] | None:
@@ -385,28 +499,50 @@ class TTSService:
                 tts_service.synthesize(…, google_credentials_path=…)
     """
 
-    _PROVIDERS: dict[str, type[TTSProvider]] = {
+    _PROVIDER_FACTORIES: dict[str, type[TTSProvider]] = {
         "gtts": GTTSProvider,
         "google_cloud": GoogleCloudTTSProvider,
         "elevenlabs": ElevenLabsProvider,
     }
 
-    def __init__(self, settings: Settings) -> None:
-        self._preset_store = PresetStore(settings.tts_presets_path)
+    def __init__(
+        self,
+        settings: Settings,
+        credential_reader: _CredentialReader | None = None,  # type: ignore[valid-type]
+    ) -> None:
         self._default_provider = settings.tts_provider
         self._settings = settings
+        self._use_db = credential_reader is not None
+
+        # Shared thread pool for timeout backstop (avoids per-call creation).
+        self._timeout_pool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="tts-timeout"
+        )
+
+        # Provider instance cache (one per provider type, reuses connections).
+        self._provider_instances: dict[str, TTSProvider] = {}
+
+        # ── Preset store ──────────────────────────────────────────────
+        if self._use_db:
+            self._preset_store: PresetStore | _DbPresetStore = _DbPresetStore(credential_reader)  # type: ignore[arg-type]
+        else:
+            self._preset_store = PresetStore(settings.tts_presets_path)
 
         # ── Load key rings (best-effort) ─────────────────────────────
-        self._google_ring = _load_google_key_ring(settings)
-        self._elevenlabs_ring = _load_elevenlabs_key_ring(settings)
+        if self._use_db:
+            creds_dir = settings.work_dir / "credentials" / "google"
+            self._google_ring = _load_google_key_ring_from_db(credential_reader, creds_dir)  # type: ignore[arg-type]
+            self._elevenlabs_ring = _load_elevenlabs_key_ring_from_db(credential_reader)  # type: ignore[arg-type]
+        else:
+            self._google_ring = _load_google_key_ring(settings)
+            self._elevenlabs_ring = _load_elevenlabs_key_ring(settings)
 
         log.info(
             "tts_service.ready",
+            credential_source="db" if self._use_db else "env_file",
             default_provider=self._default_provider,
             google_keys=self._google_ring.size if self._google_ring else 0,
-            elevenlabs_keys=(
-                self._elevenlabs_ring.size if self._elevenlabs_ring else 0
-            ),
+            elevenlabs_keys=(self._elevenlabs_ring.size if self._elevenlabs_ring else 0),
         )
 
     def has_provider(self) -> bool:
@@ -414,22 +550,27 @@ class TTSService:
 
         Notes:
             - ``gtts``: always available; no credentials required.
-            - ``google_cloud``: always available; key ring gives per-job
-              service-account credentials, but the client falls back to
-              Application Default Credentials (ADC) when no key ring is
-              loaded – ADC is always present in GCE / Cloud Run / Workload
-              Identity environments.
-            - ``elevenlabs``: requires a key ring *or* the single env-var key.
+            - ``google_cloud``:
+              - DB mode: requires at least one active
+                ``google_cloud_service_account`` key.
+              - env/file mode: ADC fallback is allowed.
+            - ``elevenlabs``:
+              - DB mode: requires at least one active ``elevenlabs_api_key``.
+              - env/file mode: key ring or single env-var key.
         """
         if self._default_provider == "gtts":
             return True  # gTTS uses no API key
         if self._default_provider == "google_cloud":
-            # ADC is always available as a fallback when no key ring is loaded,
-            # so google_cloud can always synthesise without explicit credentials.
+            # In DB mode we require explicit Google keys from editor8.
+            if self._use_db:
+                return bool(self._google_ring)
+            # In legacy env/file mode, ADC can satisfy google_cloud.
             return True
-        return self._default_provider == "elevenlabs" and bool(
-            self._elevenlabs_ring or self._settings.elevenlabs_api_key
-        )
+        if self._default_provider == "elevenlabs":
+            if self._use_db:
+                return bool(self._elevenlabs_ring)
+            return bool(self._elevenlabs_ring or self._settings.elevenlabs_api_key)
+        return False
 
     # ── Per-video rotation ───────────────────────────────────────────
 
@@ -450,6 +591,8 @@ class TTSService:
         """
         if self._elevenlabs_ring:
             return self._elevenlabs_ring.next()
+        if self._use_db:
+            return ""
         return self._settings.elevenlabs_api_key
 
     # ── Per-scene synthesis ──────────────────────────────────────────
@@ -473,18 +616,15 @@ class TTSService:
         preset = dict(self._preset_store.get(preset_ref))
         provider_name = preset.pop("provider", self._default_provider)
 
-        provider_cls = self._PROVIDERS.get(provider_name)
-        if provider_cls is None:
-            raise ValueError(f"Unknown TTS provider: {provider_name!r}")
-
         # ── Inject credentials ───────────────────────────────────────
         if provider_name == "google_cloud":
             if google_credentials_path is not None:
                 preset["credentials_path"] = google_credentials_path
+            preset["allow_adc"] = not self._use_db
         elif provider_name == "elevenlabs":
             if elevenlabs_api_key:
                 preset["api_key"] = elevenlabs_api_key
-            elif "api_key" not in preset:
+            elif "api_key" not in preset and not self._use_db:
                 preset["api_key"] = self._settings.elevenlabs_api_key
 
         # ── Inject timeout ───────────────────────────────────────────
@@ -495,7 +635,6 @@ class TTSService:
         timeout_sec = self._settings.tts_timeout_sec
         preset["timeout"] = timeout_sec
 
-        provider = provider_cls()
         effective_lang = preset.pop("lang", lang)
 
         log.info(
@@ -506,19 +645,137 @@ class TTSService:
             timeout_sec=timeout_sec,
         )
 
-        # ── Thread-based backstop ────────────────────────────────────
-        # Bounds every provider (including gTTS which has no native
-        # timeout API) to tts_timeout_sec wall-clock seconds.  Raises
-        # TimeoutError which the TTS pipeline stage converts to a
-        # retryable StageError.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as _pool:
-            _future = _pool.submit(
-                provider.synthesize, text, effective_lang, output_path, **preset
+        def _invoke(current_provider: str, current_preset: dict[str, Any]) -> SynthesisResult:
+            provider_cls = self._PROVIDER_FACTORIES.get(current_provider)
+            if provider_cls is None:
+                raise ValueError(f"Unknown TTS provider: {current_provider!r}")
+            # Re-use cached provider instance to preserve HTTP/gRPC connections.
+            provider = self._provider_instances.get(current_provider)
+            if provider is None:
+                provider = provider_cls()
+                self._provider_instances[current_provider] = provider
+
+            # ── Thread-based backstop ────────────────────────────────
+            # Bounds every provider (including gTTS which has no native
+            # timeout API) to tts_timeout_sec wall-clock seconds.  Raises
+            # TimeoutError which the TTS pipeline stage converts to
+            # retryable/non-retryable warnings at scene level.
+            _future = self._timeout_pool.submit(
+                provider.synthesize,
+                text,
+                effective_lang,
+                output_path,
+                **current_preset,
             )
             try:
                 return _future.result(timeout=timeout_sec)
             except concurrent.futures.TimeoutError as exc:
                 raise TimeoutError(
                     f"TTS synthesis timed out after {timeout_sec:.0f}s "
-                    f"(provider={provider_name!r}, chars={len(text)})"
+                    f"(provider={current_provider!r}, chars={len(text)})"
                 ) from exc
+
+        def _retry_with_alternate_google_credentials(
+            initial_error: Exception,
+            base_preset: dict[str, Any],
+        ) -> SynthesisResult | None:
+            if not self._google_ring:
+                return None
+            attempted: set[str] = set()
+            current = base_preset.get("credentials_path")
+            if current is not None:
+                attempted.add(str(current))
+
+            for attempt in range(1, self._google_ring.size + 1):
+                alt_cred = self._google_ring.next()
+                alt_key = str(alt_cred)
+                if alt_key in attempted:
+                    continue
+                attempted.add(alt_key)
+                retry_preset = dict(base_preset)
+                retry_preset["credentials_path"] = alt_cred
+                try:
+                    log.warning(
+                        "tts.synthesize.retry_alternate_credential",
+                        provider="google_cloud",
+                        attempt=attempt,
+                        reason_type=type(initial_error).__name__,
+                    )
+                    return _invoke("google_cloud", retry_preset)
+                except Exception as exc:
+                    initial_error = exc
+                    log.warning(
+                        "tts.synthesize.retry_alternate_credential_failed",
+                        provider="google_cloud",
+                        attempt=attempt,
+                        error_type=type(exc).__name__,
+                        error_message=str(exc)[:500],
+                    )
+            return None
+
+        def _retry_with_alternate_elevenlabs_keys(
+            initial_error: Exception,
+            base_preset: dict[str, Any],
+        ) -> SynthesisResult | None:
+            attempted: set[str] = set()
+            current = str(base_preset.get("api_key", "")).strip()
+            if current:
+                attempted.add(current)
+
+            if not self._elevenlabs_ring:
+                return None
+
+            for attempt in range(1, self._elevenlabs_ring.size + 1):
+                alt_key = self._elevenlabs_ring.next().strip()
+                if not alt_key or alt_key in attempted:
+                    continue
+                attempted.add(alt_key)
+                retry_preset = dict(base_preset)
+                retry_preset["api_key"] = alt_key
+                try:
+                    log.warning(
+                        "tts.synthesize.retry_alternate_credential",
+                        provider="elevenlabs",
+                        attempt=attempt,
+                        reason_type=type(initial_error).__name__,
+                    )
+                    return _invoke("elevenlabs", retry_preset)
+                except Exception as exc:
+                    initial_error = exc
+                    log.warning(
+                        "tts.synthesize.retry_alternate_credential_failed",
+                        provider="elevenlabs",
+                        attempt=attempt,
+                        error_type=type(exc).__name__,
+                        error_message=str(exc)[:500],
+                    )
+            return None
+
+        try:
+            return _invoke(provider_name, dict(preset))
+        except Exception as primary_exc:
+            # If a pinned credential is dead (expired key, billing disabled,
+            # revoked token), try other credentials from the same provider ring
+            # before giving up this scene.
+            if provider_name == "google_cloud":
+                retry_result = _retry_with_alternate_google_credentials(primary_exc, dict(preset))
+                if retry_result is not None:
+                    return retry_result
+            elif provider_name == "elevenlabs":
+                retry_result = _retry_with_alternate_elevenlabs_keys(primary_exc, dict(preset))
+                if retry_result is not None:
+                    return retry_result
+
+            # Last-resort fallback: preserve narration with gTTS when a premium
+            # provider fails globally (credentials/quota/network).
+            if provider_name != "gtts":
+                log.warning(
+                    "tts.synthesize.fallback_gtts",
+                    failed_provider=provider_name,
+                    error_type=type(primary_exc).__name__,
+                    error_message=str(primary_exc)[:500],
+                )
+                fallback_preset: dict[str, Any] = {"timeout": timeout_sec}
+                return _invoke("gtts", fallback_preset)
+
+            raise

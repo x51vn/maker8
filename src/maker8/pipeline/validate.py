@@ -212,6 +212,38 @@ class ValidateStage(Stage):
                         retryable=False,
                     )
 
+        # ── Each V2 scene must have a primary_visual layer ──────────
+        # Compatibility: infer from a single obvious visual layer when
+        # upstream omitted role during migration.
+        for scene in spec.scenes:
+            has_primary_visual = any(layer.role == "primary_visual" for layer in scene.layers)
+            if has_primary_visual:
+                continue
+
+            inferred_layer = self._infer_primary_visual(scene.layers)
+            if inferred_layer is not None:
+                prev_role = inferred_layer.role
+                # Store inferred values on context instead of mutating spec.
+                ctx.inferred_roles[inferred_layer.layer_id] = "primary_visual"
+                ctx.inferred_required.add(inferred_layer.layer_id)
+                log.warning(
+                    "validate.primary_visual_inferred",
+                    job_id=ctx.job_id,
+                    scene_id=scene.scene_id,
+                    layer_id=inferred_layer.layer_id,
+                    previous_role=prev_role,
+                )
+                continue
+
+            raise StageError(
+                self.name,
+                "MISSING_PRIMARY_VISUAL",
+                f"Scene {scene.scene_id} has no layer with role='primary_visual';"
+                " V2 requires each production scene to have a primary visual layer;"
+                " no inferable image/video layer was found",
+                retryable=False,
+            )
+
         # ── Scene subtitle validation ────────────────────────────────
         for scene in spec.scenes:
             sub = scene.subtitle
@@ -263,3 +295,24 @@ class ValidateStage(Stage):
                 account_ref=first_account_ref,
                 hint="channel_id does not match first enabled target's account_ref",
             )
+
+    @staticmethod
+    def _infer_primary_visual(layers: list[object]) -> object | None:
+        """Pick a single obvious visual layer to promote as primary_visual."""
+        candidates: list[object] = []
+        for layer in layers:
+            layer_type = getattr(layer, "type", "")
+            layer_role = getattr(layer, "role", None)
+            has_primary_asset_ref = bool(getattr(layer, "asset_ref", None))
+            has_fallback_refs = bool(getattr(layer, "fallback_asset_refs", []))
+            is_eligible_role = layer_role in (None, "supporting_visual")
+            if (
+                layer_type in {"image", "video"}
+                and (has_primary_asset_ref or has_fallback_refs)
+                and is_eligible_role
+            ):
+                candidates.append(layer)
+
+        if len(candidates) != 1:
+            return None
+        return candidates[0]

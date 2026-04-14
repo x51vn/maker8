@@ -19,6 +19,8 @@ from prometheus_client import (
     Histogram,
 )
 
+from maker8.models.common import RenderStage
+
 __all__ = [
     "CURRENT_STAGE",
     "DEPENDENCY_FAILURES",
@@ -193,18 +195,10 @@ KAFKA_CONSUMER_RUNNING = Gauge(
     "1 if the Kafka consumer loop is active.",
 )
 
-# Stage ordinal mapping for CURRENT_STAGE gauge
-_STAGE_ORDINALS: dict[str | None, int] = {
-    None: 0,
-    "VALIDATE": 1,
-    "RESOLVE_ASSETS": 2,
-    "DOWNLOAD": 3,
-    "NORMALIZE": 4,
-    "TTS": 5,
-    "RENDER": 6,
-    "UPLOAD_DROPBOX": 7,
-    "EMIT_RESULT": 8,
-}
+# Stage ordinal mapping for CURRENT_STAGE gauge — derived from RenderStage enum
+# to avoid manual sync.
+_STAGE_ORDINALS: dict[str | None, int] = {None: 0}
+_STAGE_ORDINALS.update({s.value: i for i, s in enumerate(RenderStage, 1)})
 
 
 def set_current_stage(stage: str | None) -> None:

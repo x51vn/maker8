@@ -57,6 +57,14 @@ class Defaults(BaseModel):
 # ── Assets ───────────────────────────────────────────────────────────────────
 
 
+class SceneBoundary(BaseModel):
+    """A single scene interval within a video asset."""
+
+    start_sec: float
+    end_sec: float
+    score: float | None = None
+
+
 class AssetSourceOptions(BaseModel):
     # Wire-format boundary semantics:
     #   None / omitted → consumer uses its default (e.g. maker8 _DEFAULT_FORMAT)
@@ -64,6 +72,14 @@ class AssetSourceOptions(BaseModel):
     #   non-empty str  → used as-is
     format: str | None = None
     max_duration_sec: int | None = None
+
+    # ── Scene detection options ──────────────────────────────────────
+    scene_detect_enabled: bool = False
+    scene_detect_threshold: float | None = None
+    scene_detect_min_scene_len_sec: float | None = None
+    scene_detect_max_scenes: int | None = None
+    scene_detect_sample_fps: int | None = None
+    scene_detect_scale_width: int | None = None
 
 
 class AssetSource(BaseModel):
@@ -121,6 +137,7 @@ class Layer(BaseModel):
 
     # image / video
     asset_ref: str | None = None
+    fallback_asset_refs: list[str] = Field(default_factory=list)
     fit: str | None = None
     align: str | None = None  # RESERVED – layer alignment not yet implemented in maker8 renderer
     trim: Trim | None = None

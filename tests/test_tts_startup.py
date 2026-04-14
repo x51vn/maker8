@@ -1,9 +1,11 @@
 """Tests for TTSService.has_provider() semantics (XST-1051).
 
 Verifies:
-  - google_cloud always returns True (ADC fallback, no key ring required)
+  - google_cloud returns True in env_file mode (ADC fallback)
+  - google_cloud requires DB keys in credential_source=db mode
   - gtts always returns True (no credentials needed)
-  - elevenlabs returns True only when a key ring or env-var key is present
+  - elevenlabs returns True only when a key ring or env-var key is present in env mode
+  - elevenlabs requires DB keys in credential_source=db mode
   - elevenlabs returns False when neither key ring nor env-var is configured
   - The startup check in app.py emits a warning but does NOT kill the process
 """
@@ -47,6 +49,26 @@ def _make_tts_service(
         patch("maker8.services.tts_client.PresetStore"),
     ):
         return TTSService(settings)
+
+
+def _make_tts_service_db(
+    provider: str = "gtts",
+    elevenlabs_api_key: str = "",
+    google_ring: object | None = None,
+    elevenlabs_ring: object | None = None,
+) -> TTSService:
+    """Construct a DB-backed TTSService with mocked DB key-ring loading."""
+    settings = _make_settings(provider=provider, elevenlabs_api_key=elevenlabs_api_key)
+    settings.work_dir = Path("/tmp/maker8-tests")
+    reader = MagicMock()
+    with (
+        patch("maker8.services.tts_client._load_google_key_ring_from_db", return_value=google_ring),
+        patch(
+            "maker8.services.tts_client._load_elevenlabs_key_ring_from_db",
+            return_value=elevenlabs_ring,
+        ),
+    ):
+        return TTSService(settings, credential_reader=reader)
 
 
 # ── Tests ────────────────────────────────────────────────────────────────────
@@ -104,6 +126,20 @@ class TestHasProvider:
         svc = _make_tts_service(provider="nonexistent_provider")
         assert svc.has_provider() is False
 
+    def test_google_cloud_no_db_keys_returns_false_in_db_mode(self) -> None:
+        """DB mode does not allow ADC fallback when no DB key exists."""
+        svc = _make_tts_service_db(provider="google_cloud", google_ring=None)
+        assert svc.has_provider() is False
+
+    def test_elevenlabs_env_key_ignored_in_db_mode(self) -> None:
+        """DB mode ignores MAKER8_ELEVENLABS_API_KEY fallback."""
+        svc = _make_tts_service_db(
+            provider="elevenlabs",
+            elevenlabs_api_key="sk-env-should-be-ignored",
+            elevenlabs_ring=None,
+        )
+        assert svc.has_provider() is False
+
 
 class TestStartupNoHardKill:
     """Ensure the startup TTS check does not hard-kill the process."""
@@ -125,14 +161,11 @@ class TestStartupNoHardKill:
         window = lines[has_provider_line : has_provider_line + 20]
         exit_in_window = any("os._exit" in line for line in window)
         assert not exit_in_window, (
-            "os._exit() found near has_provider() in app.py. "
-            "Should use log.warning() per XST-1051."
+            "os._exit() found near has_provider() in app.py. Should use log.warning() per XST-1051."
         )
         # The window should contain 'warning' (log.warning call)
         warning_in_window = any("warning" in line.lower() for line in window)
-        assert warning_in_window, (
-            "No log.warning() found near has_provider() in app.py."
-        )
+        assert warning_in_window, "No log.warning() found near has_provider() in app.py."
 
     def test_google_cloud_no_key_ring_never_triggers_warning(self) -> None:
         """google_cloud with no key ring => has_provider() True => no warning path."""

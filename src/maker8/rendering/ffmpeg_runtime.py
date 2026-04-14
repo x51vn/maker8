@@ -142,6 +142,7 @@ def diagnose_runtime() -> FFmpegRuntimeInfo:
     # What imageio_ffmpeg would resolve to (for logging only)
     try:
         import imageio_ffmpeg
+
         imageio_path = imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:
         imageio_path = "(not installed)"

@@ -23,6 +23,15 @@ from maker8.retry import StageError
 
 def _make_minimal_spec(spec_version: str = "1.0") -> RenderSpec:
     """Return the smallest valid RenderSpec at the given spec_version."""
+    layer: dict = {
+        "layer_id": "l1",
+        "type": "video",
+        "asset_ref": "a1",
+        "rect": {"x": 0, "y": 0, "w": 1080, "h": 1920},
+    }
+    if spec_version == "2.0":
+        layer["role"] = "primary_visual"
+        layer["required"] = True
     return RenderSpec.model_validate(
         {
             "spec_version": spec_version,
@@ -46,14 +55,7 @@ def _make_minimal_spec(spec_version: str = "1.0") -> RenderSpec:
                 {
                     "scene_id": "s1",
                     "narration": {"text": "Hello world."},
-                    "layers": [
-                        {
-                            "layer_id": "l1",
-                            "type": "video",
-                            "asset_ref": "a1",
-                            "rect": {"x": 0, "y": 0, "w": 1080, "h": 1920},
-                        }
-                    ],
+                    "layers": [layer],
                 }
             ],
         }

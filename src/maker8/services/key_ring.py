@@ -90,15 +90,11 @@ class KeyRing(Generic[T]):
         ordering across restarts.
         """
         if not directory.is_dir():
-            raise FileNotFoundError(
-                f"Key directory does not exist: {directory}"
-            )
+            raise FileNotFoundError(f"Key directory does not exist: {directory}")
 
         paths = sorted(directory.glob("*.json"))
         if not paths:
-            raise FileNotFoundError(
-                f"No *.json credential files found in {directory}"
-            )
+            raise FileNotFoundError(f"No *.json credential files found in {directory}")
 
         labels = [p.name for p in paths]
         log.info(
@@ -120,19 +116,13 @@ class KeyRing(Generic[T]):
         string.
         """
         if not directory.is_dir():
-            raise FileNotFoundError(
-                f"Key directory does not exist: {directory}"
-            )
+            raise FileNotFoundError(f"Key directory does not exist: {directory}")
 
         key_files = sorted(
-            p
-            for p in directory.iterdir()
-            if p.is_file() and p.suffix in {".txt", ".key"}
+            p for p in directory.iterdir() if p.is_file() and p.suffix in {".txt", ".key"}
         )
         if not key_files:
-            raise FileNotFoundError(
-                f"No *.txt / *.key files found in {directory}"
-            )
+            raise FileNotFoundError(f"No *.txt / *.key files found in {directory}")
 
         keys: list[str] = []
         labels: list[str] = []
@@ -145,9 +135,7 @@ class KeyRing(Generic[T]):
             labels.append(kf.name)
 
         if not keys:
-            raise ValueError(
-                f"All key files in {directory} are empty"
-            )
+            raise ValueError(f"All key files in {directory} are empty")
 
         log.info(
             "key_ring.loaded_text",
