@@ -109,7 +109,13 @@ def compose_video(ri: RenderInput) -> tuple[Path, OutputMeta]:
     allow_python_effects = profile.allow_python_effects if profile else True
 
     output_path = ri.output_dir / f"{ri.job_id}.mp4"
-    encoder = resolve_encoder(output_cfg.codec, output_cfg.preset, output_cfg.pix_fmt)
+    encoder = resolve_encoder(
+        output_cfg.codec,
+        output_cfg.preset,
+        output_cfg.pix_fmt,
+        preferred_cpu_preset=profile.encode_preset_cpu if profile else None,
+        preferred_gpu_preset=profile.encode_preset_gpu if profile else None,
+    )
 
     # Decide strategy: scene-level render (fast) or single-graph (transition)
     has_transitions = any(

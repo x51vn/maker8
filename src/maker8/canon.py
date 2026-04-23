@@ -22,7 +22,7 @@ def canonicalize(spec: RenderSpec) -> str:
       1. UTF-8 serialize
       2. Sort object keys lexicographically
       3. Sort ``assets[]`` by ``id``
-      4. Sort ``publish.targets[]`` by ``(platform, account_ref)``
+            4. Sort ``publish.targets[]`` by ``(platform, channel_id, channel_url, channel_name)``
       5. Keep order of ``scenes[]``
       6. Keep order of ``layers[]``
       7. Normalize floats to 6 decimal places
@@ -39,7 +39,12 @@ def canonicalize(spec: RenderSpec) -> str:
     if "targets" in publish:
         publish["targets"] = sorted(
             publish["targets"],
-            key=lambda t: (t.get("platform", ""), t.get("account_ref", "")),
+            key=lambda t: (
+                t.get("platform", ""),
+                t.get("channel_id", ""),
+                t.get("channel_url", ""),
+                t.get("channel_name", ""),
+            ),
         )
 
     # Rule 7  – walk tree before serialisation

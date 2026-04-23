@@ -30,7 +30,7 @@ class TestContractReservedFieldsAccepted:
     def test_reserved_variant_accepted(self) -> None:
         from render_contracts.render_spec import PublishTarget
 
-        target = PublishTarget(platform="youtube", account_ref="ch-1", variant="shorts")
+        target = PublishTarget(platform="youtube", channel_id="UCch1", variant="shorts")
         assert target.variant == "shorts"
 
     def test_reserved_result_type_accepted(self) -> None:

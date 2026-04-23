@@ -199,6 +199,9 @@ def resolve_encoder(
     requested_codec: str,
     requested_preset: str,
     pix_fmt: str = "yuv420p",
+    *,
+    preferred_cpu_preset: str | None = None,
+    preferred_gpu_preset: str | None = None,
 ) -> EncoderConfig:
     """Resolve the final encoder configuration.
 
@@ -212,16 +215,19 @@ def resolve_encoder(
     default.  Requests generated before the ``"auto"`` contract change
     carry ``"libx264"`` but should still benefit from GPU acceleration.
     """
+    cpu_preset = preferred_cpu_preset or requested_preset
+    gpu_preset = preferred_gpu_preset or "p4"
+
     if requested_codec in ("auto", "libx264"):
         if check_nvenc():
-            return _gpu_config(pix_fmt)
-        return _cpu_config(requested_preset, pix_fmt)
+            return _gpu_config(pix_fmt, preset=gpu_preset)
+        return _cpu_config(cpu_preset, pix_fmt)
 
     if requested_codec == "h264_nvenc":
         if check_nvenc():
-            return _gpu_config(pix_fmt)
+            return _gpu_config(pix_fmt, preset=gpu_preset)
         log.warning("encoder.nvenc_requested_but_unavailable", fallback="libx264")
-        return _cpu_config(requested_preset, pix_fmt)
+        return _cpu_config(cpu_preset, pix_fmt)
 
     # Explicit CPU codec — honour as-is
     return EncoderConfig(
@@ -232,10 +238,10 @@ def resolve_encoder(
     )
 
 
-def _gpu_config(pix_fmt: str) -> EncoderConfig:
+def _gpu_config(pix_fmt: str, preset: str = "p4") -> EncoderConfig:
     return EncoderConfig(
         codec="h264_nvenc",
-        preset="p4",
+        preset=preset,
         ffmpeg_params=[
             "-pix_fmt",
             pix_fmt,

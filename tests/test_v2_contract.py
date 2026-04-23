@@ -326,6 +326,30 @@ class TestV2LayerRoles:
         assert ctx.inferred_roles.get(layer.layer_id) == "primary_visual"
         assert layer.layer_id in ctx.inferred_required
 
+    def test_multi_candidate_infers_largest_as_primary(self, tmp_path: Path) -> None:
+        """Background + small overlay without roles: largest area layer is inferred as primary."""
+        req_dict = _v2_request(1, roles=False, planning_count=1)
+        scene = req_dict["render_spec"]["scenes"][0]
+        scene["layers"] = [
+            {
+                "layer_id": "bg",
+                "type": "video",
+                "asset_ref": "a1",
+                "rect": {"x": 0, "y": 0, "w": 1080, "h": 1920},
+            },
+            {
+                "layer_id": "logo",
+                "type": "image",
+                "asset_ref": "a1",
+                "rect": {"x": 40, "y": 40, "w": 120, "h": 120},
+            },
+        ]
+        ctx = _make_ctx(tmp_path, req_dict)
+        ValidateStage().execute(ctx)
+        assert ctx.inferred_roles.get("bg") == "primary_visual"
+        assert "bg" in ctx.inferred_required
+        assert "logo" not in ctx.inferred_roles
+
     def test_invalid_role_fails(self, tmp_path: Path) -> None:
         req_dict = _v2_request(1, planning_count=1)
         req_dict["render_spec"]["scenes"][0]["layers"][0]["role"] = "not_a_role"

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from maker8.models.contracts import RenderRequest
 from maker8.models.spec import (
     RenderSpec,
@@ -93,11 +95,11 @@ class TestIdentityWarnings:
     """Non-blocking identity checks must warn but never raise."""
 
     def test_matching_identity_no_warning(self, tmp_path: Path, caplog: object) -> None:
-        """Matching channel_id and account_ref should produce no identity warnings."""
+        """Matching common channel_id and target channel_id should produce no warnings."""
         req = _make_request(
             channel_id="channel:abc",
             publish_targets=[
-                {"platform": "youtube", "account_ref": "channel:abc", "enabled": True}
+                {"platform": "youtube", "channel_id": "channel:abc", "enabled": True}
             ],
         )
         ctx = _make_ctx(tmp_path, req)
@@ -111,7 +113,7 @@ class TestIdentityWarnings:
         req = _make_request(
             channel_id="",
             publish_targets=[
-                {"platform": "youtube", "account_ref": "channel:abc", "enabled": True}
+                {"platform": "youtube", "channel_id": "channel:abc", "enabled": True}
             ],
         )
         ctx = _make_ctx(tmp_path, req)
@@ -119,16 +121,33 @@ class TestIdentityWarnings:
         ValidateStage().execute(ctx)
 
     def test_identity_mismatch_warns(self, tmp_path: Path) -> None:
-        """Mismatched channel_id vs account_ref should warn but not fail."""
+        """Mismatched common channel_id vs target channel_id should warn but not fail."""
         req = _make_request(
             channel_id="yt:old-channel",
             publish_targets=[
-                {"platform": "youtube", "account_ref": "channel:new", "enabled": True}
+                {"platform": "youtube", "channel_id": "channel:new", "enabled": True}
             ],
         )
         ctx = _make_ctx(tmp_path, req)
         # Should NOT raise — warnings only
         ValidateStage().execute(ctx)
+
+    def test_missing_enabled_channel_id_raises(self, tmp_path: Path) -> None:
+        req = _make_request(
+            channel_id="",
+            publish_targets=[
+                {"platform": "youtube", "channel_id": "", "enabled": True}
+            ],
+        )
+        ctx = _make_ctx(tmp_path, req)
+
+        from maker8.retry import StageError
+
+        with pytest.raises(StageError) as exc_info:
+            ValidateStage().execute(ctx)
+
+        assert exc_info.value.code == "MISSING_PUBLISH_CHANNEL_ID"
+        assert str(exc_info.value) == "Enabled publish targets must define channel_id"
 
     def test_no_publish_targets_no_warning(self, tmp_path: Path) -> None:
         """No publish targets means no identity check performed."""
@@ -141,7 +160,7 @@ class TestIdentityWarnings:
         req = _make_request(
             channel_id="",
             publish_targets=[
-                {"platform": "youtube", "account_ref": "channel:abc", "enabled": False}
+                {"platform": "youtube", "channel_id": "channel:abc", "enabled": False}
             ],
         )
         ctx = _make_ctx(tmp_path, req)

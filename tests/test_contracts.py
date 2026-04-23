@@ -245,16 +245,18 @@ class TestEditor8CrossRepoContract:
     def test_publish_intent_preserved(self) -> None:
         payload = _load_fixture("golden_editor8_full_request.json")
         req = RenderRequest.model_validate(payload)
-        assert req.publish_intent == "render_and_publish"
+        assert req.publish_intent == "publish_ready"
 
     def test_uploader_metadata_fully_parsed(self) -> None:
         payload = _load_fixture("golden_editor8_full_request.json")
         req = RenderRequest.model_validate(payload)
         um = req.uploader_metadata
-        assert um.channel_id == "channel:test-channel"
+        assert um.channel_id == "UCtestchannel"
+        assert um.channel_url == "https://youtube.com/@test-channel"
+        assert um.channel_name == "Test Channel"
         assert um.title == "Test Video Title"
         assert um.lang == "vi"
-        assert um.visibility == "private"
+        assert um.visibility == "public"
         assert len(um.keywords) == 2
         assert len(um.source_attributions) == 1
         assert um.source_attributions[0].provider == "youtube"

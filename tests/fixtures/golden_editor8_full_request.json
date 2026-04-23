@@ -56,9 +56,17 @@
             "layer_id": "bg-layer",
             "type": "video",
             "asset_ref": "bg-video-1",
-            "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 1080,
+              "h": 1920
+            },
             "fit": "cover",
-            "trim": { "in": 0, "out": 15 },
+            "trim": {
+              "in": 0,
+              "out": 15
+            },
             "opacity": 1.0,
             "anchor": "top_left",
             "rotation_deg": 0.0,
@@ -68,11 +76,17 @@
             "layer_id": "logo-overlay",
             "type": "image",
             "asset_ref": "logo-img",
-            "rect": { "x": 40, "y": 40, "w": 120, "h": 120 },
+            "rect": {
+              "x": 40,
+              "y": 40,
+              "w": 120,
+              "h": 120
+            },
             "opacity": 0.9,
             "anchor": "top_left",
             "rotation_deg": 0.0,
-            "scale": 1.0
+            "scale": 1.0,
+            "fit": "contain"
           }
         ],
         "audio_tracks": [],
@@ -92,7 +106,9 @@
       "targets": [
         {
           "platform": "youtube",
-          "account_ref": "channel:test-channel",
+          "channel_id": "UCtestchannel",
+          "channel_url": "https://youtube.com/@test-channel",
+          "channel_name": "Test Channel",
           "variant": "",
           "enabled": true,
           "metadata": {
@@ -105,23 +121,31 @@
   },
   "dry_run": false,
   "canvas_profile": "portrait_1080x1920",
-  "publish_intent": "render_and_publish",
+  "publish_intent": "publish_ready",
   "uploader_metadata": {
-    "channel_id": "channel:test-channel",
+    "channel_id": "UCtestchannel",
+    "channel_url": "https://youtube.com/@test-channel",
+    "channel_name": "Test Channel",
     "title": "Test Video Title",
     "short_title": "Test Video",
     "summary": "A cross-repo contract test fixture.",
     "description": "This fixture validates that editor8's output is parseable by maker8.",
     "lang": "vi",
-    "keywords": ["test", "contract"],
-    "tags": ["test"],
-    "hashtags": ["#test"],
+    "keywords": [
+      "test",
+      "contract"
+    ],
+    "tags": [
+      "test"
+    ],
+    "hashtags": [
+      "#test"
+    ],
     "category": "News",
-    "visibility": "private",
+    "visibility": "public",
     "scheduled_publish_at": null,
     "content_rating": "general",
-    "thumbnail_ref": "",
-    "thumbnail_source_url": "",
+    "thumbnail_url": "",
     "thumbnail_strategy": "source_asset",
     "source_attributions": [
       {

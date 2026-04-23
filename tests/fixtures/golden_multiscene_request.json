@@ -206,7 +206,9 @@
       "targets": [
         {
           "platform": "youtube",
-          "account_ref": "yt:test-channel",
+          "channel_id": "UCtestchannel",
+          "channel_url": "https://youtube.com/@test-channel",
+          "channel_name": "Test Channel",
           "metadata": {
             "title": "Golden Test Video",
             "description": "Automated contract test."
