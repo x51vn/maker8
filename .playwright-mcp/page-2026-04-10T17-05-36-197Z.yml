@@ -1,0 +1,160 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e20]:
+    - complementary [ref=e21]:
+      - generic [ref=e22]:
+        - img [ref=e24]
+        - generic [ref=e26]:
+          - heading "editor8" [level=1] [ref=e27]
+          - paragraph [ref=e28]: AI Video Builder
+      - navigation [ref=e29]:
+        - link "Dashboard" [ref=e30] [cursor=pointer]:
+          - /url: /
+          - img [ref=e31]
+          - text: Dashboard
+        - link "Submit" [ref=e36] [cursor=pointer]:
+          - /url: /submit
+          - img [ref=e37]
+          - text: Submit
+        - link "Jobs" [ref=e40] [cursor=pointer]:
+          - /url: /jobs
+          - img [ref=e41]
+          - text: Jobs
+        - link "Channels" [ref=e44] [cursor=pointer]:
+          - /url: /channels
+          - img [ref=e45]
+          - text: Channels
+        - link "Operations" [ref=e48] [cursor=pointer]:
+          - /url: /ops
+          - img [ref=e49]
+          - text: Operations
+        - link "Settings" [ref=e51] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e52]
+          - text: Settings
+        - link "API Keys" [ref=e55] [cursor=pointer]:
+          - /url: /settings/keys
+          - img [ref=e56]
+          - text: API Keys
+        - link "TTS Presets" [ref=e59] [cursor=pointer]:
+          - /url: /settings/tts-presets
+          - img [ref=e60]
+          - text: TTS Presets
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - generic [ref=e63]: admin
+          - button "Sign out" [ref=e64] [cursor=pointer]:
+            - img [ref=e65]
+        - paragraph [ref=e68]: v0.2.0 · 8 AI Agents
+    - main [ref=e69]:
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - heading "Dashboard" [level=1] [ref=e74]
+            - paragraph [ref=e75]: Overview of your AI video pipeline
+          - button "Refresh" [ref=e76] [cursor=pointer]:
+            - img [ref=e77]
+            - text: Refresh
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - generic [ref=e85]: Total Jobs
+              - img [ref=e87]
+            - paragraph [ref=e90]: "27"
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - generic [ref=e93]: Published
+              - img [ref=e95]
+            - paragraph [ref=e98]: "27"
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - generic [ref=e101]: Processing
+              - img [ref=e103]
+            - paragraph [ref=e106]: "0"
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: Failed
+              - img [ref=e111]
+            - paragraph [ref=e113]: "0"
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - generic [ref=e116]:
+              - img [ref=e117]
+              - generic [ref=e119]: Today
+            - paragraph [ref=e120]: "1"
+          - generic [ref=e121]:
+            - generic [ref=e122]:
+              - img [ref=e123]
+              - generic [ref=e126]: This Week
+            - paragraph [ref=e127]: "7"
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - img [ref=e130]
+              - generic [ref=e133]: Avg. Processing
+            - paragraph [ref=e134]: 21787s
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - heading "Recent Jobs" [level=2] [ref=e137]
+            - link "View all →" [ref=e138] [cursor=pointer]:
+              - /url: /jobs
+          - generic [ref=e139]:
+            - link "507e7e45-583... 4/10/2026, 8:28:35 PM PUBLISHED" [ref=e140] [cursor=pointer]:
+              - /url: /jobs/507e7e45-5834-4127-abb8-eab290a88ac4
+              - generic [ref=e141]:
+                - paragraph [ref=e142]: 507e7e45-583...
+                - paragraph [ref=e143]: 4/10/2026, 8:28:35 PM
+              - generic [ref=e144]: PUBLISHED
+            - link "e792b4f8-fc8... 4/10/2026, 12:09:59 AM PUBLISHED" [ref=e146] [cursor=pointer]:
+              - /url: /jobs/e792b4f8-fc8e-4928-acf9-6d726e89701c
+              - generic [ref=e147]:
+                - paragraph [ref=e148]: e792b4f8-fc8...
+                - paragraph [ref=e149]: 4/10/2026, 12:09:59 AM
+              - generic [ref=e150]: PUBLISHED
+            - link "Cơ sở lọc dầu bị tấn công, Iran phóng tên lửa vào các nước vùng Vịnh Cơ sở lọc dầu bị tấn công, Iran... 4/8/2026, 11:05:33 PM PUBLISHED" [ref=e152] [cursor=pointer]:
+              - /url: /jobs/fcb9876c-4160-462a-ae32-3760e1741fee
+              - generic [ref=e153]:
+                - paragraph [ref=e154]: Cơ sở lọc dầu bị tấn công, Iran phóng tên lửa vào các nước vùng Vịnh Cơ sở lọc dầu bị tấn công, Iran...
+                - paragraph [ref=e155]: 4/8/2026, 11:05:33 PM
+              - generic [ref=e156]: PUBLISHED
+            - link "Cơ sở lọc dầu bị tấn công, Iran phóng tên lửa vào các nước vùng Vịnh Cơ sở lọc dầu bị tấn công, Iran... 4/8/2026, 8:50:52 PM PUBLISHED" [ref=e158] [cursor=pointer]:
+              - /url: /jobs/8c274bc2-85c5-4410-8bcc-2ba5d8cd69f9
+              - generic [ref=e159]:
+                - paragraph [ref=e160]: Cơ sở lọc dầu bị tấn công, Iran phóng tên lửa vào các nước vùng Vịnh Cơ sở lọc dầu bị tấn công, Iran...
+                - paragraph [ref=e161]: 4/8/2026, 8:50:52 PM
+              - generic [ref=e162]: PUBLISHED
+            - link "5 ưu tiên của tân Thủ tướng Lê Minh Hưng 5 ưu tiên của tân Thủ tướng Lê Minh Hưng 1 Thủ tướng Lê Min... 4/7/2026, 7:28:41 PM PUBLISHED" [ref=e164] [cursor=pointer]:
+              - /url: /jobs/5f833af7-b597-4649-90ec-9bcd307cd861
+              - generic [ref=e165]:
+                - paragraph [ref=e166]: 5 ưu tiên của tân Thủ tướng Lê Minh Hưng 5 ưu tiên của tân Thủ tướng Lê Minh Hưng 1 Thủ tướng Lê Min...
+                - paragraph [ref=e167]: 4/7/2026, 7:28:41 PM
+              - generic [ref=e168]: PUBLISHED
+            - link "Hôm nay Quốc hội bầu Chủ tịch nước, Thủ tướng nhiệm kỳ mới Ngày 7/4, Quốc hội bầu Chủ tịch nước và T... 4/7/2026, 6:29:29 AM PUBLISHED" [ref=e170] [cursor=pointer]:
+              - /url: /jobs/d98b1d4b-e9f8-4afc-9d5f-f2e154916847
+              - generic [ref=e171]:
+                - paragraph [ref=e172]: Hôm nay Quốc hội bầu Chủ tịch nước, Thủ tướng nhiệm kỳ mới Ngày 7/4, Quốc hội bầu Chủ tịch nước và T...
+                - paragraph [ref=e173]: 4/7/2026, 6:29:29 AM
+              - generic [ref=e174]: PUBLISHED
+            - link "Iran tuyên bố bắn hạ ba máy bay Mỹ tham gia tìm phi công Iran tuyên bố bắn hạ ba máy bay Mỹ tham gia... 4/5/2026, 9:27:46 PM PUBLISHED" [ref=e176] [cursor=pointer]:
+              - /url: /jobs/7e4b6d72-2ef0-402f-a6dd-d0be1e7c151b
+              - generic [ref=e177]:
+                - paragraph [ref=e178]: Iran tuyên bố bắn hạ ba máy bay Mỹ tham gia tìm phi công Iran tuyên bố bắn hạ ba máy bay Mỹ tham gia...
+                - paragraph [ref=e179]: 4/5/2026, 9:27:46 PM
+              - generic [ref=e180]: PUBLISHED
+            - link "A senior Japanese politician told the news channel NHK TV that Japan would not rule out sending wars... 3/20/2026, 10:45:10 PM PUBLISHED" [ref=e182] [cursor=pointer]:
+              - /url: /jobs/43a80bdb-443c-4a2d-85d3-6dfa117b70ba
+              - generic [ref=e183]:
+                - paragraph [ref=e184]: A senior Japanese politician told the news channel NHK TV that Japan would not rule out sending wars...
+                - paragraph [ref=e185]: 3/20/2026, 10:45:10 PM
+              - generic [ref=e186]: PUBLISHED
+            - link "According to the Financial Times, EU foreign affairs ministers are also considering widening the sco... 3/20/2026, 9:42:38 PM PUBLISHED" [ref=e188] [cursor=pointer]:
+              - /url: /jobs/4d32617d-d64a-43a6-b436-9dab6619e9c6
+              - generic [ref=e189]:
+                - paragraph [ref=e190]: According to the Financial Times, EU foreign affairs ministers are also considering widening the sco...
+                - paragraph [ref=e191]: 3/20/2026, 9:42:38 PM
+              - generic [ref=e192]: PUBLISHED
+            - link "Trump’s call for allied deployment to strait of Hormuz meets muted response UK and Japan among count... 3/19/2026, 7:03:13 PM PUBLISHED" [ref=e194] [cursor=pointer]:
+              - /url: /jobs/daea3e94-b817-4180-a88e-9abbed42fbc4
+              - generic [ref=e195]:
+                - paragraph [ref=e196]: Trump’s call for allied deployment to strait of Hormuz meets muted response UK and Japan among count...
+                - paragraph [ref=e197]: 3/19/2026, 7:03:13 PM
+              - generic [ref=e198]: PUBLISHED

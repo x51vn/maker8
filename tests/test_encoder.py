@@ -205,6 +205,20 @@ class TestResolveEncoder:
             cpu = resolve_encoder("auto", "medium")
             assert "+faststart" in " ".join(cpu.ffmpeg_params)
 
+    def test_auto_with_gpu_honours_preferred_gpu_preset(self) -> None:
+        with patch("maker8.rendering.encoder.check_nvenc", return_value=True):
+            cfg = resolve_encoder("auto", "medium", preferred_gpu_preset="p2")
+            assert cfg.codec == "h264_nvenc"
+            assert cfg.preset == "p2"
+            assert cfg.is_gpu is True
+
+    def test_auto_without_gpu_honours_preferred_cpu_preset(self) -> None:
+        with patch("maker8.rendering.encoder.check_nvenc", return_value=False):
+            cfg = resolve_encoder("auto", "medium", preferred_cpu_preset="veryfast")
+            assert cfg.codec == "libx264"
+            assert cfg.preset == "veryfast"
+            assert cfg.is_gpu is False
+
 
 # ── _cpu_config ──────────────────────────────────────────────────────────────
 

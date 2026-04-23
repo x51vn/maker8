@@ -524,7 +524,33 @@ Ngoài ra nên xác định rõ:
 - cải thiện batching / flush strategy cho Kafka producer
 - xem xét lâu dài việc giảm phụ thuộc vào MoviePy cho những phần performance-critical
 
-## 10. Bottom Line
+## 10. Render Performance Review (2026-04-18)
+
+Sau khi review lại render path hiện tại, các điểm có impact hiệu năng lớn nhất là:
+
+### 10.1 Bottleneck hiện tại
+
+- Phần compose vẫn chủ yếu là MoviePy-first, nên CPU mới là nút cổ chai chính chứ không phải encode.
+- Download, normalize và TTS đang chạy tuần tự theo từng asset hoặc từng scene, nên một job dài tăng wall-clock gần tuyến tính.
+- Mỗi layer video mở lại file media riêng trong rendering layer builder, làm tăng I/O và chi phí decode khi cùng asset được dùng lặp lại.
+- Performance profile đã có sẵn nhưng trước đây preset CPU/GPU chưa được truyền đầy đủ vào encoder path, nên chế độ fast chưa tận dụng hết phần giảm thời gian encode.
+
+### 10.2 Cải thiện nên ưu tiên ngay
+
+1. Ưu tiên scene-level render và FFmpeg-native effects hơn nữa để giảm graph MoviePy lớn trong memory.
+2. Chạy song song có giới hạn cho download, normalize và TTS theo asset hoặc scene, với semaphore theo tài nguyên CPU/GPU/disk.
+3. Cache clip handle và text rasterization theo asset hoặc nội dung để tránh mở lại cùng file và render lại cùng text nhiều lần.
+4. Giữ proxy downscale mặc định ở balanced hoặc fast cho job social-video; chỉ dùng full-res cho job thật sự cần chất lượng cao.
+5. Đo riêng build time và encode time cho từng scene để quyết định scene nào nên đi CPU path, scene nào nên đi GPU path.
+
+### 10.3 Hướng kiến trúc dài hạn
+
+- Tách render planner khỏi render executor để planner sinh ra execution plan tối ưu theo profile.
+- Dịch dần các effect phổ biến từ Python clip ops sang FFmpeg filter graph hoặc pre-baked templates.
+- Thêm cache artifact theo content hash cho normalized asset và TTS output để các job lặp không phải làm lại từ đầu.
+- Cân nhắc worker pool theo loại tải: một pool cho ingest/TTS và một pool riêng cho render GPU-heavy.
+
+## 11. Bottom Line
 
 `maker8` hiện là một worker render hoạt động được và có nền tảng kiến trúc tương đối tốt: stage pipeline rõ ràng, contract đang được chuẩn hóa, logging đã tốt hơn, plugin model đủ dùng, và GPU support đã bắt đầu hình thành.
 

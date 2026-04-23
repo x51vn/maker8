@@ -1,0 +1,726 @@
+- generic [ref=e1]:
+  - generic:
+    - generic [ref=e2]: Trang tổng quan của kênh
+    - generic [ref=e4]:
+      - banner [ref=e6]:
+        - button "Mở rộng menu" [ref=e7] [cursor=pointer]:
+          - generic [ref=e10]:
+            - img
+        - link "Trang tổng quan của YouTube Studio" [ref=e12] [cursor=pointer]:
+          - /url: /channel/UCAT5dD-oMgu5fZbihoBGt6A
+          - img "Trang tổng quan của YouTube Studio" [ref=e13]
+        - button "Bỏ qua phần hướng dẫn" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: Bỏ qua phần hướng dẫn
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - button "Tìm kiếm" [ref=e24] [cursor=pointer]:
+              - generic [ref=e27]:
+                - img
+            - button "Trò chuyện với Bộ phận hỗ trợ nhà sáng tạo" [ref=e29] [cursor=pointer]:
+              - generic [ref=e32]:
+                - img
+            - button "Trợ giúp" [ref=e34] [cursor=pointer]:
+              - generic [ref=e37]:
+                - img
+            - button "Hỏi Studio" [ref=e43] [cursor=pointer]:
+              - generic [ref=e46]:
+                - img
+            - button "Thông báo" [ref=e48] [cursor=pointer]:
+              - generic [ref=e51]:
+                - img
+          - button "Tạo" [ref=e54] [cursor=pointer]:
+            - generic [ref=e58]:
+              - img
+            - generic [ref=e59]: Tạo
+          - generic "Tài khoản" [ref=e63]:
+            - button "Account" [ref=e64]
+      - generic [ref=e66]:
+        - navigation [ref=e68]:
+          - generic [ref=e69]:
+            - generic:
+              - img "Tin tức 5.0" [ref=e72]
+              - generic [ref=e73]:
+                - generic [ref=e74]: Kênh của bạn
+                - generic [ref=e75]: Tin tức 5.0
+          - menu [ref=e77]:
+            - menuitem "Tổng quan" [ref=e78] [cursor=pointer]:
+              - generic [ref=e79]:
+                - generic [ref=e83]:
+                  - img
+                - generic: Tổng quan
+            - menuitem "Nội dung" [ref=e84] [cursor=pointer]:
+              - generic [ref=e85]:
+                - generic [ref=e89]:
+                  - img
+                - generic: Nội dung
+            - menuitem "Số liệu phân tích" [ref=e90] [cursor=pointer]:
+              - generic [ref=e91]:
+                - generic [ref=e95]:
+                  - img
+                - generic: Số liệu phân tích
+            - menuitem "Cộng đồng" [ref=e96] [cursor=pointer]:
+              - generic [ref=e97]:
+                - generic [ref=e101]:
+                  - img
+                - generic: Cộng đồng
+            - menuitem "Ngôn ngữ" [ref=e102] [cursor=pointer]:
+              - generic [ref=e103]:
+                - generic [ref=e107]:
+                  - img
+                - generic: Ngôn ngữ
+            - menuitem "Phát hiện nội dung" [ref=e108] [cursor=pointer]:
+              - generic [ref=e109]:
+                - generic [ref=e113]:
+                  - img
+                - generic: Phát hiện nội dung
+            - menuitem "Kiếm tiền" [ref=e114] [cursor=pointer]:
+              - generic [ref=e115]:
+                - generic [ref=e119]:
+                  - img
+                - generic: Kiếm tiền
+            - menuitem "Tùy chỉnh" [ref=e120] [cursor=pointer]:
+              - generic [ref=e121]:
+                - generic [ref=e125]:
+                  - img
+                - generic: Tùy chỉnh
+            - menuitem "Thư viện âm thanh" [ref=e126] [cursor=pointer]:
+              - generic [ref=e127]:
+                - generic [ref=e131]:
+                  - img
+                - generic: Thư viện âm thanh
+          - list [ref=e133]:
+            - listitem [ref=e134]:
+              - button "Cài đặt" [ref=e135] [cursor=pointer]:
+                - generic [ref=e139]:
+                  - img
+                - generic: Cài đặt
+            - listitem [ref=e140]:
+              - button "Gửi ý kiến phản hồi" [ref=e142] [cursor=pointer]:
+                - generic [ref=e146]:
+                  - img
+                - generic: Gửi ý kiến phản hồi
+        - main [ref=e147]:
+          - generic [ref=e148]:
+            - generic [ref=e150]:
+              - heading "Trang tổng quan của kênh" [level=1] [ref=e151]
+              - generic [ref=e152]:
+                - button "Tải video lên" [ref=e154] [cursor=pointer]:
+                  - generic [ref=e157]:
+                    - img
+                - link "Phát trực tiếp" [ref=e158] [cursor=pointer]:
+                  - /url: /channel/UCAT5dD-oMgu5fZbihoBGt6A/livestreaming
+                  - button "Phát trực tiếp" [ref=e159]:
+                    - generic [ref=e162]:
+                      - img
+                - link "Tạo bài đăng" [ref=e163] [cursor=pointer]:
+                  - /url: https://www.youtube.com/channel/UCAT5dD-oMgu5fZbihoBGt6A/posts?show_create_dialog=1
+                  - button "Tạo bài đăng" [ref=e164]:
+                    - generic [ref=e167]:
+                      - img
+            - generic [ref=e169]:
+              - generic [ref=e171]:
+                - generic [ref=e172]:
+                  - generic [ref=e178]:
+                    - heading "Hiệu suất của video mới nhất" [level=2] [ref=e179]
+                    - generic [ref=e181]:
+                      - 'img "Hình thu nhỏ video: TỬ VI 12 CUNG HOÀNG ĐẠO NGÀY 11/6: BẠCH DƯƠNG KHÓ KHĂN, THIÊN BÌNH PHÁT TRIỂN" [ref=e182]'
+                      - heading [level=2] [ref=e185]: "TỬ VI 12 CUNG HOÀNG ĐẠO NGÀY 11/6: BẠCH DƯƠNG KHÓ KHĂN, THIÊN BÌNH PHÁT TRIỂN"
+                    - generic [ref=e186]:
+                      - generic [ref=e187]:
+                        - generic [ref=e188]:
+                          - generic [ref=e191]:
+                            - img
+                          - text: "33"
+                        - generic [ref=e192]:
+                          - generic [ref=e195]:
+                            - img
+                          - text: "0"
+                        - generic [ref=e196]:
+                          - generic [ref=e199]:
+                            - img
+                          - text: "0"
+                      - button "Thu gọn" [ref=e200] [cursor=pointer]:
+                        - generic [ref=e203]:
+                          - img
+                    - separator [ref=e204]
+                    - group [ref=e205]:
+                      - generic [ref=e208]:
+                        - generic [ref=e210]: 295 ngày 23 giờ đầu tiên
+                        - generic [ref=e211]:
+                          - generic [ref=e212]:
+                            - generic [ref=e213]: Thứ hạng theo lượt xem
+                            - 'gridcell "2/10 . Video hàng đầu theo lượt xem. #1: LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025, #2: TỬ VI 12 CUNG HOÀNG ĐẠO NGÀY 11/6: BẠCH DƯƠNG KHÓ KHĂN, THIÊN BÌNH PHÁT TRIỂN, #3: THÊM MỘT NGƯỜI MẪU VIỆT GIÀNH GIẢI Á VƯƠNG TẠI ĐẤU TRƯỜNG QUỐC TẾ, #4: THÍ SINH KHIẾN BGK ĐIỂM HẸN TÀI NĂNG PHẢI “ĐỐI ĐẦU” NẢY LỬA, #5: BỘ TRƯỞNG GD&ĐT: SẼ CÓ QUY ĐỊNH MỚI VỀ HỌC PHÍ, #6: CON GÁI 20 TUỔI CỦA ANGELINA JOLIE ĐÍNH HÔN?, #7: ĐBQH LO CÁC TRƯỜNG TẬN THU ĐỂ BÙ VÀO KHOẢN TIỀN MIỄN HỌC PHÍ, #7: ĐIỂM CHUẨN LỚP 10 CHUYÊN NGOẠI NGỮ CAO NHẤT 34,7, #8: LỚP HỌC TRƯỜNG HUYỆN Ở NGHỆ AN CÓ 2 THỦ KHOA, 1 Á KHOA VÀO LỚP 10 và #9: CÁC TRƯỜNG NGÀNH XÂY DỰNG TĂNG HỌC PHÍ, CAO NHẤT 150 TRIỆU ĐỒNG/NĂM" [ref=e215] [cursor=pointer]':
+                              - generic [ref=e216]: 2/10
+                              - 'generic ". Video hàng đầu theo lượt xem. #1: LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025, #2: TỬ VI 12 CUNG HOÀNG ĐẠO NGÀY 11/6: BẠCH DƯƠNG KHÓ KHĂN, THIÊN BÌNH PHÁT TRIỂN, #3: THÊM MỘT NGƯỜI MẪU VIỆT GIÀNH GIẢI Á VƯƠNG TẠI ĐẤU TRƯỜNG QUỐC TẾ, #4: THÍ SINH KHIẾN BGK ĐIỂM HẸN TÀI NĂNG PHẢI “ĐỐI ĐẦU” NẢY LỬA, #5: BỘ TRƯỞNG GD&ĐT: SẼ CÓ QUY ĐỊNH MỚI VỀ HỌC PHÍ, #6: CON GÁI 20 TUỔI CỦA ANGELINA JOLIE ĐÍNH HÔN?, #7: ĐBQH LO CÁC TRƯỜNG TẬN THU ĐỂ BÙ VÀO KHOẢN TIỀN MIỄN HỌC PHÍ, #7: ĐIỂM CHUẨN LỚP 10 CHUYÊN NGOẠI NGỮ CAO NHẤT 34,7, #8: LỚP HỌC TRƯỜNG HUYỆN Ở NGHỆ AN CÓ 2 THỦ KHOA, 1 Á KHOA VÀO LỚP 10 và #9: CÁC TRƯỜNG NGÀNH XÂY DỰNG TĂNG HỌC PHÍ, CAO NHẤT 150 TRIỆU ĐỒNG/NĂM" [ref=e217]':
+                                - generic [ref=e219]:
+                                  - img
+                          - button "Số lượt xem 33" [ref=e220]:
+                            - generic [ref=e221]: Số lượt xem
+                            - generic [ref=e225]: "33"
+                          - button "Tỷ lệ nhấp của số lượt hiển thị hình thu nhỏ 1,6%" [ref=e226]:
+                            - generic [ref=e227]: Tỷ lệ nhấp của số lượt hiển thị hình thu nhỏ
+                            - generic [ref=e231]: 1,6%
+                          - button "Thời lượng xem trung bình 0:01" [ref=e232]:
+                            - generic [ref=e233]: Thời lượng xem trung bình
+                            - generic [ref=e237]: 0:01
+                    - generic [ref=e238]:
+                      - link "Xem số liệu phân tích video" [ref=e239] [cursor=pointer]:
+                        - /url: /video/AFCORjSPVFU/analytics/tab-overview/period-default
+                        - button "Xem số liệu phân tích video" [ref=e242]:
+                          - generic [ref=e243]: Xem số liệu phân tích video
+                      - link "Xem bình luận (0)" [ref=e247] [cursor=pointer]:
+                        - /url: /video/AFCORjSPVFU/comments/inbox
+                        - button "Xem bình luận (0)" [ref=e250]:
+                          - generic [ref=e251]: Xem bình luận (0)
+                  - generic [ref=e257]:
+                    - generic [ref=e259]: Video đã xuất bản
+                    - list [ref=e260]:
+                      - listitem [ref=e261]:
+                        - generic [ref=e266]:
+                          - link "LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025" [ref=e268] [cursor=pointer]:
+                            - /url: /video/Udg9lVqj9GU/edit
+                            - 'img "Hình thu nhỏ video: LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025" [ref=e274]'
+                          - generic [ref=e276]:
+                            - heading "LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025" [level=3] [ref=e277]
+                            - generic [ref=e278]:
+                              - generic [ref=e279]:
+                                - generic [ref=e282]:
+                                  - img
+                                - text: "304"
+                              - generic [ref=e283]:
+                                - generic [ref=e286]:
+                                  - img
+                                - text: "0"
+                              - generic [ref=e287]:
+                                - generic [ref=e290]:
+                                  - img
+                                - text: "1"
+                      - listitem [ref=e291]:
+                        - generic [ref=e296]:
+                          - link "Á HẬU HUỲNH MINH KIÊN CHẠM NGÕ ĐIỆN ẢNH SAU NHIỀU LẦN TRƯỢT VAI" [ref=e298] [cursor=pointer]:
+                            - /url: /video/LdtrLp7gmhk/edit
+                            - 'img "Hình thu nhỏ video: Á HẬU HUỲNH MINH KIÊN CHẠM NGÕ ĐIỆN ẢNH SAU NHIỀU LẦN TRƯỢT VAI" [ref=e304]'
+                          - generic [ref=e306]:
+                            - heading "Á HẬU HUỲNH MINH KIÊN CHẠM NGÕ ĐIỆN ẢNH SAU NHIỀU LẦN TRƯỢT VAI" [level=3] [ref=e307]
+                            - generic [ref=e308]:
+                              - generic [ref=e309]:
+                                - generic [ref=e312]:
+                                  - img
+                                - text: "356"
+                              - generic [ref=e313]:
+                                - generic [ref=e316]:
+                                  - img
+                                - text: "0"
+                              - generic [ref=e317]:
+                                - generic [ref=e320]:
+                                  - img
+                                - text: "0"
+                      - listitem [ref=e321]:
+                        - generic [ref=e326]:
+                          - link "LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025" [ref=e328] [cursor=pointer]:
+                            - /url: /video/NKd4FLlYhQA/edit
+                            - 'img "Hình thu nhỏ video: LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025" [ref=e334]'
+                          - generic [ref=e336]:
+                            - heading "LOẠT TRƯỜNG Y DƯỢC XÉT TUYỂN HỌC BẠ 2025" [level=3] [ref=e337]
+                            - generic [ref=e338]:
+                              - generic [ref=e339]:
+                                - generic [ref=e342]:
+                                  - img
+                                - text: "53"
+                              - generic [ref=e343]:
+                                - generic [ref=e346]:
+                                  - img
+                                - text: "0"
+                              - generic [ref=e347]:
+                                - generic [ref=e350]:
+                                  - img
+                                - text: "0"
+                      - listitem [ref=e351]:
+                        - generic [ref=e353]:
+                          - generic [ref=e356]:
+                            - link "PHIM 'TÌM XÁC' TRỞ LẠI VỚI DIỆN MẠO MỚI" [ref=e358] [cursor=pointer]:
+                              - /url: /video/UBzj4GxHIcA/edit
+                              - 'img "Hình thu nhỏ video: PHIM ''TÌM XÁC'' TRỞ LẠI VỚI DIỆN MẠO MỚI" [ref=e364]'
+                            - generic [ref=e366]:
+                              - heading "PHIM 'TÌM XÁC' TRỞ LẠI VỚI DIỆN MẠO MỚI" [level=3] [ref=e367]
+                              - generic [ref=e368]:
+                                - generic [ref=e369]:
+                                  - generic [ref=e372]:
+                                    - img
+                                  - text: "199"
+                                - generic [ref=e373]:
+                                  - generic [ref=e376]:
+                                    - img
+                                  - text: "0"
+                                - generic [ref=e377]:
+                                  - generic [ref=e380]:
+                                    - img
+                                  - text: "1"
+                          - link "Chuyển đến danh sách video" [ref=e381] [cursor=pointer]:
+                            - /url: /channel/UCAT5dD-oMgu5fZbihoBGt6A/videos
+                            - button "Chuyển đến danh sách video" [ref=e384]:
+                              - generic [ref=e385]: Chuyển đến danh sách video
+                  - list [ref=e392]:
+                    - listitem [ref=e393]:
+                      - generic [ref=e396]:
+                        - paragraph [ref=e399]: Tạo bài đăng đầu tiên để bắt đầu trò chuyện và nhận ý kiến phản hồi từ cộng đồng của bạn.
+                        - link "Tạo bài đăng" [ref=e401] [cursor=pointer]:
+                          - /url: https://www.youtube.com/my_community?pdc=OAk%253D
+                          - button "Tạo bài đăng" [ref=e404]:
+                            - generic [ref=e405]: Tạo bài đăng
+                - generic [ref=e409]:
+                  - generic [ref=e415]:
+                    - heading "Số liệu phân tích về kênh" [level=2] [ref=e416]
+                    - generic [ref=e417]:
+                      - generic [ref=e418]: Số người đăng ký hiện tại
+                      - generic [ref=e419]: "5.437"
+                      - generic [ref=e421]: Tăng 62 trong 28 ngày qua
+                    - separator [ref=e422]
+                    - generic [ref=e423]:
+                      - generic [ref=e424]: Tóm tắt
+                      - generic [ref=e425]: 28 ngày qua
+                    - generic [ref=e427]:
+                      - generic [ref=e428]:
+                        - generic [ref=e429]: Số lượt xem
+                        - generic [ref=e430]: 56,8 N
+                        - generic [ref=e435]:
+                          - img
+                      - generic [ref=e436]:
+                        - generic [ref=e437]: Thời gian xem (giờ)
+                        - generic [ref=e438]: 180,1
+                        - generic [ref=e443]:
+                          - img
+                    - separator [ref=e445]
+                    - generic [ref=e446]:
+                      - text: Nội dung hàng đầu
+                      - generic [ref=e447]: 48 giờ qua · Số lượt xem
+                    - table [ref=e449]:
+                      - rowgroup [ref=e450]:
+                        - row "Vietlott 17/10-Kết quả xổ số Vietlott hôm nay 17/10/2024-Xổ số Power 6/55 736" [ref=e451]:
+                          - cell "Vietlott 17/10-Kết quả xổ số Vietlott hôm nay 17/10/2024-Xổ số Power 6/55" [ref=e452]:
+                            - link "Vietlott 17/10-Kết quả xổ số Vietlott hôm nay 17/10/2024-Xổ số Power 6/55" [ref=e453] [cursor=pointer]:
+                              - /url: /video/fVuVf3zF1Q0/analytics/tab-overview/period-default
+                          - cell "736" [ref=e454]:
+                            - link "736" [ref=e455] [cursor=pointer]:
+                              - /url: /video/fVuVf3zF1Q0/analytics/tab-overview/period-default
+                        - row "Vietlott 19/9-Kết quả xổ số Vietlott hôm nay 19/9/2024-Xổ số Power 6/55 19/9 238" [ref=e456]:
+                          - cell "Vietlott 19/9-Kết quả xổ số Vietlott hôm nay 19/9/2024-Xổ số Power 6/55 19/9" [ref=e457]:
+                            - link "Vietlott 19/9-Kết quả xổ số Vietlott hôm nay 19/9/2024-Xổ số Power 6/55 19/9" [ref=e458] [cursor=pointer]:
+                              - /url: /video/ZJdajYitwXE/analytics/tab-overview/period-default
+                          - cell "238" [ref=e459]:
+                            - link "238" [ref=e460] [cursor=pointer]:
+                              - /url: /video/ZJdajYitwXE/analytics/tab-overview/period-default
+                        - row "Điểm chuẩn của 17 trường quân đội 151" [ref=e461]:
+                          - cell "Điểm chuẩn của 17 trường quân đội" [ref=e462]:
+                            - link "Điểm chuẩn của 17 trường quân đội" [ref=e463] [cursor=pointer]:
+                              - /url: /video/hoqdwFiTa_k/analytics/tab-overview/period-default
+                          - cell "151" [ref=e464]:
+                            - link "151" [ref=e465] [cursor=pointer]:
+                              - /url: /video/hoqdwFiTa_k/analytics/tab-overview/period-default
+                    - link "Chuyển đến số liệu phân tích" [ref=e467] [cursor=pointer]:
+                      - /url: /channel/UCAT5dD-oMgu5fZbihoBGt6A/analytics/tab-overview/period-default
+                      - button "Chuyển đến số liệu phân tích" [ref=e470]:
+                        - generic [ref=e471]: Chuyển đến số liệu phân tích
+                  - list [ref=e478]:
+                    - listitem [ref=e479]:
+                      - heading "Bình luận" [level=2] [ref=e482]
+                    - listitem [ref=e485]:
+                      - generic [ref=e488]:
+                        - generic [ref=e492]:
+                          - generic [ref=e493]:
+                            - generic [ref=e495]: "@ConmeonokieulamsaoMeow"
+                            - generic [ref=e496]: •
+                            - generic [ref=e497]: 2 tuần trước
+                          - generic [ref=e498]: 2026 rồi:(
+                        - img [ref=e503]
+                    - listitem [ref=e504]:
+                      - separator [ref=e505]
+                      - generic [ref=e508]:
+                        - generic [ref=e512]:
+                          - generic [ref=e513]:
+                            - generic [ref=e515]: "@haupham8364"
+                            - generic [ref=e516]: •
+                            - generic [ref=e517]: 2 tháng trước
+                          - generic [ref=e518]: Dở lắm giao toàn bể với hư hỏng nặng khách chả lại người bán phải chịu phí 2 chiều tôi sợ tới già luôn rồi
+                        - img [ref=e523]
+                    - listitem [ref=e524]:
+                      - separator [ref=e525]
+                      - generic [ref=e528]:
+                        - generic [ref=e532]:
+                          - generic [ref=e533]:
+                            - generic [ref=e535]: "@thuha89100"
+                            - generic [ref=e536]: •
+                            - generic [ref=e537]: 3 tháng trước
+                          - generic [ref=e538]: Chúc anh và gia đình may mắn và hạnh phúc quá được bệnh rủi ro…chúc HẠNH PHÚC cùng gia đình mai mai HẠNH PHUC
+                        - img [ref=e543]
+                    - listitem [ref=e544]:
+                      - link "Xem thêm" [ref=e547] [cursor=pointer]:
+                        - /url: /channel/UCAT5dD-oMgu5fZbihoBGt6A/comments/inbox?filter=%5B%7B%22name%22%3A%22ENGAGED_STATUS%22%2C%22value%22%3A%5B%22COMMENT_CATEGORY_NOT_ENGAGED%22%5D%7D%2C%7B%22isPinned%22%3Atrue%2C%22name%22%3A%22SORT_BY%22%2C%22value%22%3A%22SORT_BY_MOST_RELEVANT%22%7D%5D
+                        - button "Xem thêm" [ref=e550]:
+                          - generic [ref=e551]: Xem thêm
+                  - generic [ref=e559]:
+                    - heading "Người đăng ký gần đây" [level=2] [ref=e560]
+                    - generic [ref=e561]: 90 ngày qua
+                    - generic [ref=e562]:
+                      - list [ref=e563]:
+                        - listitem [ref=e564]:
+                          - link "Tánh Linh Official 136 người đăng ký" [ref=e565] [cursor=pointer]:
+                            - /url: https://www.youtube.com/channel/UCVT1LOGJ0a637bdNSg1OT9A/
+                            - generic [ref=e566]:
+                              - generic [ref=e567]: Tánh Linh Official
+                              - generic [ref=e568]: 136 người đăng ký
+                        - listitem [ref=e569]:
+                          - link "Lê thanh hải 6A5 87 người đăng ký" [ref=e570] [cursor=pointer]:
+                            - /url: https://www.youtube.com/channel/UCg5a-GMZ1tXRXROwvL3Mr8A/
+                            - generic [ref=e571]:
+                              - generic [ref=e572]: Lê thanh hải 6A5
+                              - generic [ref=e573]: 87 người đăng ký
+                        - listitem [ref=e574]:
+                          - link "TaBi Slimey 41 người đăng ký" [ref=e575] [cursor=pointer]:
+                            - /url: https://www.youtube.com/channel/UCf_-ptvlRN68GhHhZPbGviQ/
+                            - generic [ref=e576]:
+                              - generic [ref=e577]: TaBi Slimey
+                              - generic [ref=e578]: 41 người đăng ký
+                      - button "Xem tất cả" [ref=e582] [cursor=pointer]:
+                        - generic [ref=e583]: Xem tất cả
+              - generic [ref=e589]:
+                - link "Điều khoản sử dụng" [ref=e591] [cursor=pointer]:
+                  - /url: https://www.youtube.com/t/terms
+                - link "Chính sách quyền riêng tư" [ref=e593] [cursor=pointer]:
+                  - /url: https://policies.google.com/privacy?hl=vi
+                - link "Chính sách và An toàn" [ref=e595] [cursor=pointer]:
+                  - /url: https://www.youtube.com/yt/policyandsafety/
+  - dialog [ref=e596]:
+    - generic [ref=e597]:
+      - generic [ref=e598]:
+        - generic [ref=e599]:
+          - generic [ref=e601]: 88ab1b7b 41d1 4ae9 af32 ecc5f93fb5dc
+          - generic [ref=e602]:
+            - generic [ref=e653]: Đã lưu ở chế độ riêng tư
+            - button "Gửi ý kiến phản hồi" [ref=e606] [cursor=pointer]:
+              - generic [ref=e610]:
+                - img
+            - button "Đóng" [ref=e616] [cursor=pointer]:
+              - generic [ref=e620]:
+                - img
+        - tablist [ref=e656]:
+          - tab "Chi tiết" [selected] [ref=e657] [cursor=pointer]:
+            - generic [ref=e658]: Chi tiết
+          - tab "Các thành phần của video" [ref=e660] [cursor=pointer]:
+            - generic [ref=e661]: Các thành phần của video
+          - tab "Kiểm tra" [ref=e663] [cursor=pointer]:
+            - generic [ref=e664]: Kiểm tra
+          - tab "Chế độ hiển thị" [ref=e666] [cursor=pointer]:
+            - generic [ref=e667]: Chế độ hiển thị
+      - generic [ref=e669]:
+        - generic [ref=e670]:
+          - heading "Chi tiết" [level=1] [ref=e671]
+          - button "Dùng lại thông tin" [ref=e674] [cursor=pointer]:
+            - generic [ref=e675]: Dùng lại thông tin
+        - generic [ref=e679]:
+          - generic [ref=e680]:
+            - generic [ref=e681]:
+              - generic [ref=e687]:
+                - generic [ref=e688]:
+                  - text: Tiêu đề (bắt buộc)
+                  - generic "Tiêu đề hay có thể giúp bạn thu hút người xem. Khi tạo tiêu đề video, bạn nên thêm những từ khóa mà người xem có thể sử dụng khi tìm kiếm video giống như video của bạn. Tìm hiểu thêm" [ref=e690]:
+                    - generic [ref=e692]:
+                      - img
+                - textbox "Thêm tiêu đề để mô tả video của bạn (nhập ký tự @ để đề cập tên một kênh)" [ref=e696]
+              - generic [ref=e704]:
+                - generic [ref=e705]:
+                  - text: Mô tả
+                  - generic "Đưa từ khóa vào nội dung mô tả có thể giúp người xem tìm video của bạn dễ dàng hơn thông qua tính năng tìm kiếm. Bạn có thể cung cấp thông tin tổng quan về video và đặt từ khóa ở đầu đoạn mô tả. Tìm hiểu thêm" [ref=e707]:
+                    - generic [ref=e709]:
+                      - img
+                - textbox "Giới thiệu về video của bạn cho người xem (nhập ký tự @ để đề cập tên một kênh)" [ref=e713]
+              - generic [ref=e716]:
+                - generic [ref=e717]: Hình thu nhỏ
+                - generic [ref=e719]:
+                  - generic [ref=e722]:
+                    - img
+                  - generic [ref=e723]: Bạn có thể thay đổi hình thu nhỏ trên ứng dụng YouTube dành cho thiết bị di động
+              - generic [ref=e724]:
+                - generic [ref=e725]: Danh sách phát
+                - generic [ref=e726]:
+                  - text: Thêm video của bạn vào danh sách phát để sắp xếp nội dung cho người xem.
+                  - link "Tìm hiểu thêm về danh sách phát" [ref=e727] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube/answer/57792
+                    - text: Tìm hiểu thêm
+                - generic "Thêm vào danh sách phát" [ref=e730]:
+                  - button "Chọn danh sách phát" [ref=e732]:
+                    - button "Chọn" [ref=e733] [cursor=pointer]:
+                      - generic [ref=e737]: Chọn
+                      - generic [ref=e741]:
+                        - img
+              - generic [ref=e743]:
+                - generic [ref=e744]: Đối tượng người xem
+                - generic [ref=e745]:
+                  - generic [ref=e746]:
+                    - text: Video này được đặt là không dành cho trẻ em
+                    - generic [ref=e749]: Do bạn đặt
+                  - generic [ref=e750]:
+                    - text: Dù hoạt động ở quốc gia nào, bạn cũng có nghĩa vụ pháp lý phải tuân thủ Đạo luật bảo vệ quyền riêng tư của trẻ em trên mạng (COPPA) và/hoặc các luật khác. Bạn phải cho chúng tôi biết video của bạn có dành cho trẻ em hay không.
+                    - link "Thế nào là nội dung dành cho trẻ em?" [ref=e751] [cursor=pointer]:
+                      - /url: https://support.google.com/youtube/answer/9528076?hl=vi
+                  - generic [ref=e753]:
+                    - generic [ref=e756]:
+                      - img
+                    - generic [ref=e757]:
+                      - text: Các tính năng như quảng cáo được cá nhân hóa và thông báo sẽ không hoạt động trên video dành cho trẻ em. Những video mà bạn đặt là dành cho trẻ em sẽ có nhiều khả năng được đề xuất cùng với các video khác dành cho trẻ em.
+                      - link "Tìm hiểu thêm về chế độ cài đặt đối tượng của video" [ref=e758] [cursor=pointer]:
+                        - /url: https://support.google.com/youtube/answer/9527654?hl=vi
+                        - text: Tìm hiểu thêm
+                  - radiogroup [ref=e760]:
+                    - radio "Có, nội dung này dành cho trẻ em . Các tính năng như quảng cáo được cá nhân hóa và thông báo sẽ không hoạt động trên video dành cho trẻ em. Những video mà bạn đặt là dành cho trẻ em sẽ có nhiều khả năng được đề xuất cùng với các video khác dành cho trẻ em. Tìm hiểu thêm" [ref=e761] [cursor=pointer]:
+                      - generic [ref=e764]:
+                        - text: Có, nội dung này dành cho trẻ em
+                        - generic [ref=e765]: .
+                        - generic [ref=e766]:
+                          - text: Các tính năng như quảng cáo được cá nhân hóa và thông báo sẽ không hoạt động trên video dành cho trẻ em. Những video mà bạn đặt là dành cho trẻ em sẽ có nhiều khả năng được đề xuất cùng với các video khác dành cho trẻ em.
+                          - link "Tìm hiểu thêm" [ref=e767]:
+                            - /url: https://support.google.com/youtube/answer/9527654?hl=vi
+                    - radio "Không, nội dung này không dành cho trẻ em" [checked] [ref=e768] [cursor=pointer]:
+                      - generic [ref=e772]: Không, nội dung này không dành cho trẻ em
+                - button "Giới hạn độ tuổi (nâng cao)" [ref=e773]:
+                  - generic [ref=e776]:
+                    - img
+                  - heading "Giới hạn độ tuổi (nâng cao)" [level=3] [ref=e777]
+            - generic "Ẩn chế độ cài đặt nâng cao" [ref=e826]:
+              - button "Ẩn chế độ cài đặt nâng cao" [active] [ref=e827] [cursor=pointer]:
+                - generic [ref=e782]: Ẩn bớt
+            - generic [ref=e828]:
+              - generic [ref=e829]:
+                - generic [ref=e830]: Nội dung được trả tiền để quảng cáo
+                - generic [ref=e831]: Nếu bạn nhận bất kỳ vật gì có giá trị từ bên thứ ba để sản xuất video thì bạn phải thông báo cho chúng tôi. Chúng tôi sẽ hiển thị một thông báo giúp người xem biết rằng video của bạn có chứa nội dung được trả tiền để quảng cáo.
+                - generic [ref=e833] [cursor=pointer]:
+                  - generic [ref=e836]:
+                    - checkbox "Video của tôi có chứa nội dung được trả tiền để quảng cáo như nội dung lồng ghép sản phẩm, nội dung được tài trợ hoặc thông tin chứng thực"
+                  - generic [ref=e837]: Video của tôi có chứa nội dung được trả tiền để quảng cáo như nội dung lồng ghép sản phẩm, nội dung được tài trợ hoặc thông tin chứng thực
+                - generic [ref=e838]:
+                  - text: Khi chọn hộp này, bạn xác nhận rằng nội dung được trả tiền để quảng cáo tuân thủ các chính sách quảng cáo của chúng tôi và mọi quy định cũng như luật hiện hành.
+                  - link "Tìm hiểu thêm về nội dung được trả tiền để quảng cáo" [ref=e839] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube/answer/154235?hl=vi
+                    - text: Tìm hiểu thêm
+              - generic [ref=e840]:
+                - generic [ref=e841]: Nội dung đã bị chỉnh sửa
+                - generic [ref=e842]:
+                  - generic [ref=e843]:
+                    - generic [ref=e844]: Có bất kỳ điều nào dưới đây mô tả nội dung của bạn không?
+                    - list [ref=e846]:
+                      - listitem [ref=e847]: Có hình ảnh người thật có vẻ như nói và làm điều gì đó, nhưng trên thực thế là họ không làm như vậy
+                      - listitem [ref=e848]: Chỉnh sửa cảnh quay của một sự kiện hoặc một địa điểm có thật
+                      - listitem [ref=e849]: Tạo ra một cảnh trông giống thật mà không thực sự xảy ra
+                  - generic [ref=e850]:
+                    - radio "Video này chứa nội dung đã bị chỉnh sửa" [ref=e852] [cursor=pointer]:
+                      - generic [ref=e855]: Có
+                    - radio "Video này không chứa nội dung đã bị chỉnh sửa" [ref=e857] [cursor=pointer]:
+                      - generic [ref=e860]: Không
+                  - generic [ref=e862]:
+                    - text: Để tuân thủ chính sách của YouTube, bạn phải thông báo cho chúng tôi nếu nội dung của bạn là nội dung nhân tạo hoặc đã bị chỉnh sửa và trông giống thật. Điều này bao gồm cả âm thanh hoặc hình ảnh chân thực được tạo bằng AI hoặc các công cụ khác.
+                    - link "Xem ví dụ" [ref=e863] [cursor=pointer]:
+                      - /url: https://support.google.com/youtube/answer/14328491?hl=vi#examples_as
+                  - generic [ref=e865]:
+                    - text: Khi bạn chọn “Có”, một đoạn
+                    - link "thông tin công bố" [ref=e866] [cursor=pointer]:
+                      - /url: https://support.google.com/youtube/answer/14328491?hl=vi#after_disclose
+                    - text: sẽ được thêm vào nội dung của bạn.
+              - generic [ref=e867]:
+                - generic [ref=e868]: Cộng tác
+                - generic [ref=e869]:
+                  - text: Thu hút thêm khán giả bằng cách cộng tác với các nhà sáng tạo khác và mở rộng phạm vi tiếp cận của video đến khán giả của họ.
+                  - link "Tìm hiểu thêm về video cộng tác" [ref=e870] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube?p=collaborators&hl=vi
+                    - text: Tìm hiểu thêm
+                - button "Mời cộng sự" [ref=e873] [cursor=pointer]:
+                  - generic [ref=e874]: Mời cộng sự
+              - generic [ref=e878]:
+                - generic [ref=e879]: Phân cảnh tự động
+                - generic [ref=e880]:
+                  - text: Các phân cảnh và khoảnh khắc quan trọng có thể giúp mọi người xem video của bạn dễ dàng hơn. Bạn có thể thay thế các gợi ý tự động bằng cách tự tạo phân cảnh trong phần mô tả video.
+                  - link "Tìm hiểu thêm về phân cảnh tự động" [ref=e881] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube/answer/9884579?hl=vi
+                    - text: Tìm hiểu thêm
+                - generic [ref=e884] [cursor=pointer]:
+                  - generic [ref=e887]:
+                    - checkbox "Cho phép tạo khoảnh khắc quan trọng và phân cảnh tự động" [checked]
+                  - generic [ref=e888]: Cho phép tạo khoảnh khắc quan trọng và phân cảnh tự động
+              - generic [ref=e889]:
+                - generic [ref=e890]: Địa điểm nổi bật
+                - generic [ref=e891]:
+                  - text: Giúp người xem khám phá những địa điểm chính trong video của bạn. Đây là những địa điểm công cộng như nhà hàng và cửa hàng. Chúng tôi không hiển thị vị trí hiện tại hoặc thông tin riêng tư khác của bạn.
+                  - link "Tìm hiểu thêm về địa điểm tự động" [ref=e892] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube/answer/57404?hl=vi
+                    - text: Tìm hiểu thêm
+                - generic [ref=e894] [cursor=pointer]:
+                  - generic [ref=e897]:
+                    - checkbox "Cho phép chèn địa điểm tự động" [checked]
+                  - generic [ref=e898]: Cho phép chèn địa điểm tự động
+              - generic [ref=e899]:
+                - generic [ref=e900]:
+                  - text: Tự động hiển thị khái niệm
+                  - generic [ref=e903]: Thử nghiệm
+                - generic [ref=e904]: Chế độ này giúp khán giả tìm hiểu những thuật ngữ họ chưa biết mà không cần rời khỏi video. Những khái niệm được đề cập trong video của bạn có thể tự động xuất hiện trong phần mô tả.
+                - generic [ref=e907] [cursor=pointer]:
+                  - generic [ref=e910]:
+                    - checkbox "Bật tính năng tự động thêm khái niệm" [checked]
+                  - generic [ref=e911]: Bật tính năng tự động thêm khái niệm
+              - generic [ref=e912]:
+                - generic [ref=e913]: Thẻ (từ khóa)
+                - generic [ref=e914]:
+                  - text: Thẻ có thể giúp ích cho bạn nếu nội dung trong video của bạn thường dễ bị viết sai chính tả. Trong các trường hợp khác, thẻ chỉ đóng vai trò rất nhỏ trong việc giúp người xem tìm thấy video của bạn.
+                  - link "Tìm hiểu thêm về thẻ" [ref=e915] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube/answer/146402?hl=vi
+                    - text: Tìm hiểu thêm
+                - generic [ref=e916]:
+                  - textbox "Thẻ (từ khóa)" [ref=e922]:
+                    - /placeholder: Thêm thẻ
+                  - generic [ref=e923]:
+                    - text: Nhập dấu phẩy sau mỗi thẻ
+                    - generic [ref=e924]: 0/500
+              - generic [ref=e925]:
+                - generic [ref=e926]: Ngôn ngữ và chứng nhận phụ đề
+                - generic [ref=e927]: Chọn ngôn ngữ của video và nếu cần thì cả chứng nhận phụ đề
+                - generic [ref=e928]:
+                  - button "Ngôn ngữ video Chọn" [ref=e933]:
+                    - button "Ngôn ngữ video Chọn" [ref=e934] [cursor=pointer]:
+                      - generic [ref=e937]:
+                        - generic [ref=e939]: Ngôn ngữ video
+                        - generic [ref=e940]: Chọn
+                      - generic [ref=e944]:
+                        - img
+                  - button "Chứng nhận phụ đề Nếu nội dung của bạn đã xuất hiện trên truyền hình Hoa Kỳ vào đúng hoặc sau ngày 30 tháng 9 năm 2012, thì có thể nội dung đó cần có phụ đề. Đây là yêu cầu của Ủy ban Truyền thông Liên bang. Nếu video của bạn không cần có phụ đề, hãy chọn lý do. Tìm hiểu thêm Không chọn mục nào" [ref=e948]:
+                    - button "Chứng nhận phụ đề Nếu nội dung của bạn đã xuất hiện trên truyền hình Hoa Kỳ vào đúng hoặc sau ngày 30 tháng 9 năm 2012, thì có thể nội dung đó cần có phụ đề. Đây là yêu cầu của Ủy ban Truyền thông Liên bang. Nếu video của bạn không cần có phụ đề, hãy chọn lý do. Tìm hiểu thêm Không chọn mục nào" [ref=e949] [cursor=pointer]:
+                      - generic [ref=e952]:
+                        - generic [ref=e953]:
+                          - generic [ref=e954]: Chứng nhận phụ đề
+                          - generic "Nếu nội dung của bạn đã xuất hiện trên truyền hình Hoa Kỳ vào đúng hoặc sau ngày 30 tháng 9 năm 2012, thì có thể nội dung đó cần có phụ đề. Đây là yêu cầu của Ủy ban Truyền thông Liên bang. Nếu video của bạn không cần có phụ đề, hãy chọn lý do. Tìm hiểu thêm" [ref=e955]:
+                            - generic [ref=e957]:
+                              - img
+                        - generic [ref=e958]: Không chọn mục nào
+                      - generic [ref=e962]:
+                        - img
+              - generic [ref=e963]:
+                - generic [ref=e964]: Ngày và địa điểm quay video
+                - generic [ref=e965]: Thêm thời gian và vị trí ghi hình video. Người xem có thể tìm kiếm video theo vị trí.
+                - generic [ref=e966]:
+                  - button "Ngày quay Không chọn" [ref=e969]:
+                    - button "Ngày quay Không chọn" [ref=e970] [cursor=pointer]:
+                      - generic [ref=e973]:
+                        - generic [ref=e975]: Ngày quay
+                        - generic [ref=e976]: Không chọn
+                      - generic [ref=e980]:
+                        - img
+                  - button "Vị trí video" [ref=e984] [cursor=pointer]:
+                    - generic [ref=e987]:
+                      - generic [ref=e989]: Vị trí video
+                      - textbox "Vị trí video" [ref=e990]:
+                        - /placeholder: Không có
+              - generic [ref=e991]:
+                - generic [ref=e992]: Giấy phép
+                - generic [ref=e994]:
+                  - text: Tìm hiểu về
+                  - link "các loại giấy phép" [ref=e995] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube/answer/2797468?hl=vi
+                  - text: .
+                - button "Giấy phép Giấy phép chuẩn của YouTube" [ref=e1000]:
+                  - button "Giấy phép Giấy phép chuẩn của YouTube" [ref=e1001] [cursor=pointer]:
+                    - generic [ref=e1004]:
+                      - generic [ref=e1006]: Giấy phép
+                      - generic [ref=e1007]: Giấy phép chuẩn của YouTube
+                    - generic [ref=e1011]:
+                      - img
+                - generic [ref=e1013]:
+                  - generic [ref=e1016] [cursor=pointer]:
+                    - generic [ref=e1019]:
+                      - checkbox "Cho phép nhúng" [checked]
+                    - generic [ref=e1020]:
+                      - text: Cho phép nhúng
+                      - generic "Cho phép người khác nhúng video của bạn vào trang web của họ." [ref=e1022]:
+                        - generic [ref=e1024]:
+                          - img
+                  - generic [ref=e1026] [cursor=pointer]:
+                    - generic [ref=e1029]:
+                      - checkbox "Xuất bản lên trang Kênh đăng ký và thông báo đến người đăng ký" [checked]
+                    - generic [ref=e1030]: Xuất bản lên trang Kênh đăng ký và thông báo đến người đăng ký
+              - generic [ref=e1031]:
+                - generic [ref=e1032]: Phối lại cho Shorts
+                - generic [ref=e1033]:
+                  - text: Cho phép mọi người tạo video ngắn bằng nội dung trong video này.
+                  - link "Tìm hiểu thêm về việc phối lại nội dung" [ref=e1034] [cursor=pointer]:
+                    - /url: https://support.google.com/youtube/answer/10623810?hl=vi#opt-out
+                    - text: Tìm hiểu thêm
+                - radiogroup [ref=e1036]:
+                  - radio "Cho phép phối lại video và âm thanh" [checked] [ref=e1037] [cursor=pointer]:
+                    - generic [ref=e1041]: Cho phép phối lại video và âm thanh
+                  - radio "Chỉ cho phép phối lại âm thanh" [ref=e1042] [cursor=pointer]:
+                    - generic [ref=e1045]: Chỉ cho phép phối lại âm thanh
+              - generic [ref=e1046]:
+                - generic [ref=e1047]: Danh mục
+                - generic [ref=e1048]: Thêm video của bạn vào một danh mục để người xem dễ dàng tìm thấy hơn
+                - button "Tin tức và chính trị" [ref=e1053]:
+                  - button "Tin tức và chính trị" [ref=e1054] [cursor=pointer]:
+                    - generic [ref=e1058]: Tin tức và chính trị
+                    - generic [ref=e1062]:
+                      - img
+              - generic [ref=e1064]:
+                - generic [ref=e1065]: Bình luận và mức phân loại
+                - generic [ref=e1066]: Chọn xem bạn muốn hiển thị hay ẩn phần bình luận và chọn cách hiển thị.
+                - generic [ref=e1068]:
+                  - generic [ref=e1070]:
+                    - button "Bình luận Bật" [ref=e1073]:
+                      - button "Bình luận Bật" [ref=e1074] [cursor=pointer]:
+                        - generic [ref=e1077]:
+                          - generic [ref=e1079]: Bình luận
+                          - generic [ref=e1080]: Bật
+                        - generic [ref=e1084]:
+                          - img
+                    - button "Kiểm duyệt Không" [ref=e1087]:
+                      - button "Kiểm duyệt Không" [ref=e1088] [cursor=pointer]:
+                        - generic [ref=e1091]:
+                          - generic [ref=e1093]: Kiểm duyệt
+                          - generic [ref=e1094]: Không
+                        - generic [ref=e1098]:
+                          - img
+                  - button "Người có thể bình luận Bất kỳ ai" [ref=e1103]:
+                    - button "Người có thể bình luận Bất kỳ ai" [ref=e1104] [cursor=pointer]:
+                      - generic [ref=e1107]:
+                        - generic [ref=e1109]: Người có thể bình luận
+                        - generic [ref=e1110]: Bất kỳ ai
+                      - generic [ref=e1114]:
+                        - img
+                - button "Sắp xếp theo Hàng đầu" [ref=e1119]:
+                  - button "Sắp xếp theo Hàng đầu" [ref=e1120] [cursor=pointer]:
+                    - generic [ref=e1123]:
+                      - generic [ref=e1125]: Sắp xếp theo
+                      - generic [ref=e1126]: Hàng đầu
+                    - generic [ref=e1130]:
+                      - img
+                - generic [ref=e1135] [cursor=pointer]:
+                  - generic [ref=e1138]:
+                    - checkbox "Hiện số người xem thích video này" [checked]
+                  - generic [ref=e1139]: Hiện số người xem thích video này
+          - generic [ref=e789]:
+            - generic [ref=e790]: Đang xử lý video...
+            - generic [ref=e791]:
+              - generic [ref=e792]:
+                - generic [ref=e793]: Đường liên kết của video
+                - link "https://youtube.com/shorts/0H9_9ohhL3s" [ref=e796] [cursor=pointer]:
+                  - /url: https://youtube.com/shorts/0H9_9ohhL3s
+              - button "Sao chép đường liên kết của video" [ref=e798] [cursor=pointer]:
+                - generic [ref=e801]:
+                  - img
+            - generic [ref=e802]: Tên tệp
+            - generic [ref=e803]: 88ab1b7b-41d1-4ae9-af32-ecc5f93fb5dc.mp4
+      - generic [ref=e805]:
+        - generic [ref=e807]:
+          - generic [ref=e810]:
+            - img
+          - generic [ref=e813]:
+            - img
+          - generic "Các bước kiểm tra sẽ bắt đầu khi quá trình xử lý độ phân giải chuẩn (SD) hoàn tất" [ref=e814]:
+            - generic [ref=e816]:
+              - img
+          - generic [ref=e817]: Đang xử lý đến độ phân giải tối đa là HD ... Còn 2 phút
+        - button "Tiếp" [ref=e821] [cursor=pointer]:
+          - generic [ref=e822]: Tiếp

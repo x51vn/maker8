@@ -159,6 +159,16 @@ class ValidateStage(Stage):
         if spec.spec_version == "2.0":
             self._validate_v2(ctx)
 
+        # ── Publish target identity must be explicit ────────────────
+        for target in spec.publish.targets:
+            if target.enabled and not target.channel_id:
+                raise StageError(
+                    self.name,
+                    "MISSING_PUBLISH_CHANNEL_ID",
+                    "Enabled publish targets must define channel_id",
+                    retryable=False,
+                )
+
         # ── Canonicalize + job key ───────────────────────────────────
         ctx.job_key = compute_job_key(spec)
         log.info(
@@ -266,7 +276,7 @@ class ValidateStage(Stage):
                 )
 
     def _warn_identity(self, ctx: PipelineContext) -> None:
-        """Non-blocking identity consistency checks (D-3: warn, never patch)."""
+        """Non-blocking common metadata consistency checks (warn, never patch)."""
         req = ctx.request
         if req is None:
             return
@@ -278,7 +288,7 @@ class ValidateStage(Stage):
         if not enabled_targets:
             return
 
-        first_account_ref = next((t.account_ref for t in enabled_targets if t.account_ref), "")
+        first_channel_id = next((t.channel_id for t in enabled_targets if t.channel_id), "")
 
         if not channel_id:
             log.warning(
@@ -287,18 +297,23 @@ class ValidateStage(Stage):
                 enabled_targets=len(enabled_targets),
                 hint="uploader_metadata.channel_id is empty but enabled publish targets exist",
             )
-        elif first_account_ref and channel_id != first_account_ref:
+        elif first_channel_id and channel_id != first_channel_id:
             log.warning(
                 "validate.identity_mismatch",
                 job_id=ctx.job_id,
                 channel_id=channel_id,
-                account_ref=first_account_ref,
-                hint="channel_id does not match first enabled target's account_ref",
+                target_channel_id=first_channel_id,
+                hint="channel_id does not match first enabled target's channel_id",
             )
 
     @staticmethod
     def _infer_primary_visual(layers: list[object]) -> object | None:
-        """Pick a single obvious visual layer to promote as primary_visual."""
+        """Pick the most likely primary visual layer when role is absent.
+
+        Single candidate → promoted unambiguously.
+        Multiple candidates (e.g. background + logo overlay) → largest rect area
+        wins; video beats image on ties. Zero candidates → None (hard failure).
+        """
         candidates: list[object] = []
         for layer in layers:
             layer_type = getattr(layer, "type", "")
@@ -313,6 +328,15 @@ class ValidateStage(Stage):
             ):
                 candidates.append(layer)
 
-        if len(candidates) != 1:
+        if not candidates:
             return None
-        return candidates[0]
+        if len(candidates) == 1:
+            return candidates[0]
+
+        def _rank(layer: object) -> tuple[int, int]:
+            rect = getattr(layer, "rect", None)
+            area = (getattr(rect, "w", 0) * getattr(rect, "h", 0)) if rect else 0
+            type_pref = 1 if getattr(layer, "type", "") == "video" else 0
+            return (area, type_pref)
+
+        return max(candidates, key=_rank)

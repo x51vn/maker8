@@ -218,11 +218,14 @@ class OutputConfig(BaseModel):
 
 class PublishTarget(BaseModel):
     platform: str
-    account_ref: str
-    # RESERVED – publisher worker not yet implemented; value is ignored at runtime.
+    channel_id: str
+    channel_url: str = ""
+    channel_name: str = ""
+    # High-level behavior selector for platform adapters (for example: "shorts").
     variant: str = ""
     enabled: bool = True
     metadata: dict[str, Any] = Field(default_factory=dict)
+    # Platform-specific runtime configuration that excludes common identity/metadata.
     params: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -248,12 +251,13 @@ class UploaderMetadata(BaseModel):
     """Normalized common metadata for downstream uploaders.
 
     This is the canonical layer shared across all platforms.
-    Per-platform overrides live in ``PublishTarget.metadata``.
+    Per-platform overrides live in ``PublishTarget.metadata``. Execution identity
+    lives on ``PublishTarget`` rather than this common metadata block.
     """
 
-    # DEPRECATED – auto-derived from publish.targets[].account_ref.
-    # Kept for backward compatibility; will be removed in a future version.
     channel_id: str = ""
+    channel_url: str = ""
+    channel_name: str = ""
     title: str = ""
     short_title: str = ""
     summary: str = ""
@@ -263,11 +267,10 @@ class UploaderMetadata(BaseModel):
     tags: list[str] = Field(default_factory=list)
     hashtags: list[str] = Field(default_factory=list)
     category: str = ""
-    visibility: str = "private"
+    visibility: str = "public"
     scheduled_publish_at: str | None = None
     content_rating: str = "general"
-    thumbnail_ref: str = ""
-    thumbnail_source_url: str = ""
+    thumbnail_url: str = ""
     thumbnail_strategy: str = "source_asset"
     source_attributions: list[SourceAttribution] = Field(default_factory=list)
     credits: list[str] = Field(default_factory=list)

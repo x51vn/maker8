@@ -21,7 +21,7 @@ except ImportError:  # pragma: no cover
 
 log = get_logger(__name__)
 
-_UPLOAD_LIMIT = 150 * 1024 * 1024  # 150 MiB – Dropbox simple-upload cap
+_UPLOAD_LIMIT = 20 * 1024 * 1024  # 20 MiB – use session upload above this to avoid timeouts
 _SESSION_CHUNK = 8 * 1024 * 1024  # 8 MiB per session append
 
 
