@@ -7,6 +7,12 @@
 			"path": "../../deployment"
 		},
 		{
+			"path": "../dashboard8"
+		},
+		{
+			"path": "../crawler8"
+		},
+		{
 			"path": "../editor8"
 		},
 		{
