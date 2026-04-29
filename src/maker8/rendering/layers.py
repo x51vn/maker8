@@ -8,10 +8,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 from moviepy import ImageClip, VideoFileClip
+from PIL import Image
 
 from maker8.models.spec import Canvas, Layer, TextStyle
 from maker8.rendering.text import render_text_image
+from maker8.utils.logging import get_logger
+
+log = get_logger(__name__)
 
 # ── Public entry point ───────────────────────────────────────────────────────
 
@@ -73,7 +78,23 @@ def _build_image(
     if not layer.asset_ref or layer.asset_ref not in asset_paths:
         return None
 
-    clip = ImageClip(str(asset_paths[layer.asset_ref]))
+    asset_path = asset_paths[layer.asset_ref]
+    try:
+        clip = ImageClip(str(asset_path))
+    except ImportError as exc:
+        # Some imageio plugin paths try optional ITK/SimpleITK backends.
+        # Fall back to Pillow decoding so rendering can continue.
+        message = str(exc).lower()
+        if "itk" not in message and "simpleitk" not in message:
+            raise
+        log.warning(
+            "layers.image_loader_fallback",
+            asset_ref=layer.asset_ref,
+            path=str(asset_path),
+            reason=str(exc),
+        )
+        with Image.open(asset_path) as image:
+            clip = ImageClip(np.array(image.convert("RGBA")), is_mask=False)
     clip = _apply_fit(clip, layer)
     clip = clip.with_duration(duration)
     clip = _apply_geometry(clip, layer)
