@@ -203,6 +203,55 @@ class TestLayerWarnings:
         assert clip is not None
         assert len(ri.warnings) == 0
 
+    def test_present_asset_falls_back_when_imageclip_raises_itk_import_error(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from moviepy import ImageClip as MoviePyImageClip
+        from PIL import Image
+
+        from maker8.models.spec import Defaults, RenderSpec, Scene, SceneNarration
+        from maker8.rendering.composer import RenderInput, _build_scene
+
+        img_path = tmp_path / "test.png"
+        Image.new("RGBA", (100, 100), (255, 0, 0, 255)).save(str(img_path))
+
+        scene = Scene(
+            scene_id="s1",
+            duration=3.0,
+            narration=SceneNarration(text="Test"),
+            layers=[
+                Layer(
+                    layer_id="img1",
+                    type="image",
+                    rect=Rect(x=0, y=0, w=100, h=100),
+                    asset_ref="a1",
+                ),
+            ],
+        )
+        canvas = Canvas(w=200, h=200, fps=24)
+        defaults = Defaults()
+        ri = RenderInput(
+            spec=RenderSpec(canvas=canvas, scenes=[scene]),
+            asset_paths={"a1": img_path},
+            job_id="test-job",
+        )
+
+        # Simulate optional imageio ITK backend not installed.
+        def _imageclip_side_effect(source: object, *args: object, **kwargs: object) -> object:
+            if isinstance(source, str):
+                raise ImportError(
+                    "itk could not be found. Please try python -m pip install itk"
+                )
+            return MoviePyImageClip(source, *args, **kwargs)
+
+        monkeypatch.setattr("maker8.rendering.layers.ImageClip", _imageclip_side_effect)
+
+        clip = _build_scene(scene, ri, canvas, defaults)
+        assert clip is not None
+        assert len(ri.warnings) == 0
+
 
 # ── Audio stripping regression ───────────────────────────────────────────────
 
