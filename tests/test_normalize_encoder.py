@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from maker8.pipeline.normalize import _build_video_cmd
+from maker8.pipeline.normalize import _analyze_ffmpeg_failure_reason, _build_video_cmd
 
 
 @pytest.fixture()
@@ -95,3 +95,15 @@ class TestBuildVideoCmd:
             with patch("maker8.pipeline.normalize.resolve_ffmpeg_binary", return_value="ffmpeg"):
                 cmd = _build_video_cmd(src, dest, use_nvenc=use_nvenc)
             assert "-y" in cmd
+
+
+class TestAnalyzeNvencFailureReason:
+    def test_video_zero_kib_without_video_stream_is_audio_only(self) -> None:
+        stderr = "video:0KiB audio:1777KiB"
+        reason = _analyze_ffmpeg_failure_reason(stderr, has_video_stream=False)
+        assert reason == "audio_only_input"
+
+    def test_video_zero_kib_with_video_stream_is_decode_failure(self) -> None:
+        stderr = "video:0KiB audio:1777KiB"
+        reason = _analyze_ffmpeg_failure_reason(stderr, has_video_stream=True)
+        assert reason == "cuda_decode_failed"

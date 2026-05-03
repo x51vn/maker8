@@ -33,7 +33,7 @@ def _is_external_kill(returncode: int) -> bool:
     return returncode < 0 and (-returncode) in _EXTERNAL_KILL_SIGNALS
 
 
-def _analyze_ffmpeg_failure_reason(stderr: str) -> str:
+def _analyze_ffmpeg_failure_reason(stderr: str, *, has_video_stream: bool | None = None) -> str:
     """Analyze stderr to categorize NVENC failure reason.
 
     Returns one of:
@@ -59,8 +59,13 @@ def _analyze_ffmpeg_failure_reason(stderr: str) -> str:
     ):
         return "gpu_unavailable"
 
-    # Audio-only or no video frame
+    # Audio-only or no video frame. Important: a video input can still end up
+    # with ``video:0KiB`` when decode fails before the first frame (e.g.
+    # GPU decode incompatibility). In that case treat as decode failure so we
+    # can retry with CPU decode + NVENC.
     if "video:0kib" in stderr_lower or "no video stream" in stderr_lower:
+        if has_video_stream is True:
+            return "cuda_decode_failed"
         return "audio_only_input"
 
     # Input corruption or unreadable
@@ -484,7 +489,10 @@ class NormalizeStage(Stage):
             timer.stop()
             # If NVENC failed, attempt intermediate retry: CPU decode + NVENC encode
             if use_nvenc:
-                failure_reason = _analyze_ffmpeg_failure_reason(exc.stderr)
+                failure_reason = _analyze_ffmpeg_failure_reason(
+                    exc.stderr,
+                    has_video_stream=True,
+                )
 
                 # Only retry with CPU decode if the failure was clearly GPU decode-related
                 if failure_reason == "cuda_decode_failed":
