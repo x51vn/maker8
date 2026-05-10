@@ -35,10 +35,13 @@ from maker8.models.spec import (
     AudioTrack,
     Canvas,
     Defaults,
+    Layer,
     OutputConfig,
     RenderSpec,
     Scene,
+    SceneBoundary,
     TextStyle,
+    Trim,
 )
 from maker8.observability.helpers import Timer
 from maker8.observability.metrics import RENDER_FPS, SCENE_RENDER_DURATION
@@ -79,6 +82,7 @@ class RenderInput:
     effects_map: dict[str, EffectPlugin] = field(default_factory=dict)
     perf_profile: PerfProfile | None = None
     warnings: list[AssetWarning] = field(default_factory=list)
+    scene_candidates: dict[str, list[SceneBoundary]] = field(default_factory=dict)
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -590,6 +594,119 @@ def _write_final_video(
     )
 
 
+# ── Scene clip selection ─────────────────────────────────────────────────────
+
+
+def _resolve_scene_trim(
+    layer: Layer,
+    scene_candidates: dict[str, list[SceneBoundary]],
+    warnings: list[AssetWarning],
+    scene_id: str,
+) -> Trim | None:
+    """Resolve ``layer.scene_clip_select`` strategy to an effective ``Trim``.
+
+    Returns ``None`` to fall back to ``layer.trim`` (or full asset).
+    Never raises; emits ``AssetWarning`` entries for all non-fatal issues.
+    """
+    strategy = layer.scene_clip_select
+    if strategy is None:
+        return None
+
+    asset_id = layer.asset_ref or ""
+    candidates = scene_candidates.get(asset_id)
+
+    if not candidates:
+        warnings.append(
+            AssetWarning(
+                asset_id=asset_id,
+                scene_id=scene_id,
+                stage="RENDER",
+                code="SCENE_CLIP_SELECT_NO_CANDIDATES",
+                message=(
+                    f"Layer {layer.layer_id}: scene_clip_select={strategy!r} set but "
+                    f"no scene boundaries available for asset '{asset_id}'; "
+                    "playing full asset."
+                ),
+            )
+        )
+        return None
+
+    # Warn if an explicit trim is being overridden
+    if layer.trim is not None:
+        warnings.append(
+            AssetWarning(
+                asset_id=asset_id,
+                scene_id=scene_id,
+                stage="RENDER",
+                code="SCENE_CLIP_SELECT_TRIM_OVERRIDE",
+                message=(
+                    f"Layer {layer.layer_id}: both trim and scene_clip_select={strategy!r} "
+                    "are set; scene_clip_select wins."
+                ),
+            )
+        )
+
+    # Resolve strategy → boundary
+    normalised = "longest" if strategy == "auto" else strategy
+
+    if normalised == "first":
+        boundary = candidates[0]
+    elif normalised == "last":
+        boundary = candidates[-1]
+    elif normalised == "longest":
+        boundary = max(candidates, key=lambda b: b.end_sec - b.start_sec)
+    elif normalised == "shortest":
+        boundary = min(candidates, key=lambda b: b.end_sec - b.start_sec)
+    elif normalised.startswith("index:"):
+        try:
+            idx = int(normalised[6:])
+        except ValueError:
+            warnings.append(
+                AssetWarning(
+                    asset_id=asset_id,
+                    scene_id=scene_id,
+                    stage="RENDER",
+                    code="SCENE_CLIP_SELECT_UNKNOWN_STRATEGY",
+                    message=(
+                        f"Layer {layer.layer_id}: unrecognised scene_clip_select={strategy!r}; "
+                        "playing full asset."
+                    ),
+                )
+            )
+            return None
+        if idx >= len(candidates):
+            warnings.append(
+                AssetWarning(
+                    asset_id=asset_id,
+                    scene_id=scene_id,
+                    stage="RENDER",
+                    code="SCENE_CLIP_SELECT_INDEX_OOB",
+                    message=(
+                        f"Layer {layer.layer_id}: index:{idx} out of range "
+                        f"(only {len(candidates)} boundaries); clamped to last."
+                    ),
+                )
+            )
+            idx = len(candidates) - 1
+        boundary = candidates[idx]
+    else:
+        warnings.append(
+            AssetWarning(
+                asset_id=asset_id,
+                scene_id=scene_id,
+                stage="RENDER",
+                code="SCENE_CLIP_SELECT_UNKNOWN_STRATEGY",
+                message=(
+                    f"Layer {layer.layer_id}: unrecognised scene_clip_select={strategy!r}; "
+                    "playing full asset."
+                ),
+            )
+        )
+        return None
+
+    return Trim(in_=boundary.start_sec, out=boundary.end_sec)
+
+
 # ── Scene builder ────────────────────────────────────────────────────────────
 
 
@@ -624,7 +741,12 @@ def _build_scene(
     # ── Visual layers ────────────────────────────────────────────────
     layer_clips: list[VideoClip] = [bg]
     for layer in scene.layers:
-        lc = build_layer_clip(layer, ri.asset_paths, duration, canvas)
+        effective_trim: Trim | None = None
+        if layer.type == "video":
+            effective_trim = _resolve_scene_trim(
+                layer, ri.scene_candidates, ri.warnings, scene.scene_id
+            )
+        lc = build_layer_clip(layer, ri.asset_paths, duration, canvas, effective_trim=effective_trim)
         if lc is not None:
             layer_clips.append(lc)
         elif layer.type in ("image", "video") and layer.asset_ref:

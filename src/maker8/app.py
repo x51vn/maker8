@@ -10,9 +10,11 @@ Start with::
 from __future__ import annotations
 
 import atexit
+import contextlib
 import os
 import signal
 import sys
+import threading
 from pathlib import Path
 
 from maker8.config import Settings, get_settings
@@ -34,6 +36,7 @@ from maker8.utils.logging import get_logger, setup_logging
 
 # Global variables for shutdown coordination
 _shutdown_requested = False
+_shutdown_event = threading.Event()
 _consumer: RenderConsumer | None = None
 _producer: KafkaProducer | None = None
 _health: HealthManager | None = None
@@ -104,8 +107,69 @@ def _apply_db_runtime_overrides(
     return errors
 
 
+def _atexit() -> None:
+    """Fallback: log exit when sys.exit() is called (e.g., by the
+    double-SIGINT hard-timeout).  Cleanup (updater.stop, health.cleanup,
+    producer.close) is handled explicitly in the finally block so it runs
+    even when os._exit() terminates the process.
+    """
+    if _log is not None:
+        try:
+            _log.info("app.exiting")
+        except Exception as _e:
+            # Logger itself failed (e.g. broken pipe on shutdown).
+            # Print to stderr so the error is not silently lost.
+            print(f"[maker8] app.exiting log failed: {_e}", file=sys.stderr)
+
+
+def _shutdown(sig: int, _frame: object) -> None:
+    """Signal handler for SIGINT / SIGTERM.
+
+    * First signal: initiate graceful shutdown (stop consumer, mark not-ready).
+    * Double signal: set ``_shutdown_event`` so the consumer poll loop breaks
+      immediately, then arm a 5-second daemon timer that calls ``sys.exit(1)``
+      if cleanup does not complete in time.  ``os._exit`` is intentionally
+      *not* called here so the ``finally`` block in ``main()`` still runs.
+    """
+    global _shutdown_requested
+
+    if _shutdown_requested:
+        # Double-SIGINT: signal consumer loop to break immediately and
+        # start a 5-second hard-timeout so cleanup can still run.
+        if _log is not None:
+            _log.warning("app.force_exit", reason="shutdown_already_in_progress")
+        _shutdown_event.set()
+
+        def _force_exit() -> None:
+            if _log is not None:
+                with contextlib.suppress(Exception):
+                    _log.warning("app.force_exit_timeout", timeout_sec=5)
+            sys.exit(1)
+
+        t = threading.Timer(5.0, _force_exit)
+        t.daemon = True
+        t.start()
+        return
+
+    _shutdown_requested = True
+
+    if _log is not None:
+        _log.info("app.shutdown", signal=sig)
+
+    WORKER_READY.set(0)
+    if _health is not None:
+        _health.mark_not_ready()
+
+    try:
+        if _consumer is not None:
+            _consumer.stop()
+    except Exception as e:
+        if _log is not None:
+            _log.error("consumer.stop_failed", error=str(e))
+
+
 def main() -> None:
-    global _consumer, _producer, _health, _updater, _log, _shutdown_requested
+    global _consumer, _producer, _health, _updater, _log, _shutdown_requested, _shutdown_event
 
     settings = get_settings()
     setup_logging(level=settings.log_level, fmt=settings.log_format)
@@ -258,6 +322,7 @@ def main() -> None:
         settings,
         worker_state=worker_state,
         dlq_producer=producer.send,
+        flush_producer=producer.flush,
     )
     _consumer = consumer
 
@@ -280,55 +345,13 @@ def main() -> None:
     WORKER_READY.set(1)
     log.info("app.ready")
 
-    # ── Fast exit handler (fallback for graceful shutdown hang) ───────
-    def _atexit() -> None:
-        """Run at exit to close resources and log completion."""
-        if _updater is not None:
-            _updater.stop()
-        if _health is not None:
-            _health.cleanup()
-        if _log is not None:
-            try:
-                _log.info("app.exiting")
-            except Exception as _e:
-                # Logger itself failed (e.g. broken pipe on shutdown).
-                # Print to stderr so the error is not silently lost.
-                print(f"[maker8] app.exiting log failed: {_e}", file=sys.stderr)
-
     atexit.register(_atexit)
-
-    # ── Graceful shutdown ────────────────────────────────────────────
-    def _shutdown(sig: int, _frame: object) -> None:
-        global _shutdown_requested
-
-        if _shutdown_requested:
-            # Already shutting down, force exit
-            if _log is not None:
-                _log.warning("app.force_exit", reason="shutdown_already_in_progress")
-            os._exit(0)
-
-        _shutdown_requested = True
-
-        if _log is not None:
-            _log.info("app.shutdown", signal=sig)
-
-        WORKER_READY.set(0)
-        if _health is not None:
-            _health.mark_not_ready()
-
-        try:
-            if _consumer is not None:
-                _consumer.stop()
-        except Exception as e:
-            if _log is not None:
-                _log.error("consumer.stop_failed", error=str(e))
-
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
     # ── Run ──────────────────────────────────────────────────────────
     try:
-        consumer.start(handler=orchestrator.handle)
+        consumer.start(handler=orchestrator.handle, stop_event=_shutdown_event)
     except KeyboardInterrupt:
         pass
     finally:
@@ -338,11 +361,17 @@ def main() -> None:
             _health.mark_not_live()
             _health.mark_not_ready()
 
+        if _updater is not None:
+            _updater.stop()
+
         try:
             producer.close(timeout=10.0)
             log.info("app.stopped")
         except Exception as e:
             log.error("producer.close_failed", error=str(e))
+
+        if _health is not None:
+            _health.cleanup()
 
         # Use os._exit to avoid C extension cleanup issues on shutdown
         # See: https://github.com/confluentinc/confluent-kafka-python/issues/...

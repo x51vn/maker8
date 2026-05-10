@@ -68,6 +68,71 @@
           ],
           "default": null,
           "title": "Max Duration Sec"
+        },
+        "scene_detect_enabled": {
+          "default": false,
+          "title": "Scene Detect Enabled",
+          "type": "boolean"
+        },
+        "scene_detect_threshold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Detect Threshold"
+        },
+        "scene_detect_min_scene_len_sec": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Detect Min Scene Len Sec"
+        },
+        "scene_detect_max_scenes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Detect Max Scenes"
+        },
+        "scene_detect_sample_fps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Detect Sample Fps"
+        },
+        "scene_detect_scale_width": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Detect Scale Width"
         }
       },
       "title": "AssetSourceOptions",
@@ -151,6 +216,9 @@
         },
         "scene_timing": {
           "$ref": "#/$defs/SceneTiming"
+        },
+        "subtitles": {
+          "$ref": "#/$defs/SubtitleDefaults"
         }
       },
       "title": "Defaults",
@@ -212,6 +280,28 @@
           "title": "Scale",
           "type": "number"
         },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "missing_asset_policy": {
+          "default": "drop_layer",
+          "title": "Missing Asset Policy",
+          "type": "string"
+        },
         "asset_ref": {
           "anyOf": [
             {
@@ -223,6 +313,13 @@
           ],
           "default": null,
           "title": "Asset Ref"
+        },
+        "fallback_asset_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fallback Asset Refs",
+          "type": "array"
         },
         "fit": {
           "anyOf": [
@@ -258,6 +355,18 @@
             }
           ],
           "default": null
+        },
+        "scene_clip_select": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Clip Select"
         },
         "text": {
           "anyOf": [
@@ -366,6 +475,46 @@
       "title": "OutputConfig",
       "type": "object"
     },
+    "PlanningMetadata": {
+      "properties": {
+        "target_duration_sec": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Duration Sec"
+        },
+        "duration_source": {
+          "default": "",
+          "title": "Duration Source",
+          "type": "string"
+        },
+        "scene_count_policy_version": {
+          "default": "",
+          "title": "Scene Count Policy Version",
+          "type": "string"
+        },
+        "planned_scene_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Planned Scene Count"
+        }
+      },
+      "title": "PlanningMetadata",
+      "type": "object"
+    },
     "PublishConfig": {
       "properties": {
         "targets": {
@@ -385,8 +534,18 @@
           "title": "Platform",
           "type": "string"
         },
-        "account_ref": {
-          "title": "Account Ref",
+        "channel_id": {
+          "title": "Channel Id",
+          "type": "string"
+        },
+        "channel_url": {
+          "default": "",
+          "title": "Channel Url",
+          "type": "string"
+        },
+        "channel_name": {
+          "default": "",
+          "title": "Channel Name",
           "type": "string"
         },
         "variant": {
@@ -412,7 +571,7 @@
       },
       "required": [
         "platform",
-        "account_ref"
+        "channel_id"
       ],
       "title": "PublishTarget",
       "type": "object"
@@ -579,6 +738,17 @@
             }
           ],
           "default": null
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SceneSubtitle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -623,6 +793,41 @@
         "text"
       ],
       "title": "SceneNarration",
+      "type": "object"
+    },
+    "SceneSubtitle": {
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "source": {
+          "default": "narration",
+          "title": "Source",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "title": "SceneSubtitle",
       "type": "object"
     },
     "SceneTiming": {
@@ -681,6 +886,27 @@
         }
       },
       "title": "SourceAttribution",
+      "type": "object"
+    },
+    "SubtitleDefaults": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "source": {
+          "default": "narration",
+          "title": "Source",
+          "type": "string"
+        },
+        "max_lines": {
+          "default": 2,
+          "title": "Max Lines",
+          "type": "integer"
+        }
+      },
+      "title": "SubtitleDefaults",
       "type": "object"
     },
     "TextStyle": {
@@ -775,11 +1001,21 @@
       "type": "object"
     },
     "UploaderMetadata": {
-      "description": "Normalized common metadata for downstream uploaders.\n\nThis is the canonical layer shared across all platforms.\nPer-platform overrides live in ``PublishTarget.metadata``.",
+      "description": "Normalized common metadata for downstream uploaders.\n\nThis is the canonical layer shared across all platforms.\nPer-platform overrides live in ``PublishTarget.metadata``. Execution identity\nlives on ``PublishTarget`` rather than this common metadata block.",
       "properties": {
         "channel_id": {
           "default": "",
           "title": "Channel Id",
+          "type": "string"
+        },
+        "channel_url": {
+          "default": "",
+          "title": "Channel Url",
+          "type": "string"
+        },
+        "channel_name": {
+          "default": "",
+          "title": "Channel Name",
           "type": "string"
         },
         "title": {
@@ -834,7 +1070,7 @@
           "type": "string"
         },
         "visibility": {
-          "default": "private",
+          "default": "public",
           "title": "Visibility",
           "type": "string"
         },
@@ -855,14 +1091,9 @@
           "title": "Content Rating",
           "type": "string"
         },
-        "thumbnail_ref": {
+        "thumbnail_url": {
           "default": "",
-          "title": "Thumbnail Ref",
-          "type": "string"
-        },
-        "thumbnail_source_url": {
-          "default": "",
-          "title": "Thumbnail Source Url",
+          "title": "Thumbnail Url",
           "type": "string"
         },
         "thumbnail_strategy": {
@@ -899,7 +1130,7 @@
       "type": "object"
     }
   },
-  "description": "``video.render.request.v1`` \u2013 the output payload published to Kafka.",
+  "description": "``video.render.request.v1`` – the output payload published to Kafka.",
   "properties": {
     "job_id": {
       "title": "Job Id",
@@ -934,6 +1165,17 @@
       "default": "render_only",
       "title": "Publish Intent",
       "type": "string"
+    },
+    "planning": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PlanningMetadata"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "uploader_metadata": {
       "$ref": "#/$defs/UploaderMetadata"

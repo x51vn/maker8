@@ -190,8 +190,18 @@
           "title": "Platform",
           "type": "string"
         },
-        "account_ref": {
-          "title": "Account Ref",
+        "channel_id": {
+          "title": "Channel Id",
+          "type": "string"
+        },
+        "channel_url": {
+          "default": "",
+          "title": "Channel Url",
+          "type": "string"
+        },
+        "channel_name": {
+          "default": "",
+          "title": "Channel Name",
           "type": "string"
         },
         "variant": {
@@ -217,7 +227,7 @@
       },
       "required": [
         "platform",
-        "account_ref"
+        "channel_id"
       ],
       "title": "PublishTarget",
       "type": "object"
@@ -271,11 +281,21 @@
       "type": "object"
     },
     "UploaderMetadata": {
-      "description": "Normalized common metadata for downstream uploaders.\n\nThis is the canonical layer shared across all platforms.\nPer-platform overrides live in ``PublishTarget.metadata``.",
+      "description": "Normalized common metadata for downstream uploaders.\n\nThis is the canonical layer shared across all platforms.\nPer-platform overrides live in ``PublishTarget.metadata``. Execution identity\nlives on ``PublishTarget`` rather than this common metadata block.",
       "properties": {
         "channel_id": {
           "default": "",
           "title": "Channel Id",
+          "type": "string"
+        },
+        "channel_url": {
+          "default": "",
+          "title": "Channel Url",
+          "type": "string"
+        },
+        "channel_name": {
+          "default": "",
+          "title": "Channel Name",
           "type": "string"
         },
         "title": {
@@ -330,7 +350,7 @@
           "type": "string"
         },
         "visibility": {
-          "default": "private",
+          "default": "public",
           "title": "Visibility",
           "type": "string"
         },
@@ -351,14 +371,9 @@
           "title": "Content Rating",
           "type": "string"
         },
-        "thumbnail_ref": {
+        "thumbnail_url": {
           "default": "",
-          "title": "Thumbnail Ref",
-          "type": "string"
-        },
-        "thumbnail_source_url": {
-          "default": "",
-          "title": "Thumbnail Source Url",
+          "title": "Thumbnail Url",
           "type": "string"
         },
         "thumbnail_strategy": {
