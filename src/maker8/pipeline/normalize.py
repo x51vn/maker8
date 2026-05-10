@@ -126,6 +126,36 @@ _MIN_VALID_VIDEO_BYTES = 1024  # a real MP4 with even one frame is > 1 KiB
 _MIN_VALID_AUDIO_BYTES = 256
 
 
+def _probe_audio_channels(path: Path, timeout: int = 10) -> int:
+    """Return the number of audio channels in *path* via ffprobe.
+
+    Falls back to 1 (mono) if the probe fails for any reason.
+    """
+    ffprobe = resolve_ffprobe_binary()
+    try:
+        result = subprocess.run(
+            [
+                ffprobe,
+                "-v",
+                "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "stream=channels",
+                "-of",
+                "csv=p=0",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return int(result.stdout.strip())
+    except Exception:
+        log.warning("normalize.audio_probe_failed", path=str(path))
+        return 1
+
+
 def _is_valid_media(path: Path, *, min_bytes: int = _MIN_VALID_VIDEO_BYTES) -> bool:
     """Return ``True`` if *path* exists, exceeds *min_bytes*, and ffprobe can read it."""
     if not path.exists():
@@ -279,8 +309,9 @@ def _build_video_cmd(
 
 
 class NormalizeStage(Stage):
-    def __init__(self, proxy_max_short_edge: int = 0) -> None:
+    def __init__(self, proxy_max_short_edge: int = 0, max_audio_channels: int = 2) -> None:
         self._proxy_max_short_edge = proxy_max_short_edge
+        self._max_audio_channels = max_audio_channels
 
     @property
     def name(self) -> RenderStage:
@@ -406,9 +437,9 @@ class NormalizeStage(Stage):
                 asset_id=asset_id,
                 path=str(src),
             )
-            return self._normalize_audio(src, dest_dir, job_id, asset_id)
+            return self._normalize_audio(src, dest_dir, job_id, asset_id, self._max_audio_channels)
         if asset_type == "audio":
-            return self._normalize_audio(src, dest_dir, job_id, asset_id)
+            return self._normalize_audio(src, dest_dir, job_id, asset_id, self._max_audio_channels)
         # Images – no normalisation needed
         return src
 
@@ -781,8 +812,14 @@ class NormalizeStage(Stage):
         return dest
 
     @staticmethod
-    def _normalize_audio(src: Path, dest_dir: Path, job_id: str, asset_id: str) -> Path:
-        """Convert to mono 44.1 kHz WAV for consistent MoviePy handling."""
+    def _normalize_audio(
+        src: Path,
+        dest_dir: Path,
+        job_id: str,
+        asset_id: str,
+        max_audio_channels: int = 2,
+    ) -> Path:
+        """Normalise audio to WAV at 44.1 kHz, preserving stereo up to *max_audio_channels*."""
         dest = dest_dir / f"{src.stem}_norm.wav"
         if _is_valid_media(dest, min_bytes=_MIN_VALID_AUDIO_BYTES):
             log.info(
@@ -795,13 +832,24 @@ class NormalizeStage(Stage):
             return dest
         dest.unlink(missing_ok=True)
 
+        detected_channels = _probe_audio_channels(src)
+        target_channels = min(detected_channels, max_audio_channels)
+        log.info(
+            "normalize.audio_channels",
+            job_id=job_id,
+            asset_id=asset_id,
+            detected=detected_channels,
+            target=target_channels,
+            clamped=(detected_channels != target_channels),
+        )
+
         cmd = [
             resolve_ffmpeg_binary(),
             "-y",
             "-i",
             str(src),
             "-ac",
-            "1",
+            str(target_channels),
             "-ar",
             "44100",
             str(dest),

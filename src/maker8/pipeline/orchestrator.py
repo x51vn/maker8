@@ -84,7 +84,10 @@ class Orchestrator:
             ResolveAssetsStage(registry),
             DownloadStage(registry),
             SceneDetectStage(),
-            NormalizeStage(proxy_max_short_edge=profile.proxy_max_short_edge),
+            NormalizeStage(
+                proxy_max_short_edge=profile.proxy_max_short_edge,
+                max_audio_channels=settings.normalize_max_audio_channels,
+            ),
             TTSStage(tts_service),
             RenderStageImpl(registry, perf_profile=profile),
             UploadDropboxStage(dbx_client),

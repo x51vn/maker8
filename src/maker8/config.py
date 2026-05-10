@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     # Maximum short-edge resolution for proxy assets.
     # 0 = auto (derive from canvas size + perf_mode).
     proxy_max_resolution: int = 0
+    # Maximum audio channel count preserved during normalisation (default 2 = stereo).
+    # Set to 1 to force mono (legacy behaviour).
+    normalize_max_audio_channels: int = 2
 
     # ── Retry ────────────────────────────────────────────────────────
     # ge=1 ensures a zero or negative value is rejected at startup; a loop
