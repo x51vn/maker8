@@ -20,7 +20,7 @@
 
 ## 4. Tests
 
-- [ ] 4.1 Create `tests/test_stereo_audio_preservation.py` with unit tests covering:
+- [x] 4.1 Create `tests/test_stereo_audio_preservation.py` with unit tests covering:
   - (a) `_probe_audio_channels` with mocked ffprobe returning `"2\n"` → returns `2`
   - (b) `_probe_audio_channels` with mocked ffprobe returning `"1\n"` → returns `1`
   - (c) `_probe_audio_channels` with mocked ffprobe raising `subprocess.TimeoutExpired` → returns `1`
@@ -28,5 +28,5 @@
   - (e) `_normalize_audio` with a stereo source and default max (2) → FFmpeg called with `-ac 2`
   - (f) `_normalize_audio` with a stereo source and `normalize_max_audio_channels=1` → FFmpeg called with `-ac 1`
   - (g) `_normalize_audio` with a 6-channel source and default max (2) → FFmpeg called with `-ac 2`
-- [ ] 4.2 Run `python -m pytest tests/test_stereo_audio_preservation.py -v` and confirm all tests pass
-- [ ] 4.3 Run `python -m pytest tests/` to confirm no regressions
+- [x] 4.2 Run `python -m pytest tests/test_stereo_audio_preservation.py -v` and confirm all tests pass
+- [x] 4.3 Run `python -m pytest tests/` to confirm no regressions
