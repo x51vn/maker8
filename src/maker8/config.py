@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -74,9 +75,15 @@ class Settings(BaseSettings):
     proxy_max_resolution: int = 0
 
     # ── Retry ────────────────────────────────────────────────────────
-    render_max_attempts: int = 5
+    # ge=1 ensures a zero or negative value is rejected at startup; a loop
+    # with max_attempts=0 would silently skip every stage and return success.
+    render_max_attempts: int = Field(default=5, ge=1)
     render_retry_min_delay_sec: float = 60.0
     render_retry_max_delay_sec: float = 21600.0  # 6 h
+
+    # ── Producer ─────────────────────────────────────────────────────
+    # Flush the Kafka producer at most every N seconds (0 = after each message).
+    producer_flush_interval: int = Field(default=30, ge=0)
 
     # ── Logging ──────────────────────────────────────────────────────
     log_level: str = "INFO"

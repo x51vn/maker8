@@ -15,11 +15,14 @@ import pytest
 from maker8.models.contracts import RenderRequest
 from maker8.models.spec import (
     Asset,
+    AssetSource,
+    AssetSourceOptions,
     AudioTrack,
     Canvas,
     Defaults,
     EffectInstance,
     Layer,
+    NarrationDefaults,
     OutputConfig,
     PublishConfig,
     PublishTarget,
@@ -28,12 +31,17 @@ from maker8.models.spec import (
     ResultDestination,
     SafeArea,
     Scene,
+    SceneBoundary,
     SceneNarration,
+    SceneSubtitle,
     SceneTiming,
+    SourceAttribution,
+    SubtitleDefaults,
     TextStyle,
     Trace,
     Transition,
     Trim,
+    UploaderMetadata,
 )
 from render_contracts.render_spec import RenderRequest as CanonicalRenderRequest
 
@@ -134,11 +142,14 @@ class TestModelIdentity:
 
         pairs = [
             (Asset, canonical.Asset),
+            (AssetSource, canonical.AssetSource),
+            (AssetSourceOptions, canonical.AssetSourceOptions),
             (AudioTrack, canonical.AudioTrack),
             (Canvas, canonical.Canvas),
             (Defaults, canonical.Defaults),
             (EffectInstance, canonical.EffectInstance),
             (Layer, canonical.Layer),
+            (NarrationDefaults, canonical.NarrationDefaults),
             (OutputConfig, canonical.OutputConfig),
             (PublishConfig, canonical.PublishConfig),
             (PublishTarget, canonical.PublishTarget),
@@ -147,12 +158,17 @@ class TestModelIdentity:
             (ResultDestination, canonical.ResultDestination),
             (SafeArea, canonical.SafeArea),
             (Scene, canonical.Scene),
+            (SceneBoundary, canonical.SceneBoundary),
             (SceneNarration, canonical.SceneNarration),
+            (SceneSubtitle, canonical.SceneSubtitle),
             (SceneTiming, canonical.SceneTiming),
+            (SourceAttribution, canonical.SourceAttribution),
+            (SubtitleDefaults, canonical.SubtitleDefaults),
             (TextStyle, canonical.TextStyle),
             (Trace, canonical.Trace),
             (Transition, canonical.Transition),
             (Trim, canonical.Trim),
+            (UploaderMetadata, canonical.UploaderMetadata),
         ]
         for maker8_cls, canonical_cls in pairs:
             assert maker8_cls is canonical_cls, (

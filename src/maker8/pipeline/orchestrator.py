@@ -106,17 +106,23 @@ class Orchestrator:
             self._send_invalid_payload_dlq(payload, exc)
             return  # cannot proceed without a valid RenderRequest
 
-        ctx = PipelineContext.from_request(
-            job_id=request.job_id,
-            render_spec=request.render_spec,
-            trace=request.trace,
-            base_work_dir=self._settings.work_dir,
-            dry_run=request.dry_run,
-            canvas_profile=request.canvas_profile,
-            uploader_metadata=request.uploader_metadata,
-            result_destination=request.result,
-            request=request,
-        )
+        try:
+            ctx = PipelineContext.from_request(
+                job_id=request.job_id,
+                render_spec=request.render_spec,
+                trace=request.trace,
+                base_work_dir=self._settings.work_dir,
+                dry_run=request.dry_run,
+                canvas_profile=request.canvas_profile,
+                uploader_metadata=request.uploader_metadata,
+                result_destination=request.result,
+                request=request,
+            )
+        except ValueError as exc:
+            log.exception("orchestrator.invalid_context", job_id=request.job_id)
+            INVALID_PAYLOAD.inc()
+            self._send_invalid_payload_dlq(payload, exc)
+            return
 
         correlation_id = ctx.trace.correlation_id if ctx.trace else ""
         log.info(
@@ -252,9 +258,31 @@ class Orchestrator:
                 )
                 return  # success
 
-            except StageError as exc:
+            except Exception as exc:
                 stage_timer.stop()
-                last_exc = exc
+                STAGE_DURATION.labels(stage=stage_name, status="failed").observe(
+                    stage_timer.elapsed_sec
+                )
+
+                # Normalize to StageError so retry logic is applied uniformly.
+                # Previously the `except Exception` clause raised a new StageError,
+                # but a raise inside an except block cannot be caught by a sibling
+                # except clause in the same try statement – the new exception would
+                # escape the loop entirely, bypassing retry.
+                if isinstance(exc, StageError):
+                    err: StageError = exc
+                else:
+                    err = StageError(
+                        stage.name,
+                        "UNEXPECTED_ERROR",
+                        f"Unexpected error in {stage_name}: {exc}",
+                        # OSError subclasses (IOError, socket errors) are often transient.
+                        retryable=isinstance(exc, OSError),
+                    )
+                    err.__cause__ = exc
+                    err.__suppress_context__ = True
+
+                last_exc = err
                 ctx.attempt = attempt
 
                 log.warning(
@@ -262,18 +290,15 @@ class Orchestrator:
                     job_id=ctx.job_id,
                     stage=stage_name,
                     attempt=attempt,
-                    error_code=exc.code,
+                    error_code=err.code,
                     error_type=type(exc).__name__,
-                    error_message=str(exc),
-                    retryable=exc.retryable,
+                    error_message=str(err),
+                    retryable=err.retryable,
                     duration_ms=stage_timer.elapsed_ms,
                 )
-                STAGE_DURATION.labels(stage=stage_name, status="failed").observe(
-                    stage_timer.elapsed_sec
-                )
 
-                if not policy.is_retryable(stage.name) or not exc.retryable:
-                    raise
+                if not policy.is_retryable(stage.name) or not err.retryable:
+                    raise err from err.__cause__
                 if attempt >= policy.max_attempts:
                     log.error(
                         "stage.retry_exhausted",
@@ -281,10 +306,10 @@ class Orchestrator:
                         stage=stage_name,
                         attempts=attempt,
                         max_attempts=policy.max_attempts,
-                        error_code=exc.code,
-                        error_message=str(exc),
+                        error_code=err.code,
+                        error_message=str(err),
                     )
-                    raise
+                    raise err from err.__cause__
 
                 delay = policy.delay(attempt)
                 log.warning(
@@ -294,28 +319,13 @@ class Orchestrator:
                     attempt=attempt,
                     max_attempts=policy.max_attempts,
                     next_delay_sec=delay,
-                    error_code=exc.code,
-                    error_message=str(exc),
+                    error_code=err.code,
+                    error_message=str(err),
                 )
                 RETRIES_SCHEDULED.labels(stage=stage_name).inc()
                 if self._state:
                     self._state.on_retry_sleep(delay)
                 time.sleep(delay)
-
-            except Exception as exc:
-                stage_timer.stop()
-                STAGE_DURATION.labels(stage=stage_name, status="failed").observe(
-                    stage_timer.elapsed_sec
-                )
-                # Wrap unexpected exceptions as non-retryable StageError.
-                # OSError subclasses (IOError, etc.) are often transient.
-                retryable = isinstance(exc, OSError)
-                raise StageError(
-                    stage.name,
-                    "UNEXPECTED_ERROR",
-                    f"Unexpected error in {stage_name}: {exc}",
-                    retryable=retryable,
-                ) from exc
 
         # Should not reach here, but just in case
         if last_exc:

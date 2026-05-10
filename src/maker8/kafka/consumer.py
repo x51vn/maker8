@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -39,10 +41,13 @@ class RenderConsumer:
         settings: Settings,
         worker_state: WorkerState | None = None,
         dlq_producer: Callable[[str, str, dict[str, Any]], None] | None = None,
+        flush_producer: Callable[[], None] | None = None,
     ) -> None:
         self._settings = settings
         self._state = worker_state
         self._dlq_producer = dlq_producer
+        self._flush_producer = flush_producer
+        self._flush_interval: int = settings.producer_flush_interval
 
         # Build Kafka config
         kafka_config = {
@@ -71,8 +76,20 @@ class RenderConsumer:
 
     # ── Main loop ────────────────────────────────────────────────────
 
-    def start(self, handler: Callable[[dict[str, Any]], None]) -> None:
-        """Block forever, calling *handler(payload)* for each message."""
+    def start(
+        self,
+        handler: Callable[[dict[str, Any]], None],
+        stop_event: threading.Event | None = None,
+    ) -> None:
+        """Block forever, calling *handler(payload)* for each message.
+
+        Args:
+            handler: Called with the deserialized JSON payload for each message.
+            stop_event: Optional :class:`threading.Event`.  When set, the poll
+                loop breaks cleanly on the next iteration (within one poll
+                timeout).  Used by the double-SIGINT shutdown path so an
+                in-progress handler can finish before the loop exits.
+        """
         topic = self._settings.kafka_render_request_topic
         self._consumer.subscribe([topic])
         self._running = True
@@ -81,7 +98,11 @@ class RenderConsumer:
             self._state.consumer_running = True
         log.info("consumer.started", topic=topic)
 
+        last_flush_time: float = time.monotonic()
+
         while self._running:
+            if stop_event is not None and stop_event.is_set():
+                break
             msg: Message | None = self._consumer.poll(timeout=1.0)
             if msg is None:
                 continue
@@ -170,6 +191,16 @@ class RenderConsumer:
                     offset=offset,
                     partition=partition,
                 )
+
+            # ── Periodic producer flush ───────────────────────────────
+            if self._flush_producer is not None:
+                now = time.monotonic()
+                if self._flush_interval == 0 or (now - last_flush_time) >= self._flush_interval:
+                    try:
+                        self._flush_producer()
+                    except Exception:
+                        log.exception("consumer.flush_producer_error")
+                    last_flush_time = now
 
     # ── DLQ helpers ──────────────────────────────────────────────────
 

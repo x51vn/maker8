@@ -141,6 +141,7 @@ class Layer(BaseModel):
     fit: str | None = None
     align: str | None = None  # RESERVED – layer alignment not yet implemented in maker8 renderer
     trim: Trim | None = None
+    scene_clip_select: str | None = None
 
     # text
     text: str | None = None

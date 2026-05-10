@@ -125,6 +125,7 @@ class RenderStageImpl(Stage):
             job_id=ctx.job_id,
             effects_map=effects_map,
             perf_profile=self._perf_profile,
+            scene_candidates=ctx.scene_candidates,
         )
 
         log.info(

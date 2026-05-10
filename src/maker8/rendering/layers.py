@@ -12,7 +12,7 @@ import numpy as np
 from moviepy import ImageClip, VideoFileClip
 from PIL import Image
 
-from maker8.models.spec import Canvas, Layer, TextStyle
+from maker8.models.spec import Canvas, Layer, TextStyle, Trim
 from maker8.rendering.text import render_text_image
 from maker8.utils.logging import get_logger
 
@@ -26,10 +26,11 @@ def build_layer_clip(
     asset_paths: dict[str, Path],
     duration: float,
     canvas: Canvas,
+    effective_trim: Trim | None = None,
 ) -> VideoFileClip | ImageClip | None:
     """Dispatch on ``layer.type`` and return a positioned MoviePy clip."""
     if layer.type == "video":
-        return _build_video(layer, asset_paths, duration)
+        return _build_video(layer, asset_paths, duration, effective_trim=effective_trim)
     if layer.type == "image":
         return _build_image(layer, asset_paths, duration)
     if layer.type == "text":
@@ -44,16 +45,18 @@ def _build_video(
     layer: Layer,
     asset_paths: dict[str, Path],
     duration: float,
+    effective_trim: Trim | None = None,
 ) -> VideoFileClip | None:
     if not layer.asset_ref or layer.asset_ref not in asset_paths:
         return None
 
     clip = VideoFileClip(str(asset_paths[layer.asset_ref])).without_audio()
 
-    # Trim
-    if layer.trim:
-        t_start = layer.trim.in_
-        t_end = layer.trim.out if layer.trim.out > 0 else clip.duration
+    # Trim — effective_trim (from scene_clip_select) takes precedence over layer.trim
+    trim = effective_trim if effective_trim is not None else layer.trim
+    if trim:
+        t_start = trim.in_
+        t_end = trim.out if trim.out > 0 else clip.duration
         clip = clip.subclipped(t_start, min(t_end, clip.duration))
 
     # Fit / resize

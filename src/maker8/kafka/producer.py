@@ -35,7 +35,13 @@ class KafkaProducer:
         self._producer = Producer(kafka_config)
 
     def send(self, topic: str, key: str, value: dict[str, Any]) -> None:
-        """Serialise *value* as JSON and produce to *topic*."""
+        """Serialise *value* as JSON and enqueue to *topic*.
+
+        Does **not** flush; call :meth:`flush` or :meth:`close` explicitly to
+        ensure delivery.  Flushing after every ``send()`` was removed because
+        it blocked the pipeline on every result/DLQ emit — the consumer loop
+        now calls :meth:`flush` periodically instead.
+        """
         payload = json.dumps(value, ensure_ascii=False).encode("utf-8")
         self._producer.produce(
             topic,
@@ -43,7 +49,12 @@ class KafkaProducer:
             value=payload,
             callback=self._on_delivery,
         )
-        self._producer.flush()
+
+    def flush(self, timeout: float = 5.0) -> None:
+        """Deliver any buffered messages, waiting up to *timeout* seconds."""
+        remaining = self._producer.flush(timeout)
+        if remaining > 0:
+            log.warning("producer.flush_timeout", remaining_messages=remaining, timeout=timeout)
 
     def close(self, timeout: float = 10.0) -> None:
         remaining = self._producer.flush(timeout)
