@@ -1,8 +1,10 @@
 # ── Secrets ───────────────────────────────────────────────────────────────────
 .env
+.env.deploy
 
 # ── TTS credential directories (never commit real keys) ───────────────────
-gg-tts-keys/*.json
+# Use **/*.json to cover nested subdirs (e.g. quarantine-*/)
+gg-tts-keys/**/*.json
 elevenlabs-keys/*.txt
 elevenlabs-keys/*.key
 
@@ -25,4 +27,10 @@ Thumbs.db
 # ── Work data ─────────────────────────────────────────────────────────────────
 /data/
 /venv/
-/logs/.playwright-mcp/
+
+# ── Agent-tooling state (never commit) ───────────────────────────────────────
+.playwright-mcp/
+.serena/memories/
+
+# ── Internal deployment config (never commit) ────────────────────────────────
+deployment/server2/
