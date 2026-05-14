@@ -70,10 +70,10 @@
 
 ## 10. Final verification and publication
 
-- [ ] 10.1 Run `git log --all -- "gg-tts-keys/*.json"` — must return empty
-- [ ] 10.2 Run `git ls-files .playwright-mcp/ .serena/memories/ deployment/server2/ docs/EDITOR8_UI_KEY_MANAGEMENT*.md` — must return empty
-- [ ] 10.3 Run `git grep "10\.113\.213\."` — must return empty (or only in ignored files)
-- [ ] 10.4 Run `git grep -l "private_key"` across tracked files — must return empty
+- [x] 10.1 Run `git log --all -- "gg-tts-keys/*.json"` — must return empty
+- [x] 10.2 Run `git ls-files .playwright-mcp/ .serena/memories/ deployment/server2/ docs/EDITOR8_UI_KEY_MANAGEMENT*.md` — must return empty
+- [x] 10.3 Run `git grep "10\.113\.213\."` — must return empty (or only in ignored files)
+- [x] 10.4 Run `git grep -l "private_key"` across tracked files — must return empty
 - [ ] 10.5 Optionally run `trufflesecurity/trufflehog` or `gitleaks` against the full history to confirm no secrets remain
 - [ ] 10.6 Force-push the rewritten history: `git push --force-with-lease origin main`
 - [ ] 10.7 Publish the repository (set visibility to public on GitHub/GitLab)
