@@ -1,2 +1,0 @@
-[     146ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://10.113.213.9:3018/favicon.ico:0
-[     156ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://10.113.213.9:8018/api/dashboard:0
