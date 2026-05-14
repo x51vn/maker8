@@ -15,19 +15,8 @@ video).
 4. Copy the file here.
 5. Start the worker – it logs how many keys were loaded:
    ```
-   tts_service.ready  google_keys=15  elevenlabs_keys=0
+   tts_service.ready  google_keys=1  elevenlabs_keys=0
    ```
-
-## Current accounts
-
-| Email | Key file |
-|---|---|
-| REDACTED | REDACTED.json |
-| REDACTED | REDACTED.json |
-| REDACTED | REDACTED.json |
-| REDACTED | REDACTED.json |
-| REDACTED | REDACTED.json |
-| REDACTED | REDACTED.json |
 
 ## Notes
 
