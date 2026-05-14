@@ -7,16 +7,16 @@
 
 ## 2. Install git-filter-repo
 
-- [ ] 2.1 Install `git-filter-repo`: `pip install git-filter-repo` (or `pip3 install git-filter-repo`)
-- [ ] 2.2 Verify: `git filter-repo --version` exits without error
+- [x] 2.1 Install `git-filter-repo`: `pip install git-filter-repo` (or `pip3 install git-filter-repo`)
+- [x] 2.2 Verify: `git filter-repo --version` exits without error
 
 ## 3. Rewrite git history to remove credential files
 
-- [ ] 3.1 Create a full local backup of the repo: `cp -r . ../maker8-backup-$(date +%Y%m%d)`
-- [ ] 3.2 Run filter-repo to excise `gg-tts-keys/` from all history: `git filter-repo --path gg-tts-keys/ --invert-paths --force`
-- [ ] 3.3 Verify no JSON credential files remain in history: `git log --all -- "gg-tts-keys/*.json"` must return empty
-- [ ] 3.4 Verify `gg-tts-keys/quarantine-2026-04-13/` is also absent from history: `git log --all -- "gg-tts-keys/quarantine-2026-04-13/"` must return empty
-- [ ] 3.5 Confirm the `gg-tts-keys/README.md` file is still present in HEAD (filter-repo only removed `.json` files if `--path gg-tts-keys/` was used — adjust to use `--path-glob` if needed to keep the README)
+- [x] 3.1 Create a full local backup of the repo: `cp -r . ../maker8-backup-$(date +%Y%m%d)`
+- [x] 3.2 Run filter-repo to excise `gg-tts-keys/` from all history: `git filter-repo --path gg-tts-keys/ --invert-paths --force`
+- [x] 3.3 Verify no JSON credential files remain in history: `git log --all -- "gg-tts-keys/*.json"` must return empty
+- [x] 3.4 Verify `gg-tts-keys/quarantine-2026-04-13/` is also absent from history: `git log --all -- "gg-tts-keys/quarantine-2026-04-13/"` must return empty
+- [x] 3.5 Confirm the `gg-tts-keys/README.md` file is still present in HEAD (filter-repo only removed `.json` files if `--path gg-tts-keys/` was used — adjust to use `--path-glob` if needed to keep the README)
 
 > **Note on step 3.5:** If the entire `gg-tts-keys/` dir was removed, re-add just the README: `git checkout HEAD~1 -- gg-tts-keys/README.md && git add gg-tts-keys/README.md && git commit -m "restore: gg-tts-keys/README.md after history rewrite"`
 
