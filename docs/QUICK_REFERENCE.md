@@ -29,7 +29,7 @@ nano .env
 **Required fields**:
 ```env
 # Kafka
-MAKER8_KAFKA_BOOTSTRAP_SERVERS=10.113.213.9:9094
+MAKER8_KAFKA_BOOTSTRAP_SERVERS=<kafka-host>:9094
 MAKER8_KAFKA_SASL_MECHANISM=PLAIN
 MAKER8_KAFKA_USERNAME=render
 MAKER8_KAFKA_PASSWORD=...
@@ -209,7 +209,7 @@ grep KAFKA .env | grep -v "^#"
 python -c "
 from confluent_kafka import KafkaConsumer
 c = KafkaConsumer(
-    bootstrap_servers='10.113.213.9:9094',
+    bootstrap_servers='<kafka-host>:9094',
     security_protocol='SASL_PLAINTEXT',
     sasl_mechanism='PLAIN',
     sasl_plain_username='render',

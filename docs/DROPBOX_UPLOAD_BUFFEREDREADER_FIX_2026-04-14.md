@@ -58,5 +58,5 @@ This is safe because `_simple_upload()` is only used for files ≤ 150 MiB
 ## Deployment
 
 - **Image:** `docker.x51.vn/x-ai/maker8:20260414.2150`
-- **Host:** worker-z440 (10.113.213.9)
+- **Host:** worker-z440
 - **Status:** deployed and healthy
