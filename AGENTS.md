@@ -46,4 +46,4 @@
 - **Registry path**: `<registry>/<org>/maker8:latest`, deployed to `<deployment-host>`.
 - `deploy-production.sh` — pushes images to the private registry then restarts compose on the remote host.
 - `deploy-direct.sh` — registry-bypass: tarballs the image, SCPs it to the host, then loads and restarts compose. Use when the registry is unavailable.
-- Both scripts hard-code the SSH key at `/home/<user>/deployment/worker-z440/ssh/id_ed25519`.
+- Both scripts hard-code the SSH key at `<ssh-key-path>`.
